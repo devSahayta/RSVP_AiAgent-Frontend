@@ -1,0 +1,4 @@
+FullName,Phone Number,RSVP Status,Number of Guests,Proof Uploaded,Document Upload,Event Name,TimeStamp
+John Doe,+1 (555) 123-4567,Confirmed,2,Yes,id_proof.pdf,Annual Gala,2025-01-15T10:30:00Z
+Jane Smith,+1 (555) 987-6543,Pending,1,No,,Annual Gala,2025-01-15T11:45:00Z
+Mike Johnson,+1 (555) 456-7890,Declined,0,No,,Corporate Meeting,2025-01-15T14:20:00Z
