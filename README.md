@@ -1,1 +1,1 @@
-RSVP_AI_AGENT
+RSVP_AI_AGENT-Frontend
