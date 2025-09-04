@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Calendar, BarChart3, User } from 'lucide-react'; // ✅ Added User icon
+import { Menu, X, Calendar, BarChart3, User, Plus } from 'lucide-react'; // ✅ Added Plus icon
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import '../styles/navbar.css';
 
@@ -28,17 +28,18 @@ const NavBar = () => {
           {isAuthenticated && (
             <>
               <Link
+                to="/events"
+                className={`nav-link ${isActive('/events') ? 'active' : ''}`}
+              >
+                <Calendar size={18} />
+                Events
+              </Link>
+              <Link
                 to="/createEvent"
                 className={`nav-link ${isActive('/createEvent') ? 'active' : ''}`}
               >
+                <Plus size={16} className="mr-1" /> {/* ✅ Added Plus icon */}
                 Create Event
-              </Link>
-              <Link
-                to="/dashboard"
-                className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`}
-              >
-                <BarChart3 size={18} />
-                Dashboard
               </Link>
 
               {/* ✅ Show username with icon */}
@@ -73,21 +74,23 @@ const NavBar = () => {
           {isAuthenticated && (
             <>
               <Link
+                to="/events"
+                className={`nav-link ${isActive('/events') ? 'active' : ''}`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <Calendar size={18} />
+                Events
+              </Link>
+              <Link
                 to="/createEvent"
                 className={`nav-link ${isActive('/createEvent') ? 'active' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
+                <Plus size={16} className="mr-1" /> {/* ✅ Plus icon in mobile */}
                 Create Event
               </Link>
-              <Link
-                to="/dashboard"
-                className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Dashboard
-              </Link>
 
-              {/* ✅ Show username with icon in mobile */}
+              {/* ✅ Username in mobile */}
               <span className="nav-username">
                 <User size={18} className="user-icon" /> {username}
               </span>

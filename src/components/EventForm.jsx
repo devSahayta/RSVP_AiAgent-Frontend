@@ -1,8 +1,9 @@
+// components/EventForm.jsx
 import React, { useState } from 'react';
 import { Upload, Calendar, Type, Check, AlertCircle, Download } from 'lucide-react';
 import '../styles/form.css';
 
-const EventForm = () => {
+const EventForm = ({ user }) => {
   const [formData, setFormData] = useState({
     eventName: '',
     eventDate: '',
@@ -34,43 +35,48 @@ const EventForm = () => {
     setSubmitStatus(null);
 
     try {
-      // TODO: Implement Airtable API integration
-      // Example Airtable API call:
-      /*
-      const airtableData = {
-        fields: {
-          'Event Name': formData.eventName,
-          'Event Date': formData.eventDate,
-          'Dataset': formData.dataset ? formData.dataset.name : ''
-        }
-      };
+      // Prepare form data for backend
+     // inside handleSubmit
+const payload = new FormData();
+payload.append("user_id", user?.id); // ✅ Use Kinde id
+console.log("Submitting event for user_id:", user?.id);
+payload.append("event_name", formData.eventName);
+payload.append("event_date", formData.eventDate);
 
-      const response = await fetch('https://api.airtable.com/v0/{baseId}/{tableName}', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer YOUR_AIRTABLE_API_KEY',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(airtableData)
+if (!user?.id) {
+  setSubmitStatus("error");
+  setMessage("User not authenticated. Cannot create event.");
+  setIsSubmitting(false);
+  return;
+}
+
+
+
+      if (formData.dataset) {
+        payload.append("dataset", formData.dataset);
+      }
+
+      const response = await fetch("http://localhost:5000/api/events", {
+        method: "POST",
+        body: payload
       });
 
-      if (!response.ok) throw new Error('Failed to save event');
-      */
+      if (!response.ok) {
+        throw new Error("Failed to create event");
+      }
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const data = await response.json();
+      console.log("✅ Event created:", data);
 
       setSubmitStatus('success');
       setMessage('Event created successfully!');
-      
+
       // Reset form
       setFormData({
         eventName: '',
         eventDate: '',
         dataset: null
       });
-
-      // Reset file input
       const fileInput = document.getElementById('dataset');
       if (fileInput) fileInput.value = '';
 
