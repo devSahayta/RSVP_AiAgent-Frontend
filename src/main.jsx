@@ -9,8 +9,8 @@ createRoot(document.getElementById('root')).render(
     <KindeProvider
       clientId={import.meta.env.VITE_KINDE_CLIENT_ID}
       domain={import.meta.env.VITE_KINDE_DOMAIN}
-      redirectUri="http://localhost:5173/createEvent"   // After login
-      logoutUri="http://localhost:5173/"                // After logout
+      redirectUri="https://rsvp-ai-agent-frontend.vercel.app/createEvent"   // After login
+      logoutUri="https://rsvp-ai-agent-frontend.vercel.app/"                // After logout
     >
       <App />
     </KindeProvider>
