@@ -11,6 +11,10 @@
   import { addUserToBackend } from "./api/userApi";
   import "./styles/global.css";
   import CallBatchPage from "./pages/CallBatchPage";
+import RSVPTable from "./components/RSVPTable";
+import DocumentUpload from "./pages/DocumentUpload";
+import DocumentViewerPage from './pages/DocumentViewerPage';
+import DocumentViewer from "./components/DocumentViewer";
 
   // PrivateRoute for protected pages
   function PrivateRoute({ children }) {
@@ -65,7 +69,7 @@
                 path="/dashboard/:eventId"
                 element={
                   <PrivateRoute>
-                    <EventDashboard />
+                    <Dashboard />
                   </PrivateRoute>
                 }
               />
@@ -78,6 +82,9 @@
                 </PrivateRoute>
               }
             />
+
+                <Route path="/document-upload/:participantId" element={<DocumentUpload />} />
+              <Route path="/document-viewer/:participantId" element={<DocumentViewer />} />
 
               {/* Redirect unknown routes */}
               <Route path="*" element={<Navigate to="/" replace />} />

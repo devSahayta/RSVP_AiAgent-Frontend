@@ -90,13 +90,14 @@ if (!user?.id) {
   };
 
   const handleDownloadTemplate = () => {
-    const link = document.createElement('a');
-    link.href = '/sample-rsvp-template.csv';
-    link.download = 'rsvp-template.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  const link = document.createElement('a');
+  link.href = "https://docs.google.com/spreadsheets/d/1FGZaAMEMNjG_8iwyUnlLdC5-BiDQrcosprs6awrADQo/export?format=csv";
+  link.download = "RSVP_Mockup_template.csv";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 
   return (
     <div className="form-container">

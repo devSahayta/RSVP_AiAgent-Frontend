@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Document, Page } from "react-pdf";
 import {
   Users,
   Phone,
@@ -11,63 +12,100 @@ import {
   FileText,
 } from "lucide-react";
 import "../styles/table.css";
+import { supabase } from "../config/supabaseClient"; // 🔥 Import supabase client
+import { useParams, useNavigate } from "react-router-dom";
 
-const RSVPTable = () => {
+const RSVPTable = ({ eventId: propEventId }) => {
   const [rsvpData, setRsvpData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const { eventId: paramEventId } = useParams();
+  const eventId = propEventId || paramEventId;
+  const navigate = useNavigate();
+
 
   useEffect(() => {
     fetchRSVPData();
-  }, []);
+  }, [eventId]);
 
   useEffect(() => {
     filterData();
   }, [rsvpData, searchTerm, statusFilter]);
 
-  const fetchRSVPData = async () => {
-    try {
-      const response = await fetch(
-        "https://api.airtable.com/v0/appS3GsydWKYaYxS0/tblgWhr4jmvNkXYxP",
-        {
-          headers: {
-            Authorization: `Bearer ${import.meta.env.VITE_AIRTABLE_API_KEY}`,
-          },
-        }
-      );
+  // 🔥 Fetch participants + conversations from Supabase
+ const fetchRSVPData = async () => {
+  try {
+    setIsLoading(true);
 
-      if (!response.ok) throw new Error("Failed to fetch data");
+    // 1️⃣ Get participants for this event
+    const { data: participants, error: pError } = await supabase
+      .from("participants")
+      .select(`
+        participant_id,
+        full_name,
+        phone_number,
+        uploaded_at,
+        event_id,
+        events (
+          event_name
+        )
+      `)
+      .eq("event_id", eventId);
 
-      const data = await response.json();
-      const formattedData = data.records.map((record) => {
-        // Normalize RSVP Status
-        let status = record.fields["RSVP Status"] || "Pending";
-        if (status.toLowerCase() === "yes") status = "Confirmed";
-        else if (status.toLowerCase() === "no") status = "Declined";
-        else if (status.toLowerCase() === "maybe") status = "Pending";
+    if (pError) throw pError;
+
+    // 2️⃣ For each participant, fetch RSVP + document uploads
+    const results = await Promise.all(
+      participants.map(async (p) => {
+        // Latest conversation
+        const { data: conversation } = await supabase
+          .from("conversation_results")
+          .select("rsvp_status, number_of_guests, dietary_preferences, last_updated, upload_id")
+          .eq("participant_id", p.participant_id)
+          .order("last_updated", { ascending: false })
+          .limit(1);
+
+        const conv = conversation?.[0];
+        let status = conv?.rsvp_status || "Maybe";
+
+        // 🔥 Fetch uploaded document (if exists)
+        const { data: uploads } = await supabase
+          .from("uploads")
+          .select("document_url")
+          .eq("participant_id", p.participant_id)
+          .limit(1);
+
+        const doc = uploads?.[0];
 
         return {
-          id: record.id,
-          fullName: record.fields["Full Name"] || "N/A",
-          phoneNumber: record.fields["Phone Number"] || "N/A",
+          id: p.participant_id,
+          fullName: p.full_name,
+          phoneNumber: p.phone_number,
           rsvpStatus: status,
-          numberOfGuests: record.fields["Number of Guests"] || 0,
-          proofUploaded: record.fields["Proof Uploaded"] || false,
-          documentUpload: record.fields["Document Upload"] || null,
-          eventName: record.fields["Event Name"] || "N/A",
-          timestamp: record.fields["Timestamp"] || new Date().toISOString(),
+          numberOfGuests: conv?.number_of_guests || 0,
+          dietaryPreferences: conv?.dietary_preferences || "None",
+          proofUploaded: !!doc,
+          documentUpload: doc
+            ? [{ url: doc.document_url, filename: doc.document_type || "Document" }]
+            : null,
+          eventName: p.events?.event_name || "N/A",
+          timestamp: conv?.last_updated || p.uploaded_at,
         };
-      });
+      })
+    );
 
-      setRsvpData(formattedData);
-    } catch (error) {
-      console.error("Error fetching RSVP data:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    setRsvpData(results.filter((r) => r !== null));
+  } catch (error) {
+    console.error("Error fetching RSVP data:", error);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
+
 
   const filterData = () => {
     let filtered = rsvpData;
@@ -93,10 +131,10 @@ const RSVPTable = () => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case "Confirmed":
+      case "Yes":
         return <CheckCircle size={16} className="status-icon confirmed" />;
-      case "Declined":
-        return <XCircle size={16} className="status-icon declined" />;
+      case "No":
+        return <XCircle size={16} className="status-icon declined" />
       default:
         return <Clock size={16} className="status-icon pending" />;
     }
@@ -144,9 +182,9 @@ const RSVPTable = () => {
           className="status-filter"
         >
           <option value="all">All Status</option>
-          <option value="confirmed">Confirmed</option>
-          <option value="pending">Pending</option>
-          <option value="declined">Declined</option>
+          <option value="Yes">Yes</option>
+          <option value="Maybe">Maybe</option>
+          <option value="No">No</option>
         </select>
       </div>
 
@@ -159,7 +197,7 @@ const RSVPTable = () => {
               <th>Phone Number</th>
               <th>RSVP Status</th>
               <th>Guests</th>
-              <th>Proof</th>
+              {/* <th>Proof</th> */}
               <th>Document Upload</th>
               <th>Event</th>
               <th>Date</th>
@@ -196,7 +234,7 @@ const RSVPTable = () => {
                     </div>
                   </td>
                   <td className="guests-cell">{item.numberOfGuests}</td>
-                  <td>
+                  {/* <td>
                     <div className="proof-cell">
                       {item.proofUploaded ? (
                         <div className="proof-uploaded">
@@ -207,22 +245,21 @@ const RSVPTable = () => {
                         <span className="proof-missing">No</span>
                       )}
                     </div>
-                  </td>
+                  </td> */}
                   <td>
-                    {item.documentUpload ? (
-                      <a
-                        href={item.documentUpload[0]?.url || "#"}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="doc-link"
-                      >
-                        <FileText size={14} />{" "}
-                        {item.documentUpload[0]?.filename || "View"}
-                      </a>
-                    ) : (
-                      <span className="no-doc">No file</span>
-                    )}
-                  </td>
+  {item.proofUploaded ? (
+    <button
+      className="doc-link"
+      onClick={() => navigate(`/document-viewer/${item.id}`)}
+    >
+      <FileText size={14} />
+      View
+    </button>
+  ) : (
+    <span className="no-doc">No file</span>
+  )}
+</td>
+
                   <td className="event-cell">{item.eventName}</td>
                   <td className="date-cell">
                     <Calendar size={14} />
@@ -242,35 +279,59 @@ const RSVPTable = () => {
           <span className="stat-value">{filteredData.length}</span>
         </div>
         <div className="stat-item">
-          <span className="stat-label">Confirmed:</span>
+          <span className="stat-label">Yes:</span>
           <span className="stat-value confirmed">
-            {
-              filteredData.filter((item) => item.rsvpStatus === "Confirmed")
-                .length
-            }
+            {filteredData.filter((item) => item.rsvpStatus === "Yes").length}
           </span>
         </div>
         <div className="stat-item">
-          <span className="stat-label">Pending:</span>
+          <span className="stat-label">Maybe:</span>
           <span className="stat-value pending">
-            {
-              filteredData.filter((item) => item.rsvpStatus === "Pending")
-                .length
-            }
+            {filteredData.filter((item) => item.rsvpStatus === "Maybe").length}
           </span>
         </div>
         <div className="stat-item">
-          <span className="stat-label">Declined:</span>
+          <span className="stat-label">No:</span>
           <span className="stat-value declined">
-            {
-              filteredData.filter((item) => item.rsvpStatus === "Declined")
-                .length
-            }
+            {filteredData.filter((item) => item.rsvpStatus === "No").length}
           </span>
         </div>
+        
       </div>
+
+   {/* ✅ Retry Batch Call Button */}
+      <div className="retry-batch-container">
+        <button
+          className="retry-batch-btn"
+          onClick={async () => {
+            try {
+              const confirmRetry = window.confirm(
+                "Do you want to retry the batch call for this event?"
+              );
+              if (!confirmRetry) return;
+
+              const response = await fetch(
+                `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/retry-batch`,
+                { method: "POST" }
+              );
+
+              if (!response.ok) throw new Error("Retry batch call failed");
+
+              alert("✅ Retry batch call started successfully!");
+            } catch (error) {
+              console.error("Error retrying batch call:", error);
+              alert("❌ Failed to start retry batch call.");
+            }
+          }}
+        >
+           Retry Batch Call
+        </button>
+      </div>      
     </div>
+
+    
   );
+  
 };
 
 export default RSVPTable;

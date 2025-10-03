@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Calendar, BarChart3, User, Plus } from 'lucide-react'; // ✅ Added Plus icon
+import { Menu, X, Calendar, LogOut,BarChart3, User, Plus } from 'lucide-react'; // ✅ Added Plus icon
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import '../styles/navbar.css';
 

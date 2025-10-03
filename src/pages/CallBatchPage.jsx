@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Phone, Users, ArrowLeft, Loader2, CheckCircle } from 'lucide-react';
+import { supabase } from '../config/supabaseClient';
+import RSVPTable from '../components/RSVPTable';
 
 const CallBatchPage = () => {
   const { eventId } = useParams();
@@ -9,30 +11,134 @@ const CallBatchPage = () => {
   const [loading, setLoading] = useState(true);
   const [callInProgress, setCallInProgress] = useState(false);
   const [callResult, setCallResult] = useState(null);
+  const [hasConversations, setHasConversations] = useState(false);
 
   useEffect(() => {
     fetchEventData();
   }, [eventId]);
 
+useEffect(() => {
+  if (hasConversations) {
+    navigate(`/dashboard/${eventId}`);
+  }
+}, [hasConversations, navigate, eventId]);
+
+
+
   const fetchEventData = async () => {
-    try {
+  try {
     const res = await fetch(`http://localhost:5000/api/events/${eventId}`);
     if (!res.ok) throw new Error("Failed to fetch event");
     const data = await res.json();
-    console.log(data);
+    console.log('event API:', data);
+
+    const participants = data.participants || [];
+    console.log("participants raw:", participants);
 
     setEvent({
       id: data.event_id,
       name: data.event_name,
-      participants: data.participants || [] // <-- make sure backend returns participants
+      participants
     });
+
+    const participantIds = participants.map(p => p.participant_id);
+    console.log('participantIds:', participantIds);
+
+    if (participantIds.length > 0) {
+      const { data: conversations, error } = await supabase
+        .from("conversation_results")
+        .select("result_id")
+        .in("participant_id", participantIds)
+        .limit(1);
+
+      if (error) throw error;
+      setHasConversations(conversations?.length > 0);
+    } else {
+      setHasConversations(false);
+    }
+
   } catch (error) {
     console.error("Error fetching event data:", error);
   } finally {
     setLoading(false);
   }
-  };
+};
 
+
+
+  if (loading) {
+    return (
+      <div style={{
+        maxWidth: '1200px',
+        margin: '0 auto',
+        padding: '2rem 1rem',
+        minHeight: 'calc(100vh - 64px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1rem',
+          color: '#6b7280'
+        }}>
+          <div className="loading-spinner"></div>
+          <p>Loading event data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!event) {
+    return (
+      <div style={{
+        maxWidth: '1200px',
+        margin: '0 auto',
+        padding: '2rem 1rem',
+        minHeight: 'calc(100vh - 64px)'
+      }}>
+        <button 
+          onClick={() => navigate('/events')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            background: 'none',
+            border: 'none',
+            color: '#6b7280',
+            fontSize: '0.875rem',
+            fontWeight: '500',
+            cursor: 'pointer',
+            padding: '0.5rem 0',
+            marginBottom: '1rem',
+            transition: 'color 0.2s ease'
+          }}
+          onMouseEnter={(e) => e.target.style.color = '#000000'}
+          onMouseLeave={(e) => e.target.style.color = '#6b7280'}
+        >
+          <ArrowLeft size={20} />
+          Back to Events
+        </button>
+        
+        <div style={{
+          textAlign: 'center',
+          padding: '3rem',
+          color: '#6b7280'
+        }}>
+          <h2 style={{ color: '#dc2626', marginBottom: '1rem' }}>Event Not Found</h2>
+          <p style={{ marginBottom: '2rem' }}>The requested event could not be found.</p>
+        </div>
+      </div>
+    );
+  }
+if (hasConversations) {
+  navigate(`/dashboard/${eventId}`, { replace: true });
+  return null;
+}
+
+// inside CallBatchPage component, before return
   const handleStartCallBatch = async () => {
   if (!event || !event.participants?.length) return;
 
@@ -142,6 +248,7 @@ const CallBatchPage = () => {
       </div>
     );
   }
+  
 
   return (
     <div style={{
@@ -247,6 +354,7 @@ const CallBatchPage = () => {
               <span>{callResult.message}</span>
             </div>
           )}
+          
 
           <button
             onClick={handleStartCallBatch}
@@ -307,13 +415,25 @@ const CallBatchPage = () => {
           )}
         </div>
       </div>
+{/* 
+      <div style={{ marginTop: "3rem" }}>
+        <h2 style={{
+          fontSize: "1.5rem",
+          fontWeight: "600",
+          marginBottom: "1rem",
+          color: "#374151"
+        }}>
+          RSVP Dashboard
+        </h2>
+        <RSVPTable eventId={eventId} />
+      </div>
 
       <style jsx>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
-      `}</style>
+      `}</style> */}
     </div>
   );
 };
