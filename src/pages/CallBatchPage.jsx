@@ -27,7 +27,7 @@ useEffect(() => {
 
   const fetchEventData = async () => {
   try {
-    const res = await fetch(`http://localhost:5000/api/events/${eventId}`);
+    const res = await fetch(`https://rsvp-aiagent-backend.onrender.com/api/events/${eventId}`);
     if (!res.ok) throw new Error("Failed to fetch event");
     const data = await res.json();
     console.log('event API:', data);
@@ -146,7 +146,7 @@ if (hasConversations) {
   setCallResult(null);
 
   try {
-    const res = await fetch(`http://localhost:5000/api/events/${event.id}/call-batch`, {
+    const res = await fetch(`https://rsvp-aiagent-backend.onrender.com/api/events/${event.id}/call-batch`, {
       method: 'POST',
     });
 

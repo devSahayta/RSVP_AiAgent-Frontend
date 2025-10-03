@@ -4,14 +4,14 @@ export const addUserToBackend = async (user) => {
     const userName = user.name || (user.email ? user.email.split('@')[0] : "Unknown");
 
     // Check if user exists
-    const check = await fetch(`http://localhost:5000/api/users/${user.id}`);
+    const check = await fetch(`https://rsvp-aiagent-backend.onrender.com/api/users/${user.id}`);
     if (check.ok) {
       const existingUser = await check.json();
       if (existingUser) return existingUser; // already exists
     }
 
     // Add user
-    const response = await fetch("http://localhost:5000/api/users", {
+    const response = await fetch("https://rsvp-aiagent-backend.onrender.com/api/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

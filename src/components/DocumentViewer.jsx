@@ -23,7 +23,7 @@ const DocumentViewer = ({ onBack }) => {
 
         // 👇 Replace this URL with your actual backend endpoint
         const response = await fetch(
-          `http://localhost:5000/api/uploads/${participantId}`
+          `https://rsvp-aiagent-backend.onrender.com/api/uploads/${participantId}`
         );
         if (!response.ok) {
           throw new Error('Failed to fetch documents');

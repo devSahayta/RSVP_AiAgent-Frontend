@@ -37,7 +37,7 @@ const DocumentUploadForm = () => {
 const [editingData, setEditingData] = useState({});
 
   // const participantId = "dc3eb413-e70d-4e0c-8174-52f506830b5d"; // Get this from URL params in real app
-  const shareLink = `http://localhost:5173/document-upload/${participantId}`;
+  const shareLink = `https://rsvp-ai-agent-frontend.vercel.app/document-upload/${participantId}`;
 
   // Validation patterns
   const validationPatterns = {
@@ -65,7 +65,7 @@ const [editingData, setEditingData] = useState({});
   const fetchExistingData = async () => {
     try {
       setIsLoadingData(true);
-      const response = await fetch(`http://localhost:5000/api/uploads/${participantId}`);
+      const response = await fetch(`https://rsvp-aiagent-backend.onrender.com/api/uploads/${participantId}`);
       
       if (response.ok) {
         const result = await response.json();
@@ -360,7 +360,7 @@ const saveEdit = async (uploadId) => {
       payload.append('file', editingData[uploadId].file);
     }
 
-    const response = await fetch(`http://localhost:5000/api/uploads/${uploadId}`, {
+    const response = await fetch(`https://rsvp-aiagent-backend.onrender.com/api/uploads/${uploadId}`, {
       method: 'PUT',
       body: payload,
     });
@@ -737,7 +737,7 @@ const saveEdit = async (uploadId) => {
         return;
       }
 
-      const response = await fetch("http://localhost:5000/api/uploads", {
+      const response = await fetch("https://rsvp-aiagent-backend.onrender.com/api/uploads", {
         method: "POST",
         body: payload,
       });

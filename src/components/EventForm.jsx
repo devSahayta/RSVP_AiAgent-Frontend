@@ -56,7 +56,7 @@ if (!user?.id) {
         payload.append("dataset", formData.dataset);
       }
 
-      const response = await fetch("http://localhost:5000/api/events", {
+      const response = await fetch("https://rsvp-aiagent-backend.onrender.com/api/events", {
         method: "POST",
         body: payload
       });
