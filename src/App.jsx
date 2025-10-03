@@ -56,7 +56,7 @@ import DocumentViewer from "./components/DocumentViewer";
                     <EventsPage />
                   </PrivateRoute>
                 }
-              />
+              />       
               <Route
                 path="/createEvent"
                 element={
