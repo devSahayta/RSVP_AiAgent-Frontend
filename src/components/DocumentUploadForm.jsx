@@ -1014,8 +1014,8 @@ const saveEdit = async (uploadId) => {
               <label>RSVP Status</label>
               <input
                 type="text"
-                value={conversationForm.RSVP_table}
-                onChange={(e) => handleConversationChange('RSVP_table', e.target.value)}
+                value={conversationForm.rsvp_status}
+                onChange={(e) => handleConversationChange('rsvp_status', e.target.value)}
                 placeholder="e.g., Confirmed / Declined / Pending"
               />
             </div>
