@@ -35,11 +35,11 @@ const RSVPTable = ({ eventId: propEventId }) => {
   }, [rsvpData, searchTerm, statusFilter]);
 
   // 🔥 Fetch participants + conversations from Supabase
- const fetchRSVPData = async () => {
+const fetchRSVPData = async () => {
   try {
     setIsLoading(true);
 
-    // 1️⃣ Get participants for this event
+    // ✅ Step 1: Fetch all participants for this event
     const { data: participants, error: pError } = await supabase
       .from("participants")
       .select(`
@@ -56,36 +56,48 @@ const RSVPTable = ({ eventId: propEventId }) => {
 
     if (pError) throw pError;
 
-    // 2️⃣ For each participant, fetch RSVP + document uploads
+    if (!participants || participants.length === 0) {
+      setRsvpData([]);
+      return;
+    }
+
+    // ✅ Step 2: For each participant, fetch their latest conversation
     const results = await Promise.all(
       participants.map(async (p) => {
-        // Latest conversation
-        const { data: conversation } = await supabase
+        // ✅ Fixed query syntax (order must be called before limit)
+        const { data: conversation, error: convError } = await supabase
           .from("conversation_results")
-          .select("rsvp_status, number_of_guests, dietary_preferences, last_updated, upload_id")
+          .select("rsvp_status, number_of_guests, last_updated, upload_id, notes")
           .eq("participant_id", p.participant_id)
-          .order("last_updated", { ascending: false })
+          .order("last_updated", { ascending: false }) // ✅ Correct order syntax
           .limit(1);
 
-        const conv = conversation?.[0];
-        let status = conv?.rsvp_status || "Maybe";
+        if (convError) {
+          console.error(`Conversation fetch error for ${p.participant_id}:`, convError);
+          return null;
+        }
 
-        // 🔥 Fetch uploaded document (if exists)
-        const { data: uploads } = await supabase
+        const conv = conversation?.[0] || {};
+
+        // ✅ Step 3: Fetch document upload (if any)
+        const { data: uploads, error: uError } = await supabase
           .from("uploads")
-          .select("document_url")
+          .select("document_url, document_type")
           .eq("participant_id", p.participant_id)
           .limit(1);
 
-        const doc = uploads?.[0];
+        if (uError) console.error(`Upload fetch error for ${p.participant_id}:`, uError);
+
+        const doc = uploads?.[0] || null;
 
         return {
           id: p.participant_id,
-          fullName: p.full_name,
-          phoneNumber: p.phone_number,
-          rsvpStatus: status,
+          fullName: p.full_name || "N/A",
+          phoneNumber: p.phone_number || "-",
+          rsvpStatus: conv?.rsvp_status || "Maybe",
           numberOfGuests: conv?.number_of_guests || 0,
-          dietaryPreferences: conv?.dietary_preferences || "None",
+          // dietaryPreferences: conv?.dietary_preferences || "None",
+          notes: conv?.notes || "-",
           proofUploaded: !!doc,
           documentUpload: doc
             ? [{ url: doc.document_url, filename: doc.document_type || "Document" }]
@@ -96,7 +108,10 @@ const RSVPTable = ({ eventId: propEventId }) => {
       })
     );
 
-    setRsvpData(results.filter((r) => r !== null));
+    // ✅ Filter nulls and set data
+    const filteredResults = results.filter((r) => r !== null);
+    setRsvpData(filteredResults);
+
   } catch (error) {
     console.error("Error fetching RSVP data:", error);
   } finally {
@@ -192,17 +207,17 @@ const RSVPTable = ({ eventId: propEventId }) => {
       <div className="table-wrapper">
         <table className="rsvp-table">
           <thead>
-            <tr>
-              <th>Full Name</th>
-              <th>Phone Number</th>
-              <th>RSVP Status</th>
-              <th>Guests</th>
-              {/* <th>Proof</th> */}
-              <th>Document Upload</th>
-              <th>Event</th>
-              <th>Date</th>
-            </tr>
-          </thead>
+  <tr>
+    <th>Full Name</th>
+    <th>Phone Number</th>
+    <th>RSVP Status</th>
+    <th>Guests</th>
+    <th>Document Upload</th>
+    <th>Event</th>
+    <th>Date</th>
+    <th>Notes</th> {/* ✅ Added */}
+  </tr>
+</thead>
           <tbody>
             {filteredData.length === 0 ? (
               <tr>
@@ -265,6 +280,15 @@ const RSVPTable = ({ eventId: propEventId }) => {
                     <Calendar size={14} />
                     {formatDate(item.timestamp)}
                   </td>
+
+                   {/* ✅ Notes column display */}
+        <td className="notes-cell">
+          {item.notes && item.notes !== "-" ? (
+            <span className="notes-text">{item.notes}</span>
+          ) : (
+            <span className="no-notes">—</span>
+          )}
+        </td>
                 </tr>
               ))
             )}
