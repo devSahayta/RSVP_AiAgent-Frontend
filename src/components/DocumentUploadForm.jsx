@@ -75,7 +75,7 @@ const [conversationForm, setConversationForm] = useState({
   const fetchExistingData = async () => {
     try {
       setIsLoadingData(true);
-      const response = await fetch(`https://rsvp-ai-agent-frontend.vercel.app/api/uploads/${participantId}`);
+      const response = await fetch(`https://rsvp-aiagent-backend.onrender.com/api/uploads/${participantId}`);
       
       if (response.ok) {
         const result = await response.json();
@@ -99,7 +99,7 @@ const [conversationForm, setConversationForm] = useState({
 
  const fetchConversationData = async () => {
   try {
-    const response = await fetch(`https://rsvp-ai-agent-frontend.vercel.app/api/uploads/conversation/${participantId}`);
+    const response = await fetch(`https://rsvp-aiagent-backend.onrender.com/api/uploads/conversation/${participantId}`);
     if (response.ok) {
       const data = await response.json();
       setConversationData(data);
@@ -127,7 +127,7 @@ const handleConversationChange = (field, value) => {
 // ✅ Save conversation edit (no popup)
 const saveConversationEdit = async () => {
   try {
-    const response = await fetch(`https://rsvp-ai-agent-frontend.vercel.app/api/uploads/conversation/${participantId}`, {
+    const response = await fetch(`https://rsvp-aiagent-backend.onrender.com/api/uploads/conversation/${participantId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(conversationForm),
@@ -419,7 +419,7 @@ const saveEdit = async (uploadId) => {
       payload.append('file', editingData[uploadId].file);
     }
 
-    const response = await fetch(`https://rsvp-ai-agent-frontend.vercel.app/api/uploads/${uploadId}`, {
+    const response = await fetch(`https://rsvp-aiagent-backend.onrender.com/api/uploads/${uploadId}`, {
       method: 'PUT',
       body: payload,
     });
@@ -796,7 +796,7 @@ const saveEdit = async (uploadId) => {
         return;
       }
 
-      const response = await fetch("https://rsvp-ai-agent-frontend.vercel.app/api/uploads", {
+      const response = await fetch("https://rsvp-aiagent-backend.onrender.com/api/uploads", {
         method: "POST",
         body: payload,
       });
