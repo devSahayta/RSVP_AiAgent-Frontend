@@ -36,8 +36,17 @@ const DocumentUploadForm = () => {
   const [editMode, setEditMode] = useState({});
 const [editingData, setEditingData] = useState({});
 
+const [conversationData, setConversationData] = useState(null);
+const [isEditingConversation, setIsEditingConversation] = useState(false);
+const [conversationForm, setConversationForm] = useState({
+  RSVP_table: '',
+  number_of_guests: '',
+  notes: ''
+});
+
+
   // const participantId = "dc3eb413-e70d-4e0c-8174-52f506830b5d"; // Get this from URL params in real app
-  const shareLink = `https://rsvp-ai-agent-frontend.vercel.app/document-upload/${participantId}`;
+  const shareLink = `http://localhost:5173/document-upload/${participantId}`;
 
   // Validation patterns
   const validationPatterns = {
@@ -60,12 +69,13 @@ const [editingData, setEditingData] = useState({});
   // Fetch existing uploads on component mount
   useEffect(() => {
     fetchExistingData();
+      fetchConversationData();
   }, []);
 
   const fetchExistingData = async () => {
     try {
       setIsLoadingData(true);
-      const response = await fetch(`https://rsvp-aiagent-backend.onrender.com/api/uploads/${participantId}`);
+      const response = await fetch(`http://localhost:5000/api/uploads/${participantId}`);
       
       if (response.ok) {
         const result = await response.json();
@@ -86,6 +96,55 @@ const [editingData, setEditingData] = useState({});
       setIsLoadingData(false);
     }
   };
+
+ const fetchConversationData = async () => {
+  try {
+    const response = await fetch(`http://localhost:5000/api/uploads/conversation/${participantId}`);
+    if (response.ok) {
+      const data = await response.json();
+      setConversationData(data);
+      setConversationForm({
+        rsvp_status: data.rsvp_status || '',
+        number_of_guests: data.number_of_guests || '',
+        notes: data.notes || ''
+      });
+    } else {
+      console.warn('No conversation data found for this participant');
+    }
+  } catch (error) {
+    console.error('Error fetching conversation data:', error);
+  }
+};
+
+// ✅ Handle form input changes
+const handleConversationChange = (field, value) => {
+  setConversationForm((prev) => ({
+    ...prev,
+    [field]: value,
+  }));
+};
+
+// ✅ Save conversation edit (no popup)
+const saveConversationEdit = async () => {
+  try {
+    const response = await fetch(`http://localhost:5000/api/uploads/conversation/${participantId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(conversationForm),
+    });
+
+    if (response.ok) {
+      // Just refresh and close edit mode (no popup)
+      setIsEditingConversation(false);
+      fetchConversationData();
+    } else {
+      console.error('Update failed: Unable to update conversation details.');
+    }
+  } catch (error) {
+    console.error('Error updating conversation:', error);
+  }
+};
+
 
   const populateFormWithExistingData = (uploads) => {
     if (!uploads || uploads.length === 0) {
@@ -360,7 +419,7 @@ const saveEdit = async (uploadId) => {
       payload.append('file', editingData[uploadId].file);
     }
 
-    const response = await fetch(`https://rsvp-aiagent-backend.onrender.com/api/uploads/${uploadId}`, {
+    const response = await fetch(`http://localhost:5000/api/uploads/${uploadId}`, {
       method: 'PUT',
       body: payload,
     });
@@ -737,7 +796,7 @@ const saveEdit = async (uploadId) => {
         return;
       }
 
-      const response = await fetch("https://rsvp-aiagent-backend.onrender.com/api/uploads", {
+      const response = await fetch("http://localhost:5000/api/uploads", {
         method: "POST",
         body: payload,
       });
@@ -935,6 +994,78 @@ const saveEdit = async (uploadId) => {
               </>
             )}
           </section>
+
+          {/* Conversation Details Section */}
+<section className="form-section">
+  <div className="section-header">
+    <Users className="section-icon" />
+    <div>
+      <h2>Conversation Details</h2>
+      <p>View or update RSVP and guest details</p>
+    </div>
+  </div>
+
+  {conversationData ? (
+    <div className="conversation-details">
+      {isEditingConversation ? (
+        <div className="edit-conversation-form">
+          <div className="form-grid">
+            <div className="form-group">
+              <label>RSVP Status</label>
+              <input
+                type="text"
+                value={conversationForm.RSVP_table}
+                onChange={(e) => handleConversationChange('RSVP_table', e.target.value)}
+                placeholder="e.g., Confirmed / Declined / Pending"
+              />
+            </div>
+            <div className="form-group">
+              <label>Number of Guests</label>
+              <input
+                type="number"
+                value={conversationForm.number_of_guests}
+                onChange={(e) => handleConversationChange('number_of_guests', e.target.value)}
+                placeholder="e.g., 2"
+              />
+            </div>
+          </div>
+          <div className="form-group">
+            <label>Notes</label>
+            <textarea
+              value={conversationForm.notes}
+              onChange={(e) => handleConversationChange('notes', e.target.value)}
+              placeholder="Additional notes or preferences"
+            />
+          </div>
+          <div className="edit-actions">
+            <button type="button" className="save-edit-btn" onClick={saveConversationEdit}>
+              <Check size={16} /> Save
+            </button>
+            <button type="button" className="cancel-edit-btn" onClick={() => setIsEditingConversation(false)}>
+              <X size={16} /> Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="conversation-view">
+          <p><strong>RSVP Status:</strong> {conversationData.rsvp_status || 'Not provided'}</p>
+          <p><strong>Number of Guests:</strong> {conversationData.number_of_guests || 'Not provided'}</p>
+          <p><strong>Notes:</strong> {conversationData.notes || 'No notes added'}</p>
+          <button
+            type="button"
+            className="edit-btn"
+            onClick={() => setIsEditingConversation(true)}
+          >
+            Edit
+          </button>
+        </div>
+      )}
+    </div>
+  ) : (
+    <p className="no-data">No conversation details found for this participant.</p>
+  )}
+</section>
+
 
           {/* Travel Section */}
           <section className="form-section">
