@@ -12,6 +12,7 @@ const DocumentUploadForm = () => {
   const [participants, setParticipants] = useState([]);
   const [existingUploads, setExistingUploads] = useState([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
+   const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData] = useState({
     primaryContact: {
       fullName: '',
@@ -46,7 +47,7 @@ const [conversationForm, setConversationForm] = useState({
 
 
   // const participantId = "dc3eb413-e70d-4e0c-8174-52f506830b5d"; // Get this from URL params in real app
-  const shareLink = `https://rsvp-ai-agent-frontend.vercel.app/document-upload/${participantId}`;
+  const shareLink = `http://localhost:5173/document-upload/${participantId}`;
 
   // Validation patterns
   const validationPatterns = {
@@ -74,8 +75,8 @@ const [conversationForm, setConversationForm] = useState({
 
   const fetchExistingData = async () => {
     try {
-      setIsLoadingData(true);
-      const response = await fetch(`https://rsvp-aiagent-backend.onrender.com/api/uploads/${participantId}`);
+      setIsLoading(true);
+      const response = await fetch(`http://localhost:5000/api/uploads/${participantId}`);
       
       if (response.ok) {
         const result = await response.json();
@@ -93,13 +94,13 @@ const [conversationForm, setConversationForm] = useState({
     } catch (error) {
       console.error("Error fetching existing data:", error);
     } finally {
-      setIsLoadingData(false);
+      setIsLoading(false);
     }
   };
 
  const fetchConversationData = async () => {
   try {
-    const response = await fetch(`https://rsvp-aiagent-backend.onrender.com/api/uploads/conversation/${participantId}`);
+    const response = await fetch(`http://localhost:5000/api/uploads/conversation/${participantId}`);
     if (response.ok) {
       const data = await response.json();
       setConversationData(data);
@@ -127,7 +128,7 @@ const handleConversationChange = (field, value) => {
 // ✅ Save conversation edit (no popup)
 const saveConversationEdit = async () => {
   try {
-    const response = await fetch(`https://rsvp-aiagent-backend.onrender.com/api/uploads/conversation/${participantId}`, {
+    const response = await fetch(`http://localhost:5000/api/uploads/conversation/${participantId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(conversationForm),
@@ -419,7 +420,7 @@ const saveEdit = async (uploadId) => {
       payload.append('file', editingData[uploadId].file);
     }
 
-    const response = await fetch(`https://rsvp-aiagent-backend.onrender.com/api/uploads/${uploadId}`, {
+    const response = await fetch(`http://localhost:5000/api/uploads/${uploadId}`, {
       method: 'PUT',
       body: payload,
     });
@@ -796,7 +797,7 @@ const saveEdit = async (uploadId) => {
         return;
       }
 
-      const response = await fetch("https://rsvp-aiagent-backend.onrender.com/api/uploads", {
+      const response = await fetch("http://localhost:5000/api/uploads", {
         method: "POST",
         body: payload,
       });
@@ -820,12 +821,12 @@ const saveEdit = async (uploadId) => {
     }
   };
 
-  if (isLoadingData) {
+    if (isLoading) {
     return (
-      <div className="loading-container">
-        <div className="loading-spinner">
-          <Shield className="animate-spin" size={48} />
-          <p>Loading existing data...</p>
+      <div className="table-container">
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Loading RSVP data...</p>
         </div>
       </div>
     );
