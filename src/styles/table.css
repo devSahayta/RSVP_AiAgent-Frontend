@@ -166,6 +166,8 @@
   padding: 2rem;
 }
 
+
+
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -174,6 +176,16 @@
   padding: 3rem;
   gap: 1rem;
   color: #6b7280;
+}
+.call-status-cell.completed {
+  color: green;
+  font-weight: 500;
+}
+.call-status-cell.pending {
+  color: orange;
+}
+.call-status-cell.failed {
+  color: red;
 }
 
 .table-stats {

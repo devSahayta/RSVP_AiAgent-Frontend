@@ -12,7 +12,7 @@ import {
   FileText,
 } from "lucide-react";
 import "../styles/table.css";
-import { supabase } from "../config/supabaseClient"; // 🔥 Import supabase client
+import { supabase } from "../config/supabaseClient";
 import { useParams, useNavigate } from "react-router-dom";
 
 const RSVPTable = ({ eventId: propEventId }) => {
@@ -24,103 +24,126 @@ const RSVPTable = ({ eventId: propEventId }) => {
   const { eventId: paramEventId } = useParams();
   const eventId = propEventId || paramEventId;
   const navigate = useNavigate();
-
+  const [batchStatus, setBatchStatus] = useState(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [showStatusPopup, setShowStatusPopup] = useState(false);
+  const [retryStatus, setRetryStatus] = useState({ success: false, message: '' });
 
   useEffect(() => {
-    fetchRSVPData();
+    if (!eventId) return;
+
+    const autoSync = async () => {
+      try {
+        await fetchRSVPData();
+
+        const res = await fetch(`https://rsvp-aiagent-backend.onrender.com/api/events/${eventId}/sync-batch-status`, {
+          method: "POST",
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          console.log(`✅ Auto-synced ${data.updated}/${data.total} participants`);
+          await fetchRSVPData();
+        } else {
+          console.warn("⚠️ Sync batch status failed");
+        }
+      } catch (err) {
+        console.error("Auto-sync error:", err);
+      }
+    };
+
+    autoSync();
+
+    const interval = setInterval(() => {
+      autoSync();
+    }, 60000);
+
+    return () => clearInterval(interval);
   }, [eventId]);
 
   useEffect(() => {
     filterData();
   }, [rsvpData, searchTerm, statusFilter]);
 
-  // 🔥 Fetch participants + conversations from Supabase
-const fetchRSVPData = async () => {
-  try {
-    setIsLoading(true);
+  const fetchRSVPData = async () => {
+    try {
+      setIsLoading(true);
 
-    // ✅ Step 1: Fetch all participants for this event
-    const { data: participants, error: pError } = await supabase
-      .from("participants")
-      .select(`
-        participant_id,
-        full_name,
-        phone_number,
-        uploaded_at,
-        event_id,
-        events (
-          event_name
-        )
-      `)
-      .eq("event_id", eventId);
+      const { data: participants, error: pError } = await supabase
+        .from("participants")
+        .select(`
+          participant_id,
+          full_name,
+          phone_number,
+          uploaded_at,
+          event_id,
+          events (
+            event_name
+          )
+        `)
+        .eq("event_id", eventId);
 
-    if (pError) throw pError;
+      if (pError) throw pError;
 
-    if (!participants || participants.length === 0) {
-      setRsvpData([]);
-      return;
+      if (!participants || participants.length === 0) {
+        setRsvpData([]);
+        return;
+      }
+
+      const results = await Promise.all(
+        participants.map(async (p) => {
+          const { data: conversation, error: convError } = await supabase
+            .from("conversation_results")
+            .select("rsvp_status, number_of_guests, last_updated, upload_id, notes, call_status")
+            .eq("participant_id", p.participant_id)
+            .order("last_updated", { ascending: false })
+            .limit(1);
+
+          if (convError) {
+            console.error(`Conversation fetch error for ${p.participant_id}:`, convError);
+            return null;
+          }
+
+          const conv = conversation?.[0] || {};
+
+          const { data: uploads, error: uError } = await supabase
+            .from("uploads")
+            .select("document_url, document_type")
+            .eq("participant_id", p.participant_id)
+            .limit(1);
+
+          if (uError) console.error(`Upload fetch error for ${p.participant_id}:`, uError);
+
+          const doc = uploads?.[0] || null;
+
+          return {
+            id: p.participant_id,
+            fullName: p.full_name || "N/A",
+            phoneNumber: p.phone_number || "-",
+            rsvpStatus: conv?.rsvp_status || "Maybe",
+            numberOfGuests: conv?.number_of_guests || 0,
+            notes: conv?.notes || "-",
+            callStatus: conv?.call_status || "pending",
+            proofUploaded: !!doc,
+            documentUpload: doc
+              ? [{ url: doc.document_url, filename: doc.document_type || "Document" }]
+              : null,
+            eventName: p.events?.event_name || "N/A",
+            timestamp: conv?.last_updated || p.uploaded_at,
+          };
+        })
+      );
+
+      const filteredResults = results.filter((r) => r !== null);
+      setRsvpData(filteredResults);
+
+    } catch (error) {
+      console.error("Error fetching RSVP data:", error);
+    } finally {
+      setIsLoading(false);
     }
-
-    // ✅ Step 2: For each participant, fetch their latest conversation
-    const results = await Promise.all(
-      participants.map(async (p) => {
-        // ✅ Fixed query syntax (order must be called before limit)
-        const { data: conversation, error: convError } = await supabase
-          .from("conversation_results")
-          .select("rsvp_status, number_of_guests, last_updated, upload_id, notes")
-          .eq("participant_id", p.participant_id)
-          .order("last_updated", { ascending: false }) // ✅ Correct order syntax
-          .limit(1);
-
-        if (convError) {
-          console.error(`Conversation fetch error for ${p.participant_id}:`, convError);
-          return null;
-        }
-
-        const conv = conversation?.[0] || {};
-
-        // ✅ Step 3: Fetch document upload (if any)
-        const { data: uploads, error: uError } = await supabase
-          .from("uploads")
-          .select("document_url, document_type")
-          .eq("participant_id", p.participant_id)
-          .limit(1);
-
-        if (uError) console.error(`Upload fetch error for ${p.participant_id}:`, uError);
-
-        const doc = uploads?.[0] || null;
-
-        return {
-          id: p.participant_id,
-          fullName: p.full_name || "N/A",
-          phoneNumber: p.phone_number || "-",
-          rsvpStatus: conv?.rsvp_status || "Maybe",
-          numberOfGuests: conv?.number_of_guests || 0,
-          // dietaryPreferences: conv?.dietary_preferences || "None",
-          notes: conv?.notes || "-",
-          proofUploaded: !!doc,
-          documentUpload: doc
-            ? [{ url: doc.document_url, filename: doc.document_type || "Document" }]
-            : null,
-          eventName: p.events?.event_name || "N/A",
-          timestamp: conv?.last_updated || p.uploaded_at,
-        };
-      })
-    );
-
-    // ✅ Filter nulls and set data
-    const filteredResults = results.filter((r) => r !== null);
-    setRsvpData(filteredResults);
-
-  } catch (error) {
-    console.error("Error fetching RSVP data:", error);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-
-
+  };
 
   const filterData = () => {
     let filtered = rsvpData;
@@ -156,12 +179,13 @@ const fetchRSVPData = async () => {
   };
 
   const formatDate = (timestamp) => {
-    return new Date(timestamp).toLocaleDateString("en-US", {
+    return new Date(timestamp).toLocaleDateString("en-IN", {
       year: "numeric",
       month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: "Asia/Kolkata",
     });
   };
 
@@ -207,21 +231,22 @@ const fetchRSVPData = async () => {
       <div className="table-wrapper">
         <table className="rsvp-table">
           <thead>
-  <tr>
-    <th>Full Name</th>
-    <th>Phone Number</th>
-    <th>RSVP Status</th>
-    <th>Guests</th>
-    <th>Document Upload</th>
-    <th>Event</th>
-    <th>Date</th>
-    <th>Notes</th> {/* ✅ Added */}
-  </tr>
-</thead>
+            <tr>
+              <th>Full Name</th>
+              <th>Phone Number</th>
+              <th>RSVP Status</th>
+              <th>Guests</th>
+              <th>Document Upload</th>
+              <th>Event</th>
+              <th>Date</th>
+              <th>Notes</th>
+              <th>Call Status</th>
+            </tr>
+          </thead>
           <tbody>
             {filteredData.length === 0 ? (
               <tr>
-                <td colSpan={8} className="no-data">
+                <td colSpan={9} className="no-data">
                   No RSVP data found
                 </td>
               </tr>
@@ -249,46 +274,34 @@ const fetchRSVPData = async () => {
                     </div>
                   </td>
                   <td className="guests-cell">{item.numberOfGuests}</td>
-                  {/* <td>
-                    <div className="proof-cell">
-                      {item.proofUploaded ? (
-                        <div className="proof-uploaded">
-                          <Upload size={14} />
-                          <span>Yes</span>
-                        </div>
-                      ) : (
-                        <span className="proof-missing">No</span>
-                      )}
-                    </div>
-                  </td> */}
                   <td>
-  {item.proofUploaded ? (
-    <button
-      className="doc-link"
-      onClick={() => navigate(`/document-viewer/${item.id}`)}
-    >
-      <FileText size={14} />
-      View
-    </button>
-  ) : (
-    <span className="no-doc">No file</span>
-  )}
-</td>
-
+                    {item.proofUploaded ? (
+                      <button
+                        className="doc-link"
+                        onClick={() => navigate(`/document-viewer/${item.id}`)}
+                      >
+                        <FileText size={14} />
+                        View
+                      </button>
+                    ) : (
+                      <span className="no-doc">No file</span>
+                    )}
+                  </td>
                   <td className="event-cell">{item.eventName}</td>
                   <td className="date-cell">
                     <Calendar size={14} />
                     {formatDate(item.timestamp)}
                   </td>
-
-                   {/* ✅ Notes column display */}
-        <td className="notes-cell">
-          {item.notes && item.notes !== "-" ? (
-            <span className="notes-text">{item.notes}</span>
-          ) : (
-            <span className="no-notes">—</span>
-          )}
-        </td>
+                  <td className="notes-cell">
+                    {item.notes && item.notes !== "-" ? (
+                      <span className="notes-text">{item.notes}</span>
+                    ) : (
+                      <span className="no-notes">—</span>
+                    )}
+                  </td>
+                  <td className={`call-status-cell ${item.callStatus?.toLowerCase()}`}>
+                    {item.callStatus ? item.callStatus : "pending"}
+                  </td>
                 </tr>
               ))
             )}
@@ -320,42 +333,283 @@ const fetchRSVPData = async () => {
             {filteredData.filter((item) => item.rsvpStatus === "No").length}
           </span>
         </div>
-        
       </div>
 
-   {/* ✅ Retry Batch Call Button */}
-      <div className="retry-batch-container">
+      {/* Retry Batch Call Button */}
+      <div className="retry-batch-container" style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '8px',
+        marginTop: '24px',
+        padding: '0 16px',
+      }}>
         <button
           className="retry-batch-btn"
-          onClick={async () => {
-            try {
-              const confirmRetry = window.confirm(
-                "Do you want to retry the batch call for this event?"
-              );
-              if (!confirmRetry) return;
-
-              const response = await fetch(
-                `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/retry-batch`,
-                { method: "POST" }
-              );
-
-              if (!response.ok) throw new Error("Retry batch call failed");
-
-              alert("✅ Retry batch call started successfully!");
-            } catch (error) {
-              console.error("Error retrying batch call:", error);
-              alert("❌ Failed to start retry batch call.");
+          disabled={filteredData.length > 0 && filteredData.every(item => item.callStatus === "completed")}
+          style={{
+            padding: '12px 24px',
+            fontSize: '14px',
+            fontWeight: '600',
+            color: '#fff',
+            backgroundColor: filteredData.length > 0 && filteredData.every(item => item.callStatus === "completed") 
+              ? '#9ca3af' 
+              : '#000000',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: filteredData.length > 0 && filteredData.every(item => item.callStatus === "completed") 
+              ? 'not-allowed' 
+              : 'pointer',
+            transition: 'all 0.3s ease',
+            boxShadow: filteredData.length > 0 && filteredData.every(item => item.callStatus === "completed")
+              ? 'none'
+              : '0 2px 8px rgba(0, 0, 0, 0.2)',
+            width: '100%',
+            maxWidth: '300px',
+            opacity: filteredData.length > 0 && filteredData.every(item => item.callStatus === "completed") ? 0.6 : 1,
+          }}
+          onMouseEnter={(e) => {
+            if (!(filteredData.length > 0 && filteredData.every(item => item.callStatus === "completed"))) {
+              e.target.style.backgroundColor = '#1a1a1a';
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
             }
           }}
+          onMouseLeave={(e) => {
+            if (!(filteredData.length > 0 && filteredData.every(item => item.callStatus === "completed"))) {
+              e.target.style.backgroundColor = '#000000';
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.2)';
+            }
+          }}
+          onClick={() => setShowConfirmModal(true)}
         >
-           Retry Batch Call
+          Retry Batch Call
         </button>
-      </div>      
-    </div>
 
-    
+        <p className="retry-hint" style={{
+          marginTop: '8px',
+          fontSize: '13px',
+          color: filteredData.length > 0 && filteredData.every(item => item.callStatus === "completed")
+            ? '#10b981'
+            : '#f59e0b',
+          fontWeight: '500',
+          textAlign: 'center',
+          width: '100%',
+          maxWidth: '300px',
+        }}>
+          {filteredData.length > 0 && filteredData.every(item => item.callStatus === "completed")
+            ? "✅ All participants completed — retry not needed."
+            : filteredData.length > 0 
+              ? `⚠️ ${filteredData.filter(item => item.callStatus !== "completed").length} call(s) pending - Retry available`
+              : ""}
+        </p>
+      </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '16px',
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '400px',
+            width: '100%',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          }}>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: '#000',
+              marginBottom: '12px',
+            }}>
+              Retry Batch Call?
+            </h3>
+            <p style={{
+              fontSize: '14px',
+              color: '#6b7280',
+              lineHeight: '1.5',
+              marginBottom: '24px',
+            }}>
+              This will retry calls for {filteredData.filter(item => item.callStatus !== "completed").length} participant(s) who haven't completed their calls yet.
+            </p>
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              flexDirection: window.innerWidth < 400 ? 'column' : 'row',
+            }}>
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                disabled={isRetrying}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#374151',
+                  backgroundColor: 'white',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  cursor: isRetrying ? 'not-allowed' : 'pointer',
+                  opacity: isRetrying ? 0.5 : 1,
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isRetrying) {
+                    e.target.style.backgroundColor = '#f9fafb';
+                    e.target.style.borderColor = '#d1d5db';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isRetrying) {
+                    e.target.style.backgroundColor = 'white';
+                    e.target.style.borderColor = '#e5e7eb';
+                  }
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    setIsRetrying(true);
+                    const response = await fetch(
+                      `https://rsvp-aiagent-backend.onrender.com/api/events/${eventId}/retry-batch`,
+                      { method: "POST" }
+                    );
+
+                    if (!response.ok) throw new Error("Retry batch call failed");
+
+                    setShowConfirmModal(false);
+                    setRetryStatus({ 
+                      success: true, 
+                      message: '✅ Retry batch call started successfully!' 
+                    });
+                    setShowStatusPopup(true);
+                    await fetchRSVPData();
+                    
+                    setTimeout(() => setShowStatusPopup(false), 3000);
+                  } catch (error) {
+                    console.error("Error retrying batch call:", error);
+                    setShowConfirmModal(false);
+                    setRetryStatus({ 
+                      success: false, 
+                      message: '❌ Failed to start retry batch call.' 
+                    });
+                    setShowStatusPopup(true);
+                    
+                    setTimeout(() => setShowStatusPopup(false), 4000);
+                  } finally {
+                    setIsRetrying(false);
+                  }
+                }}
+                disabled={isRetrying}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: 'white',
+                  backgroundColor: isRetrying ? '#9ca3af' : '#000',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: isRetrying ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isRetrying) {
+                    e.target.style.backgroundColor = '#1a1a1a';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isRetrying) {
+                    e.target.style.backgroundColor = '#000';
+                  }
+                }}
+              >
+                {isRetrying ? 'Retrying...' : 'Confirm Retry'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Popup (Toast) */}
+      {showStatusPopup && (
+        <div style={{
+          position: 'fixed',
+          top: '24px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1001,
+          animation: 'slideDown 0.3s ease-out',
+        }}>
+          <div style={{
+            backgroundColor: retryStatus.success ? '#000' : '#dc2626',
+            color: 'white',
+            padding: '16px 24px',
+            borderRadius: '8px',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            minWidth: '320px',
+            maxWidth: '90vw',
+          }}>
+            <span style={{
+              fontSize: '14px',
+              fontWeight: '600',
+              flex: 1,
+            }}>
+              {retryStatus.message}
+            </span>
+            <button
+              onClick={() => setShowStatusPopup(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'white',
+                cursor: 'pointer',
+                fontSize: '18px',
+                padding: '0',
+                lineHeight: '1',
+                opacity: 0.8,
+              }}
+              onMouseEnter={(e) => e.target.style.opacity = '1'}
+              onMouseLeave={(e) => e.target.style.opacity = '0.8'}
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+          }
+        }
+      `}</style>
+    </div>
   );
-  
 };
 
 export default RSVPTable;

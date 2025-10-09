@@ -1,31 +1,41 @@
 // components/EventForm.jsx
-import React, { useState } from 'react';
-import { Upload, Calendar, Type, Check, AlertCircle, Download } from 'lucide-react';
-import '../styles/form.css';
+import React, { useState } from "react";
+import {
+  Upload,
+  Calendar,
+  Type,
+  Check,
+  AlertCircle,
+  Download,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import "../styles/form.css";
 
 const EventForm = ({ user }) => {
   const [formData, setFormData] = useState({
-    eventName: '',
-    eventDate: '',
-    dataset: null
+    eventName: "",
+    eventDate: "",
+    dataset: null,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
+  const navigate = useNavigate();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0] || null;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      dataset: file
+      dataset: file,
     }));
   };
 
@@ -35,69 +45,67 @@ const EventForm = ({ user }) => {
     setSubmitStatus(null);
 
     try {
-      // Prepare form data for backend
-     // inside handleSubmit
-const payload = new FormData();
-payload.append("user_id", user?.id); // ✅ Use Kinde id
-console.log("Submitting event for user_id:", user?.id);
-payload.append("event_name", formData.eventName);
-payload.append("event_date", formData.eventDate);
+      if (!user?.id) {
+        setSubmitStatus("error");
+        setMessage("User not authenticated. Cannot create event.");
+        setIsSubmitting(false);
+        return;
+      }
 
-if (!user?.id) {
-  setSubmitStatus("error");
-  setMessage("User not authenticated. Cannot create event.");
-  setIsSubmitting(false);
-  return;
-}
-
-
-
+      const payload = new FormData();
+      payload.append("user_id", user.id);
+      payload.append("event_name", formData.eventName);
+      payload.append("event_date", formData.eventDate);
       if (formData.dataset) {
         payload.append("dataset", formData.dataset);
       }
 
-      const response = await fetch("https://rsvp-aiagent-backend.onrender.com/api/events", {
-        method: "POST",
-        body: payload
-      });
+      const response = await fetch(
+        "https://rsvp-aiagent-backend.onrender.com/api/events",
+        {
+          method: "POST",
+          body: payload,
+        }
+      );
 
-      if (!response.ok) {
-        throw new Error("Failed to create event");
-      }
-
+      if (!response.ok) throw new Error("Failed to create event");
       const data = await response.json();
       console.log("✅ Event created:", data);
 
-      setSubmitStatus('success');
-      setMessage('Event created successfully!');
+      setSubmitStatus("success");
+      setMessage("Event created successfully!");
 
       // Reset form
       setFormData({
-        eventName: '',
-        eventDate: '',
-        dataset: null
+        eventName: "",
+        eventDate: "",
+        dataset: null,
       });
-      const fileInput = document.getElementById('dataset');
-      if (fileInput) fileInput.value = '';
+      const fileInput = document.getElementById("dataset");
+      if (fileInput) fileInput.value = "";
 
+      // 🌈 Smooth delay before redirect
+      setTimeout(() => {
+        navigate("/events");
+      }, 3000);
     } catch (error) {
-      setSubmitStatus('error');
-      setMessage('Failed to create event. Please try again.');
-      console.error('Error creating event:', error);
+      setSubmitStatus("error");
+      setMessage("Failed to create event. Please try again.");
+      console.error("Error creating event:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDownloadTemplate = () => {
-  const link = document.createElement('a');
-  link.href = "https://docs.google.com/spreadsheets/d/1FGZaAMEMNjG_8iwyUnlLdC5-BiDQrcosprs6awrADQo/export?format=csv";
-  link.download = "RSVP_Mockup_template.csv";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
-
+    const link = document.createElement("a");
+    link.href =
+      "https://docs.google.com/spreadsheets/d/1FGZaAMEMNjG_8iwyUnlLdC5-BiDQrcosprs6awrADQo/export?format=csv";
+    link.download = "RSVP_Mockup_template.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="form-container">
@@ -142,7 +150,8 @@ if (!user?.id) {
           </label>
           <div className="upload-instructions">
             <p className="upload-note">
-              Please upload your RSVP list in the given format. You can download the sample template here.
+              Please upload your RSVP list in the given format. You can download
+              the sample template here.
             </p>
             <button
               type="button"
@@ -166,25 +175,62 @@ if (!user?.id) {
           )}
         </div>
 
-        {submitStatus && (
-          <div className={`status-message ${submitStatus}`}>
-            {submitStatus === 'success' ? (
-              <Check size={20} />
-            ) : (
-              <AlertCircle size={20} />
-            )}
-            <span>{message}</span>
-          </div>
-        )}
+        <AnimatePresence>
+          {submitStatus && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: -10 }}
+              transition={{ duration: 0.4, ease: "easeInOut" }}
+              className={`status-message ${submitStatus}`}
+            >
+              {submitStatus === "success" ? (
+                <Check size={22} color="#16a34a" />
+              ) : (
+                <AlertCircle size={22} color="#dc2626" />
+              )}
+              <span>{message}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="submit-button"
-        >
-          {isSubmitting ? 'Creating Event...' : 'Create Event'}
+        <button type="submit" disabled={isSubmitting} className="submit-button">
+          {isSubmitting ? "Creating Event..." : "Create Event"}
         </button>
       </form>
+
+      {/* ✅ Smooth success popup */}
+      <AnimatePresence>
+        {submitStatus === "success" && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ y: 30, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="bg-white rounded-2xl shadow-xl p-10 text-center"
+              style={{ maxWidth: 420 }}
+            >
+              <Check size={48} color="#16a34a" className="mx-auto mb-4" />
+              <h2 className="text-2xl font-bold mb-2">Event Created </h2>
+              <p className="text-gray-600">
+                Redirecting to your event list in a few seconds...
+              </p>
+              <motion.div
+                initial={{ width: "0%" }}
+                animate={{ width: "100%" }}
+                transition={{ duration: 3, ease: "easeInOut" }}
+                className="h-1 bg-gradient-to-r from-black to-gray-600 rounded-full mt-5"
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
