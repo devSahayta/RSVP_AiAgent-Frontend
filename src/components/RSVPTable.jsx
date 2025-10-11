@@ -124,7 +124,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
             id: p.participant_id,
             fullName: p.full_name || "N/A",
             phoneNumber: p.phone_number || "-",
-            rsvpStatus: conv?.rsvp_status || "Maybe",
+           rsvpStatus: conv?.rsvp_status || "—",
             numberOfGuests: conv?.number_of_guests || 0,
             notes: conv?.notes || "-",
             callStatus: conv?.call_status || "pending",
@@ -182,16 +182,20 @@ const RSVPTable = ({ eventId: propEventId }) => {
     }
   };
 
-  const formatDate = (timestamp) => {
-    return new Date(timestamp).toLocaleDateString("en-IN", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "Asia/Kolkata",
-    });
-  };
+const formatDate = (timestamp) => {
+  if (!timestamp) return "—";
+  const utcDate = new Date(timestamp + "Z"); // force UTC interpretation
+  return utcDate.toLocaleString("en-IN", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "Asia/Kolkata",
+  });
+};
+
 
    // pagination logic
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
@@ -306,13 +310,16 @@ const RSVPTable = ({ eventId: propEventId }) => {
           <Calendar size={14} />
           {formatDate(item.timestamp)}
         </td>
-        <td className="notes-cell">
-          {item.notes && item.notes !== "-" ? (
-            <span className="notes-text">{item.notes}</span>
-          ) : (
-            <span className="no-notes">—</span>
-          )}
-        </td>
+   <td className="notes-cell">
+  {item.notes && item.notes !== "-" ? (
+    <div className="notes-text" title={item.notes}>
+      {item.notes}
+    </div>
+  ) : (
+    <span className="no-notes">—</span>
+  )}
+</td>
+
         <td className={`call-status-cell ${item.callStatus?.toLowerCase()}`}>
           {item.callStatus ? item.callStatus : "pending"}
         </td>

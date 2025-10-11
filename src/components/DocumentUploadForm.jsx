@@ -1012,14 +1012,18 @@ const saveEdit = async (uploadId) => {
         <div className="edit-conversation-form">
           <div className="form-grid">
             <div className="form-group">
-              <label>RSVP Status</label>
-              <input
-                type="text"
-                value={conversationForm.rsvp_status}
-                onChange={(e) => handleConversationChange('rsvp_status', e.target.value)}
-                placeholder="e.g., Confirmed / Declined / Pending"
-              />
-            </div>
+  <label>RSVP Status</label>
+  <select
+    value={conversationForm.rsvp_status || ""}
+    onChange={(e) => handleConversationChange("rsvp_status", e.target.value)}
+  >
+    <option value="" disabled>Select RSVP status</option>
+    <option value="Yes">Yes</option>
+    <option value="No">No</option>
+    <option value="Maybe">Maybe</option>
+  </select>
+</div>
+
             <div className="form-group">
               <label>Number of Guests</label>
               <input

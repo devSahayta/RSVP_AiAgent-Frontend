@@ -252,29 +252,48 @@
 }
 
 .notes-cell {
-  max-width: 200px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: 300px; /* increased for desktop */
+  white-space: normal; /* allow line wrapping */
+  overflow-wrap: break-word; /* break long words if needed */
+  word-break: break-word;
   color: #333;
   font-size: 0.9rem;
   text-align: left;
   padding: 8px 12px;
+  line-height: 1.4;
 }
 
 .notes-text {
   display: inline-block;
   background: #f2f6ff;
-  padding: 4px 8px;
+  padding: 6px 10px;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: #2a2a2a;
+  width: 100%;
+  box-sizing: border-box;
+  word-wrap: break-word;
 }
 
 .no-notes {
   color: #999;
   font-style: italic;
 }
+
+/* 📱 Mobile responsiveness */
+@media (max-width: 600px) {
+  .notes-cell {
+    max-width: 100%;
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+
+  .notes-text {
+    font-size: 0.85rem;
+    padding: 5px 8px;
+  }
+}
+
 
 
 
