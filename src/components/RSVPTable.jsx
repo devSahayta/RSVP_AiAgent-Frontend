@@ -256,7 +256,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
               <th>RSVP Status</th>
               <th>Guests</th>
               <th>Document Upload</th>
-              {/* <th>Event</th> */}
+              <th>Event</th>
               <th>Date</th>
               <th>Notes</th>
               <th>Call Status</th>
