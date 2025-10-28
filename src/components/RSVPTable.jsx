@@ -124,7 +124,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
             id: p.participant_id,
             fullName: p.full_name || "N/A",
             phoneNumber: p.phone_number || "-",
-           rsvpStatus: conv?.rsvp_status || "—",
+            rsvpStatus: conv?.rsvp_status || "—",
             numberOfGuests: conv?.number_of_guests || 0,
             notes: conv?.notes || "-",
             callStatus: conv?.call_status || "pending",
@@ -168,7 +168,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
     }
 
     setFilteredData(filtered);
-     setCurrentPage(1);
+    setCurrentPage(1);
   };
 
   const getStatusIcon = (status) => {
@@ -182,22 +182,21 @@ const RSVPTable = ({ eventId: propEventId }) => {
     }
   };
 
-const formatDate = (timestamp) => {
-  if (!timestamp) return "—";
-  const utcDate = new Date(timestamp + "Z"); // force UTC interpretation
-  return utcDate.toLocaleString("en-IN", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-    timeZone: "Asia/Kolkata",
-  });
-};
+  const formatDate = (timestamp) => {
+    if (!timestamp) return "—";
+    const utcDate = new Date(timestamp + "Z");
+    return utcDate.toLocaleString("en-IN", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Kolkata",
+    });
+  };
 
-
-   // pagination logic
+  // Pagination logic
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const paginatedData = filteredData.slice(
     (currentPage - 1) * itemsPerPage,
@@ -264,74 +263,76 @@ const formatDate = (timestamp) => {
             </tr>
           </thead>
           <tbody>
-  {filteredData.length === 0 ? (
-    <tr>
-      <td colSpan={9} className="no-data">
-        No RSVP data found
-      </td>
-    </tr>
-  ) : (
-    paginatedData.map((item) => (
-      <tr key={item.id}>
-        <td>
-          <div className="name-cell">
-            <Users size={16} />
-            {item.fullName}
-          </div>
-        </td>
-        <td>
-          <div className="phone-cell">
-            <Phone size={14} />
-            {item.phoneNumber}
-          </div>
-        </td>
-        <td>
-          <div className={`status-cell ${item.rsvpStatus.toLowerCase()}`}>
-            {getStatusIcon(item.rsvpStatus)}
-            {item.rsvpStatus}
-          </div>
-        </td>
-        <td className="guests-cell">{item.numberOfGuests}</td>
-        <td>
-          {item.proofUploaded ? (
-            <button
-              className="doc-link"
-              onClick={() => navigate(`/document-viewer/${item.id}`)}
-            >
-              <FileText size={14} />
-              View
-            </button>
-          ) : (
-            <span className="no-doc">No file</span>
-          )}
-        </td>
-        <td className="event-cell">{item.eventName}</td>
-        <td className="date-cell">
-          <Calendar size={14} />
-          {formatDate(item.timestamp)}
-        </td>
-   <td className="notes-cell">
-  {item.notes && item.notes !== "-" ? (
-    <div className="notes-text" title={item.notes}>
-      {item.notes}
-    </div>
-  ) : (
-    <span className="no-notes">—</span>
-  )}
-</td>
-
-        <td className={`call-status-cell ${item.callStatus?.toLowerCase()}`}>
-          {item.callStatus ? item.callStatus : "pending"}
-        </td>
-      </tr>
-    ))
-  )}
-</tbody>
-
+            {filteredData.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="no-data">
+                  No RSVP data found
+                </td>
+              </tr>
+            ) : (
+              paginatedData.map((item) => (
+                <tr key={item.id}>
+                  <td>
+                    <div className="name-cell">
+                      <Users size={16} />
+                      {item.fullName}
+                    </div>
+                  </td>
+                  <td>
+                    <div className="phone-cell">
+                      <Phone size={14} />
+                      {item.phoneNumber}
+                    </div>
+                  </td>
+                  <td>
+                    <div className={`status-cell ${item.rsvpStatus.toLowerCase()}`}>
+                      {getStatusIcon(item.rsvpStatus)}
+                      {item.rsvpStatus}
+                    </div>
+                  </td>
+                  <td className="guests-cell">{item.numberOfGuests}</td>
+                  <td>
+                    {item.proofUploaded ? (
+                      <button
+                        className="doc-link"
+                        onClick={() => navigate(`/document-viewer/${item.id}`)}
+                      >
+                        <FileText size={14} />
+                        View
+                      </button>
+                    ) : (
+                      <span className="no-doc">No file</span>
+                    )}
+                  </td>
+                  <td className="event-cell" title={item.eventName}>
+                    {item.eventName}
+                  </td>
+                  <td className="date-cell">
+                    <Calendar size={14} />
+                    {formatDate(item.timestamp)}
+                  </td>
+                  <td className="notes-cell">
+                    {item.notes && item.notes !== "-" ? (
+                      <div className="notes-text" title={item.notes}>
+                        {item.notes}
+                      </div>
+                    ) : (
+                      <span className="no-notes">—</span>
+                    )}
+                  </td>
+                  <td>
+                    <span className={`call-status-cell ${item.callStatus?.toLowerCase()}`}>
+                      {item.callStatus ? item.callStatus : "pending"}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
         </table>
       </div>
 
-            {/* Pagination */}
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="pagination-container">
           <button
@@ -362,10 +363,6 @@ const formatDate = (timestamp) => {
         </div>
       )}
 
-      {/* (Retry Batch, Modal, Toasts stay unchanged below) */}
-      {/* --- Keep your existing Retry Batch + Modal + Status Popup code here --- */}
-      {/* (omitted for brevity, same as your version) */}
-
       <style>{`
         .pagination-container {
           display: flex;
@@ -394,6 +391,8 @@ const formatDate = (timestamp) => {
         .pagination-numbers {
           display: flex;
           gap: 6px;
+          flex-wrap: wrap;
+          justify-content: center;
         }
         .page-number {
           padding: 8px 12px;
@@ -409,6 +408,9 @@ const formatDate = (timestamp) => {
           border-color: #000;
         }
         @media (max-width: 600px) {
+          .pagination-container {
+            gap: 6px;
+          }
           .pagination-btn, .page-number {
             padding: 6px 10px;
             font-size: 12px;

@@ -15,6 +15,7 @@ import RSVPTable from "./components/RSVPTable";
 import DocumentUpload from "./pages/DocumentUpload";
 import DocumentViewerPage from './pages/DocumentViewerPage';
 import DocumentViewer from "./components/DocumentViewer";
+import "./pages/LandingPage"
 
 // PrivateRoute for protected pages
 function PrivateRoute({ children }) {
