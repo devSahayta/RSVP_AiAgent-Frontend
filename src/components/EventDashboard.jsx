@@ -12,7 +12,7 @@ const EventDashboard = () => {
     const fetchEventData = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`https://rsvp-aiagent-backend.onrender.com/api/events/${eventId}`);
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}`);
         if (!response.ok) throw new Error("Failed to fetch event");
         const data = await response.json();
         setEvent(data.event);

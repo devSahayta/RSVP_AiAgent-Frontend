@@ -21,7 +21,7 @@ const EventsPage = () => {
   const fetchEvents = async (userId) => {
     try {
       const response = await fetch(
-        `https://rsvp-aiagent-backend.onrender.com/api/events?user_id=${userId}`
+        `${import.meta.env.VITE_BACKEND_URL}/api/events?user_id=${userId}`
       );
 
       if (!response.ok) throw new Error("Failed to fetch events");

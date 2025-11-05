@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Phone, Users, ArrowLeft, Loader2, CheckCircle } from 'lucide-react';
-import { supabase } from '../config/supabaseClient';
 import RSVPTable from '../components/RSVPTable';
 import { motion, AnimatePresence } from "framer-motion";
 import { useUserCredits } from "../hooks/useUserCredits";
@@ -37,35 +36,21 @@ useEffect(() => {
 
   const fetchEventData = async () => {
   try {
-    const res = await fetch(`https://rsvp-aiagent-backend.onrender.com/api/events/${eventId}`);
+    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}`);
     if (!res.ok) throw new Error("Failed to fetch event");
     const data = await res.json();
-    console.log('event API:', data);
 
     const participants = data.participants || [];
-    console.log("participants raw:", participants);
-
     setEvent({
       id: data.event_id,
       name: data.event_name,
       participants
     });
 
-    const participantIds = participants.map(p => p.participant_id);
-    console.log('participantIds:', participantIds);
-
-    if (participantIds.length > 0) {
-      const { data: conversations, error } = await supabase
-        .from("conversation_results")
-        .select("result_id")
-        .in("participant_id", participantIds)
-        .limit(1);
-
-      if (error) throw error;
-      setHasConversations(conversations?.length > 0);
-    } else {
-      setHasConversations(false);
-    }
+    // ✅ Ask backend if conversations exist
+    const res2 = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/dashboard`);
+    const dashboard = await res2.json();
+    setHasConversations((dashboard.conversations || []).length > 0);
 
   } catch (error) {
     console.error("Error fetching event data:", error);
@@ -73,6 +58,7 @@ useEffect(() => {
     setLoading(false);
   }
 };
+
 
 
 

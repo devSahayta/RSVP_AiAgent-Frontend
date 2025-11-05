@@ -12,8 +12,9 @@ import {
   FileText,
 } from "lucide-react";
 import "../styles/table.css";
-import { supabase } from "../config/supabaseClient";
+
 import { useParams, useNavigate } from "react-router-dom";
+
 
 const RSVPTable = ({ eventId: propEventId }) => {
   const [rsvpData, setRsvpData] = useState([]);
@@ -40,7 +41,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
       try {
         await fetchRSVPData();
 
-        const res = await fetch(`https://rsvp-aiagent-backend.onrender.com/api/events/${eventId}/sync-batch-status`, {
+        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/sync-batch-status`, {
           method: "POST",
         });
 
@@ -70,83 +71,20 @@ const RSVPTable = ({ eventId: propEventId }) => {
   }, [rsvpData, searchTerm, statusFilter]);
 
   const fetchRSVPData = async () => {
-    try {
-      setIsLoading(true);
+  try {
+    setIsLoading(true);
 
-      const { data: participants, error: pError } = await supabase
-        .from("participants")
-        .select(`
-          participant_id,
-          full_name,
-          phone_number,
-          uploaded_at,
-          event_id,
-          events (
-            event_name
-          )
-        `)
-        .eq("event_id", eventId);
+    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/rsvp-data`);
+    const data = await res.json();
 
-      if (pError) throw pError;
+    setRsvpData(data);
+  } catch (err) {
+    console.error("Error fetching backend RSVP data:", err);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
-      if (!participants || participants.length === 0) {
-        setRsvpData([]);
-        return;
-      }
-
-      const results = await Promise.all(
-        participants.map(async (p) => {
-          const { data: conversation, error: convError } = await supabase
-            .from("conversation_results")
-            .select("rsvp_status, number_of_guests, last_updated, upload_id, notes, call_status")
-            .eq("participant_id", p.participant_id)
-            .order("last_updated", { ascending: false })
-            .limit(1);
-
-          if (convError) {
-            console.error(`Conversation fetch error for ${p.participant_id}:`, convError);
-            return null;
-          }
-
-          const conv = conversation?.[0] || {};
-
-          const { data: uploads, error: uError } = await supabase
-            .from("uploads")
-            .select("document_url, document_type")
-            .eq("participant_id", p.participant_id)
-            .limit(1);
-
-          if (uError) console.error(`Upload fetch error for ${p.participant_id}:`, uError);
-
-          const doc = uploads?.[0] || null;
-
-          return {
-            id: p.participant_id,
-            fullName: p.full_name || "N/A",
-            phoneNumber: p.phone_number || "-",
-            rsvpStatus: conv?.rsvp_status || "—",
-            numberOfGuests: conv?.number_of_guests || 0,
-            notes: conv?.notes || "-",
-            callStatus: conv?.call_status || "pending",
-            proofUploaded: !!doc,
-            documentUpload: doc
-              ? [{ url: doc.document_url, filename: doc.document_type || "Document" }]
-              : null,
-            eventName: p.events?.event_name || "N/A",
-            timestamp: conv?.last_updated || p.uploaded_at,
-          };
-        })
-      );
-
-      const filteredResults = results.filter((r) => r !== null);
-      setRsvpData(filteredResults);
-
-    } catch (error) {
-      console.error("Error fetching RSVP data:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const filterData = () => {
     let filtered = rsvpData;
@@ -595,7 +533,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
                   try {
                     setIsRetrying(true);
                     const response = await fetch(
-                      `https://rsvp-aiagent-backend.onrender.com/api/events/${eventId}/retry-batch`,
+                      `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/retry-batch`,
                       { method: "POST" }
                     );
 

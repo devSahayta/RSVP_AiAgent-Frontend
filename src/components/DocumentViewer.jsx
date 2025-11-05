@@ -1,65 +1,115 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, FileText, Eye, Loader2 } from 'lucide-react';
-import '../styles/DocumentViewer.css';
-import { useParams } from 'react-router-dom';
+// src/components/DocumentViewer.jsx
+import React, { useState, useEffect } from "react";
+import { ArrowLeft, FileText, Eye, Loader2 } from "lucide-react";
+import "../styles/DocumentViewer.css";
+import { useParams } from "react-router-dom";
+import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 
 const DocumentViewer = ({ onBack }) => {
-  const { participantId } = useParams(); // ✅ Read from URL
+  const { participantId } = useParams();
+  const { getAccessToken, getToken, isAuthenticated } = useKindeAuth();
+
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
-  console.log("📄 Viewing documents for participant:", participantId);
-}, [participantId]);
+    console.log("📄 Viewing documents for participant:", participantId);
+  }, [participantId]);
 
-
-  // ✅ Fetch documents from backend
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
         setLoading(true);
-        setError('');
+        setError("");
 
-        // 👇 Replace this URL with your actual backend endpoint
+        // Get access token from Kinde SDK; try common function names
+        let token = null;
+        if (typeof getAccessToken === "function") {
+          token = await getAccessToken();
+        } else if (typeof getToken === "function") {
+          token = await getToken();
+        } else {
+          token = localStorage.getItem("kindeAccessToken"); // fallback
+        }
+
+        if (!token) {
+          throw new Error("No auth token found");
+        }
+
         const response = await fetch(
-          `https://rsvp-aiagent-backend.onrender.com/api/uploads/${participantId}`
+          `${import.meta.env.VITE_BACKEND_URL}/api/uploads/${participantId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
         );
+
         if (!response.ok) {
-          throw new Error('Failed to fetch documents');
+          // show server error message if available
+          const text = await response.text().catch(() => null);
+          console.error("Fetch documents failed:", response.status, text);
+          throw new Error("Failed to fetch documents");
         }
 
         const data = await response.json();
-        console.log(data)
         setDocuments(data.uploads || []);
       } catch (err) {
         console.error(err);
-        setError('Error fetching documents. Please try again later.');
+        setError("Error fetching documents. Please try again later.");
       } finally {
         setLoading(false);
       }
     };
 
-    if (participantId) {
-      fetchDocuments();
-    }
-  }, [participantId]);
+    if (participantId) fetchDocuments();
+  }, [participantId, getAccessToken, getToken]);
 
-  const handleViewDocument = (documentUrl) => {
-    window.open(documentUrl, '_blank', 'noopener,noreferrer');
-  };
+ const handleViewDocument = async (filePath, upload_id) => {
+  try {
+    let token = null;
+    if (typeof getAccessToken === "function") {
+      token = await getAccessToken();
+    } else if (typeof getToken === "function") {
+      token = await getToken();
+    }
+
+    if (!token) {
+      throw new Error("No auth token found");
+    }
+
+    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/uploads/signed-url`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ upload_id, filePath }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.signedUrl) {
+      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    } else {
+      console.error("Signed URL fetch failed:", data);
+      alert(data.error || "Failed to fetch document URL");
+    }
+  } catch (err) {
+    console.error("Signed URL fetch error:", err);
+  }
+};
+
+
 
   const handleBack = () => {
-    if (onBack) {
-      onBack();
-    } else {
-      window.history.back();
-    }
+    if (onBack) onBack();
+    else window.history.back();
   };
 
   return (
     <div className="document-viewer">
-      {/* Header */}
       <div className="document-viewer-header">
         <button className="back-button" onClick={handleBack}>
           <ArrowLeft size={20} />
@@ -68,11 +118,9 @@ const DocumentViewer = ({ onBack }) => {
 
         <div className="header-content">
           <h1>Document Viewer</h1>
-          {/* <p>View all uploaded documents</p> */}
         </div>
       </div>
 
-      {/* Loading State */}
       {loading ? (
         <div className="loading-state">
           <Loader2 size={32} className="spin" />
@@ -101,7 +149,7 @@ const DocumentViewer = ({ onBack }) => {
                     </div>
                     <div className="document-info">
                       <h3 className="participant-name">
-                        {doc.participant_relatives_name || 'Self'}
+                        {doc.participant_relatives_name || "Self"}
                       </h3>
                       <p className="document-type">{doc.document_type}</p>
                     </div>
@@ -114,7 +162,9 @@ const DocumentViewer = ({ onBack }) => {
                   <div className="document-actions">
                     <button
                       className="view-document-btn"
-                      onClick={() => handleViewDocument(doc.document_url)}
+                      onClick={() => handleViewDocument(doc.document_url, doc.upload_id)}
+
+
                     >
                       <Eye size={16} />
                       View Document

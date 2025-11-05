@@ -61,7 +61,7 @@ const EventForm = ({ user }) => {
       }
 
       const response = await fetch(
-        "https://rsvp-aiagent-backend.onrender.com/api/events",
+        `${import.meta.env.VITE_BACKEND_URL}/api/events`,
         {
           method: "POST",
           body: payload,
