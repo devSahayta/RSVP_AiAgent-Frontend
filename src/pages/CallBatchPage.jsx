@@ -17,9 +17,12 @@ const CallBatchPage = () => {
   const [callResult, setCallResult] = useState(null);
   const [hasConversations, setHasConversations] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
+  const [showWhatsAppPopup, setShowWhatsAppPopup] = useState(false); // For WhatsApp
+  const [popupMessage, setPopupMessage] = useState(""); // ✅ Add this
 const { user, isAuthenticated } = useKindeAuth();
 const { refetchCredits } = useUserCredits(user?.id, isAuthenticated);
  const [batchId, setBatchId] = useState(null); // ✅ NEW: Store batch_id
+ 
 
   useEffect(() => {
     fetchEventData();
@@ -481,6 +484,76 @@ if (hasConversations) {
               <span>{callResult.message}</span>
             </div>
           )}
+
+<button
+  onClick={async () => {
+      setPopupMessage("Sending WhatsApp Messages...");
+  setShowWhatsAppPopup(true);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/whatsapp/start-initial-message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event_id: eventId })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+      setShowWhatsAppPopup(false);
+      alert(data.error || "Failed to send WhatsApp messages");
+      return;
+    }
+
+    setPopupMessage("✅ WhatsApp invites sent!");
+    setTimeout(() => {
+      setShowWhatsAppPopup(false);
+    }, 3000); // ✅ Hide popup after 3 seconds
+
+  } catch (err) {
+    console.error("WhatsApp send error:", err);
+    setPopupMessage("❌ Send failed. Try again.");
+    setTimeout(() => {
+      setShowWhatsAppPopup(false);
+    }, 3000);
+  }
+  }}
+  style={{
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.5rem',
+    background: 'linear-gradient(135deg, #000000 0%, #333333 100%)',
+    color: 'white',
+    border: 'none',
+    padding: '1rem 2.5rem',
+    borderRadius: '8px',
+    fontSize: '1rem',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    transform: 'translateY(0)',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+    marginBottom: '1.2rem'
+  }}
+  onMouseEnter={(e) => {
+    e.target.style.background = 'linear-gradient(135deg, #333333 0%, #000000 100%)';
+    e.target.style.transform = 'translateY(-1px)';
+    e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+  }}
+  onMouseLeave={(e) => {
+    e.target.style.background = 'linear-gradient(135deg, #000000 0%, #333333 100%)';
+    e.target.style.transform = 'translateY(0)';
+    e.target.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+  }}
+>
+  <Phone size={20} />
+  Send WhatsApp RSVP Message
+</button>
+
+
+
+
+
           
 
           <button
@@ -602,6 +675,25 @@ if (hasConversations) {
     </motion.div>
   )}
 </AnimatePresence>
+
+{showWhatsAppPopup && (
+  <div style={{
+    position: "fixed",
+    top: "20px",
+    right: "20px",
+    background: "#000",
+    color: "#fff",
+    padding: "12px 18px",
+    borderRadius: "8px",
+    fontSize: "0.9rem",
+    zIndex: 9999,
+    boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+  }}>
+    {popupMessage}
+  </div>
+)}
+
+
 
       
 {/* 

@@ -451,7 +451,63 @@ const RSVPTable = ({ eventId: propEventId }) => {
               ? `⚠️ ${filteredData.filter(item => item.callStatus !== "completed").length} call(s) pending - Retry available`
               : ""}
         </p>
+
+             {/* Start Batch Message Button */}
+{/* <button
+  className="retry-batch-btn"
+  disabled={filteredData.length > 0 && filteredData.every(item => item.callStatus === "completed")}
+  style={{
+    padding: '12px 24px',
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#fff',
+    backgroundColor: filteredData.every(item => item.callStatus === "completed") 
+      ? '#9ca3af' 
+      : '#2563eb',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: filteredData.every(item => item.callStatus === "completed") 
+      ? 'not-allowed' 
+      : 'pointer',
+    transition: 'all 0.3s ease',
+    width: '100%',
+    maxWidth: '300px'
+  }}
+  onClick={async () => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/start-batch-message`,
+        { method: "POST" }
+      );
+
+      if (!response.ok) throw new Error("Batch messaging failed");
+
+      setRetryStatus({
+        success: true,
+        message: '✅ Batch WhatsApp messages are being sent!'
+      });
+      setShowStatusPopup(true);
+      await fetchRSVPData();
+
+      setTimeout(() => setShowStatusPopup(false), 3000);
+    } catch (err) {
+      console.error("Message batch error:", err);
+      setRetryStatus({
+        success: false,
+        message: '❌ Failed to send batch messages.'
+      });
+      setShowStatusPopup(true);
+      setTimeout(() => setShowStatusPopup(false), 4000);
+    }
+  }}
+>
+  Start Batch Message
+</button> */}
+        
       </div>
+
+ 
+
 
       {/* Confirmation Modal */}
       {showConfirmModal && (
