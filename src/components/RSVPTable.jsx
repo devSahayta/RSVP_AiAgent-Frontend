@@ -242,9 +242,10 @@ const RSVPTable = ({ eventId: propEventId }) => {
                       <span className="no-doc">No file</span>
                     )}
                   </td>
-                  <td className="event-cell" title={item.eventName}>
-                    {item.eventName}
-                  </td>
+                  <td className="event-cell" title={item.event_name}>
+  {item.event_name}
+</td>
+
                   <td className="date-cell">
                     <Calendar size={14} />
                     {formatDate(item.timestamp)}
