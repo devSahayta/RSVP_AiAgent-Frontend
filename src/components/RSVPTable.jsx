@@ -453,82 +453,140 @@ const { getToken } = useKindeAuth();
               ? `⚠️ ${filteredData.filter(item => item.callStatus !== "completed").length} call(s) pending - Retry available`
               : ""}
         </p>
-
-   {/* Start Batch Message Button */}
+{/* Start Batch Message Button */}
 <button
   className="retry-batch-btn"
+  disabled={
+    filteredData.length > 0 &&
+    filteredData.every(item => item.callStatus === "completed")
+  }
   style={{
     padding: "12px 24px",
     fontSize: "14px",
     fontWeight: "600",
     color: "#fff",
-    backgroundColor: "#000000",
+    backgroundColor:
+      filteredData.length > 0 &&
+      filteredData.every(item => item.callStatus === "completed")
+        ? "#9ca3af"
+        : "#000000",
     border: "none",
     borderRadius: "8px",
-    cursor: "pointer",
+    cursor:
+      filteredData.length > 0 &&
+      filteredData.every(item => item.callStatus === "completed")
+        ? "not-allowed"
+        : "pointer",
     transition: "all 0.3s ease",
-    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
+    boxShadow:
+      filteredData.length > 0 &&
+      filteredData.every(item => item.callStatus === "completed")
+        ? "none"
+        : "0 2px 8px rgba(0, 0, 0, 0.2)",
     width: "100%",
     maxWidth: "300px",
+    opacity:
+      filteredData.length > 0 &&
+      filteredData.every(item => item.callStatus === "completed")
+        ? 0.6
+        : 1,
   }}
   onMouseEnter={(e) => {
-    e.target.style.backgroundColor = "#1a1a1a";
-    e.target.style.transform = "translateY(-2px)";
-    e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.3)";
+    if (
+      !(
+        filteredData.length > 0 &&
+        filteredData.every(item => item.callStatus === "completed")
+      )
+    ) {
+      e.target.style.backgroundColor = "#1a1a1a";
+      e.target.style.transform = "translateY(-2px)";
+      e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.3)";
+    }
   }}
   onMouseLeave={(e) => {
-    e.target.style.backgroundColor = "#000000";
-    e.target.style.transform = "translateY(0)";
-    e.target.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.2)";
+    if (
+      !(
+        filteredData.length > 0 &&
+        filteredData.every(item => item.callStatus === "completed")
+      )
+    ) {
+      e.target.style.backgroundColor = "#000000";
+      e.target.style.transform = "translateY(0)";
+      e.target.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.2)";
+    }
   }}
   onClick={async () => {
-  try {
-    console.log("🎯 Starting batch message process...");
+    try {
+      console.log("🎯 Starting batch message process...");
 
-    // ✅ Get Kinde access token using the React hook
-    const token = await getToken();
-    console.log("🔑 Got Kinde token:", token ? "✅ Yes" : "❌ No");
+      const token = await getToken();
+      console.log("🔑 Got Kinde token:", token ? "✅ Yes" : "❌ No");
 
-    if (!token) throw new Error("No Kinde token found");
+      if (!token) throw new Error("No Kinde token found");
 
-    // ✅ Make API call with auth + event ID
-    const response = await fetch(
-      `${import.meta.env.VITE_BACKEND_URL}/whatsapp/send-batch`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ event_id: eventId }),
-      }
-    );
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/whatsapp/send-batch`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ event_id: eventId }),
+        }
+      );
 
-    if (!response.ok) throw new Error("Batch messaging failed");
+      if (!response.ok) throw new Error("Batch messaging failed");
 
-    console.log("✅ Batch message request sent successfully!");
+      console.log("✅ Batch message request sent successfully!");
 
-    setRetryStatus({
-      success: true,
-      message: "✅ Batch WhatsApp messages are being sent!",
-    });
-    setShowStatusPopup(true);
-    await fetchRSVPData();
+      setRetryStatus({
+        success: true,
+        message: "✅ Batch WhatsApp messages are being sent!",
+      });
+      setShowStatusPopup(true);
+      await fetchRSVPData();
 
-    setTimeout(() => setShowStatusPopup(false), 3000);
-  } catch (err) {
-    console.error("❌ Message batch error:", err);
-    setRetryStatus({
-      success: false,
-      message: "❌ Failed to send batch messages.",
-    });
-    setShowStatusPopup(true);
-    setTimeout(() => setShowStatusPopup(false), 4000);
-  }
-}}
+      setTimeout(() => setShowStatusPopup(false), 3000);
+    } catch (err) {
+      console.error("❌ Message batch error:", err);
+      setRetryStatus({
+        success: false,
+        message: "❌ Failed to send batch messages.",
+      });
+      setShowStatusPopup(true);
+      setTimeout(() => setShowStatusPopup(false), 4000);
+    }
+  }}
 >
   Start Batch Message
 </button>
+
+{/* Optional hint below */}
+<p
+  className="retry-hint"
+  style={{
+    marginTop: "8px",
+    fontSize: "13px",
+    color:
+      filteredData.length > 0 &&
+      filteredData.every(item => item.callStatus === "completed")
+        ? "#10b981"
+        : "#f59e0b",
+    fontWeight: "500",
+    textAlign: "center",
+    width: "100%",
+    maxWidth: "300px",
+  }}
+>
+  {filteredData.length > 0 &&
+  filteredData.every(item => item.callStatus === "completed")
+    ? "✅ All messages completed — retry not needed."
+    : filteredData.length > 0
+    ? `⚠️ ${filteredData.filter(item => item.callStatus !== "completed").length} message(s) pending - Start available`
+    : ""}
+</p>
+
 
         
       </div>
