@@ -14,6 +14,7 @@ import {
 import "../styles/table.css";
 
 import { useParams, useNavigate } from "react-router-dom";
+import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 
 
 const RSVPTable = ({ eventId: propEventId }) => {
@@ -33,7 +34,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
-
+const { getToken } = useKindeAuth();
   useEffect(() => {
     if (!eventId) return;
 
@@ -453,57 +454,82 @@ const RSVPTable = ({ eventId: propEventId }) => {
               : ""}
         </p>
 
-             {/* Start Batch Message Button */}
-{/* <button
+   {/* Start Batch Message Button */}
+<button
   className="retry-batch-btn"
-  disabled={filteredData.length > 0 && filteredData.every(item => item.callStatus === "completed")}
   style={{
-    padding: '12px 24px',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#fff',
-    backgroundColor: filteredData.every(item => item.callStatus === "completed") 
-      ? '#9ca3af' 
-      : '#2563eb',
-    border: 'none',
-    borderRadius: '8px',
-    cursor: filteredData.every(item => item.callStatus === "completed") 
-      ? 'not-allowed' 
-      : 'pointer',
-    transition: 'all 0.3s ease',
-    width: '100%',
-    maxWidth: '300px'
+    padding: "12px 24px",
+    fontSize: "14px",
+    fontWeight: "600",
+    color: "#fff",
+    backgroundColor: "#000000",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
+    width: "100%",
+    maxWidth: "300px",
+  }}
+  onMouseEnter={(e) => {
+    e.target.style.backgroundColor = "#1a1a1a";
+    e.target.style.transform = "translateY(-2px)";
+    e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.3)";
+  }}
+  onMouseLeave={(e) => {
+    e.target.style.backgroundColor = "#000000";
+    e.target.style.transform = "translateY(0)";
+    e.target.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.2)";
   }}
   onClick={async () => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/start-batch-message`,
-        { method: "POST" }
-      );
+  try {
+    console.log("🎯 Starting batch message process...");
 
-      if (!response.ok) throw new Error("Batch messaging failed");
+    // ✅ Get Kinde access token using the React hook
+    const token = await getToken();
+    console.log("🔑 Got Kinde token:", token ? "✅ Yes" : "❌ No");
 
-      setRetryStatus({
-        success: true,
-        message: '✅ Batch WhatsApp messages are being sent!'
-      });
-      setShowStatusPopup(true);
-      await fetchRSVPData();
+    if (!token) throw new Error("No Kinde token found");
 
-      setTimeout(() => setShowStatusPopup(false), 3000);
-    } catch (err) {
-      console.error("Message batch error:", err);
-      setRetryStatus({
-        success: false,
-        message: '❌ Failed to send batch messages.'
-      });
-      setShowStatusPopup(true);
-      setTimeout(() => setShowStatusPopup(false), 4000);
-    }
-  }}
+    // ✅ Make API call with auth + event ID
+    const response = await fetch(
+      `${import.meta.env.VITE_BACKEND_URL}/whatsapp/send-batch`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ event_id: eventId }),
+      }
+    );
+
+    if (!response.ok) throw new Error("Batch messaging failed");
+
+    console.log("✅ Batch message request sent successfully!");
+
+    setRetryStatus({
+      success: true,
+      message: "✅ Batch WhatsApp messages are being sent!",
+    });
+    setShowStatusPopup(true);
+    await fetchRSVPData();
+
+    setTimeout(() => setShowStatusPopup(false), 3000);
+  } catch (err) {
+    console.error("❌ Message batch error:", err);
+    setRetryStatus({
+      success: false,
+      message: "❌ Failed to send batch messages.",
+    });
+    setShowStatusPopup(true);
+    setTimeout(() => setShowStatusPopup(false), 4000);
+  }
+}}
 >
   Start Batch Message
-</button> */}
+</button>
+
         
       </div>
 
