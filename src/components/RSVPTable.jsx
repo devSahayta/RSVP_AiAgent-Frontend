@@ -457,8 +457,8 @@ const { getToken } = useKindeAuth();
 <button
   className="retry-batch-btn"
   disabled={
-    filteredData.length > 0 &&
-    filteredData.every(item => item.callStatus === "completed")
+    filteredData.length === 0 ||
+    filteredData.filter(item => !item.rsvpStatus || item.rsvpStatus === null).length === 0
   }
   style={{
     padding: "12px 24px",
@@ -466,36 +466,36 @@ const { getToken } = useKindeAuth();
     fontWeight: "600",
     color: "#fff",
     backgroundColor:
-      filteredData.length > 0 &&
-      filteredData.every(item => item.callStatus === "completed")
+      filteredData.length === 0 ||
+      filteredData.filter(item => !item.rsvpStatus || item.rsvpStatus === null).length === 0
         ? "#9ca3af"
         : "#000000",
     border: "none",
     borderRadius: "8px",
     cursor:
-      filteredData.length > 0 &&
-      filteredData.every(item => item.callStatus === "completed")
+      filteredData.length === 0 ||
+      filteredData.filter(item => !item.rsvpStatus || item.rsvpStatus === null).length === 0
         ? "not-allowed"
         : "pointer",
     transition: "all 0.3s ease",
     boxShadow:
-      filteredData.length > 0 &&
-      filteredData.every(item => item.callStatus === "completed")
+      filteredData.length === 0 ||
+      filteredData.filter(item => !item.rsvpStatus || item.rsvpStatus === null).length === 0
         ? "none"
         : "0 2px 8px rgba(0, 0, 0, 0.2)",
     width: "100%",
     maxWidth: "300px",
     opacity:
-      filteredData.length > 0 &&
-      filteredData.every(item => item.callStatus === "completed")
+      filteredData.length === 0 ||
+      filteredData.filter(item => !item.rsvpStatus || item.rsvpStatus === null).length === 0
         ? 0.6
         : 1,
   }}
   onMouseEnter={(e) => {
     if (
       !(
-        filteredData.length > 0 &&
-        filteredData.every(item => item.callStatus === "completed")
+        filteredData.length === 0 ||
+        filteredData.filter(item => !item.rsvpStatus || item.rsvpStatus === null).length === 0
       )
     ) {
       e.target.style.backgroundColor = "#1a1a1a";
@@ -506,8 +506,8 @@ const { getToken } = useKindeAuth();
   onMouseLeave={(e) => {
     if (
       !(
-        filteredData.length > 0 &&
-        filteredData.every(item => item.callStatus === "completed")
+        filteredData.length === 0 ||
+        filteredData.filter(item => !item.rsvpStatus || item.rsvpStatus === null).length === 0
       )
     ) {
       e.target.style.backgroundColor = "#000000";
@@ -518,6 +518,16 @@ const { getToken } = useKindeAuth();
   onClick={async () => {
     try {
       console.log("🎯 Starting batch message process...");
+      console.log("📊 Filtered data sample:", filteredData[0]);
+      console.log("📊 Total filtered data:", filteredData.length);
+
+      // Get only participants with NULL rsvpStatus
+      const pendingParticipants = filteredData.filter(
+        item => !item.rsvpStatus || item.rsvpStatus === null
+      );
+      
+      console.log(`📊 Found ${pendingParticipants.length} participants with NULL RSVP status`);
+      console.log("📊 Pending participants:", pendingParticipants);
 
       const token = await getToken();
       console.log("🔑 Got Kinde token:", token ? "✅ Yes" : "❌ No");
@@ -542,7 +552,7 @@ const { getToken } = useKindeAuth();
 
       setRetryStatus({
         success: true,
-        message: "✅ Batch WhatsApp messages are being sent!",
+        message: `✅ Sending messages to ${pendingParticipants.length} participant(s)!`,
       });
       setShowStatusPopup(true);
       await fetchRSVPData();
@@ -569,8 +579,8 @@ const { getToken } = useKindeAuth();
     marginTop: "8px",
     fontSize: "13px",
     color:
-      filteredData.length > 0 &&
-      filteredData.every(item => item.callStatus === "completed")
+      filteredData.length === 0 ||
+      filteredData.filter(item => !item.rsvpStatus || item.rsvpStatus === null).length === 0
         ? "#10b981"
         : "#f59e0b",
     fontWeight: "500",
@@ -579,12 +589,11 @@ const { getToken } = useKindeAuth();
     maxWidth: "300px",
   }}
 >
-  {filteredData.length > 0 &&
-  filteredData.every(item => item.callStatus === "completed")
-    ? "✅ All messages completed — retry not needed."
-    : filteredData.length > 0
-    ? `⚠️ ${filteredData.filter(item => item.callStatus !== "completed").length} message(s) pending - Start available`
-    : ""}
+  {filteredData.length === 0
+    ? ""
+    : filteredData.filter(item => !item.rsvpStatus || item.rsvpStatus === null).length === 0
+    ? "✅ All participants have responded — messages not needed."
+    : `⚠️ ${filteredData.filter(item => !item.rsvpStatus || item.rsvpStatus === null).length} participant(s) haven't responded - Start available`}
 </p>
 
 
