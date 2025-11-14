@@ -158,8 +158,17 @@ const { getToken } = useKindeAuth();
     );
   }
 
+  const notResponded = filteredData.filter(item =>
+  !item.rsvpStatus ||
+  item.rsvpStatus === null ||
+  item.rsvpStatus === "NULL" ||
+  item.rsvpStatus.toLowerCase() === "pending"
+);
+
+
   return (
     <div className="table-container">
+    
       {/* Filters */}
       <div className="table-filters">
         <div className="search-container">
@@ -453,12 +462,16 @@ const { getToken } = useKindeAuth();
               ? `⚠️ ${filteredData.filter(item => item.callStatus !== "completed").length} call(s) pending - Retry available`
               : ""}
         </p>
-{/* Start Batch Message Button */}
 <button
   className="retry-batch-btn"
   disabled={
     filteredData.length === 0 ||
-    filteredData.filter(item => !item.rsvpStatus || item.rsvpStatus === null).length === 0
+    filteredData.filter(item =>
+      !item.rsvpStatus ||
+      item.rsvpStatus === null ||
+      item.rsvpStatus === "NULL" ||
+      item.rsvpStatus.toLowerCase() === "pending"
+    ).length === 0
   }
   style={{
     padding: "12px 24px",
@@ -467,110 +480,85 @@ const { getToken } = useKindeAuth();
     color: "#fff",
     backgroundColor:
       filteredData.length === 0 ||
-      filteredData.filter(item => !item.rsvpStatus || item.rsvpStatus === null).length === 0
+      filteredData.filter(item =>
+        !item.rsvpStatus ||
+        item.rsvpStatus === null ||
+        item.rsvpStatus === "NULL" ||
+        item.rsvpStatus.toLowerCase() === "pending"
+      ).length === 0
         ? "#9ca3af"
         : "#000000",
     border: "none",
     borderRadius: "8px",
     cursor:
       filteredData.length === 0 ||
-      filteredData.filter(item => !item.rsvpStatus || item.rsvpStatus === null).length === 0
+      filteredData.filter(item =>
+        !item.rsvpStatus ||
+        item.rsvpStatus === null ||
+        item.rsvpStatus === "NULL" ||
+        item.rsvpStatus.toLowerCase() === "pending"
+      ).length === 0
         ? "not-allowed"
         : "pointer",
     transition: "all 0.3s ease",
     boxShadow:
       filteredData.length === 0 ||
-      filteredData.filter(item => !item.rsvpStatus || item.rsvpStatus === null).length === 0
+      filteredData.filter(item =>
+        !item.rsvpStatus ||
+        item.rsvpStatus === null ||
+        item.rsvpStatus === "NULL" ||
+        item.rsvpStatus.toLowerCase() === "pending"
+      ).length === 0
         ? "none"
         : "0 2px 8px rgba(0, 0, 0, 0.2)",
     width: "100%",
     maxWidth: "300px",
     opacity:
       filteredData.length === 0 ||
-      filteredData.filter(item => !item.rsvpStatus || item.rsvpStatus === null).length === 0
+      filteredData.filter(item =>
+        !item.rsvpStatus ||
+        item.rsvpStatus === null ||
+        item.rsvpStatus === "NULL" ||
+        item.rsvpStatus.toLowerCase() === "pending"
+      ).length === 0
         ? 0.6
         : 1,
   }}
-  onMouseEnter={(e) => {
-    if (
-      !(
-        filteredData.length === 0 ||
-        filteredData.filter(item => !item.rsvpStatus || item.rsvpStatus === null).length === 0
-      )
-    ) {
-      e.target.style.backgroundColor = "#1a1a1a";
-      e.target.style.transform = "translateY(-2px)";
-      e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.3)";
-    }
-  }}
-  onMouseLeave={(e) => {
-    if (
-      !(
-        filteredData.length === 0 ||
-        filteredData.filter(item => !item.rsvpStatus || item.rsvpStatus === null).length === 0
-      )
-    ) {
-      e.target.style.backgroundColor = "#000000";
-      e.target.style.transform = "translateY(0)";
-      e.target.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.2)";
-    }
-  }}
   onClick={async () => {
-    try {
-      console.log("🎯 Starting batch message process...");
-      console.log("📊 Filtered data sample:", filteredData[0]);
-      console.log("📊 Total filtered data:", filteredData.length);
 
-      // Get only participants with NULL rsvpStatus
-      const pendingParticipants = filteredData.filter(
-        item => !item.rsvpStatus || item.rsvpStatus === null
-      );
-      
-      console.log(`📊 Found ${pendingParticipants.length} participants with NULL RSVP status`);
-      console.log("📊 Pending participants:", pendingParticipants);
+    const pendingParticipants = filteredData.filter(
+      item =>
+        !item.rsvpStatus ||
+        item.rsvpStatus === null ||
+        item.rsvpStatus === "NULL" ||
+        item.rsvpStatus.toLowerCase() === "pending"
+    );
 
-      const token = await getToken();
-      console.log("🔑 Got Kinde token:", token ? "✅ Yes" : "❌ No");
+    console.log("Pending:", pendingParticipants.length);
 
-      if (!token) throw new Error("No Kinde token found");
+    const token = await getToken();
 
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/whatsapp/send-batch`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ event_id: eventId }),
-        }
-      );
+    await fetch(`${import.meta.env.VITE_BACKEND_URL}/whatsapp/send-batch`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ event_id: eventId }),
+    });
 
-      if (!response.ok) throw new Error("Batch messaging failed");
-
-      console.log("✅ Batch message request sent successfully!");
-
-      setRetryStatus({
-        success: true,
-        message: `✅ Sending messages to ${pendingParticipants.length} participant(s)!`,
-      });
-      setShowStatusPopup(true);
-      await fetchRSVPData();
-
-      setTimeout(() => setShowStatusPopup(false), 3000);
-    } catch (err) {
-      console.error("❌ Message batch error:", err);
-      setRetryStatus({
-        success: false,
-        message: "❌ Failed to send batch messages.",
-      });
-      setShowStatusPopup(true);
-      setTimeout(() => setShowStatusPopup(false), 4000);
-    }
+    setRetryStatus({
+      success: true,
+      message: `Sending messages to ${pendingParticipants.length} participant(s)!`,
+    });
+    setShowStatusPopup(true);
+    setTimeout(() => setShowStatusPopup(false), 3000);
+    await fetchRSVPData();
   }}
 >
   Start Batch Message
 </button>
+
 
 {/* Optional hint below */}
 <p
@@ -578,11 +566,7 @@ const { getToken } = useKindeAuth();
   style={{
     marginTop: "8px",
     fontSize: "13px",
-    color:
-      filteredData.length === 0 ||
-      filteredData.filter(item => !item.rsvpStatus || item.rsvpStatus === null).length === 0
-        ? "#10b981"
-        : "#f59e0b",
+    color: notResponded.length === 0 ? "#10b981" : "#f59e0b",
     fontWeight: "500",
     textAlign: "center",
     width: "100%",
@@ -591,10 +575,11 @@ const { getToken } = useKindeAuth();
 >
   {filteredData.length === 0
     ? ""
-    : filteredData.filter(item => !item.rsvpStatus || item.rsvpStatus === null).length === 0
+    : notResponded.length === 0
     ? "✅ All participants have responded — messages not needed."
-    : `⚠️ ${filteredData.filter(item => !item.rsvpStatus || item.rsvpStatus === null).length} participant(s) haven't responded - Start available`}
+    : `⚠️ ${notResponded.length} participant(s) haven't responded — Start available`}
 </p>
+
 
 
         
