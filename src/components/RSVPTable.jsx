@@ -35,6 +35,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 const { getToken } = useKindeAuth();
+
   useEffect(() => {
     if (!eventId) return;
 
@@ -71,14 +72,47 @@ const { getToken } = useKindeAuth();
     filterData();
   }, [rsvpData, searchTerm, statusFilter]);
 
-  const fetchRSVPData = async () => {
+ const fetchRSVPData = async () => {
   try {
     setIsLoading(true);
 
+    // 1️⃣ Fetch RSVP data
     const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/rsvp-data`);
     const data = await res.json();
 
-    setRsvpData(data);
+   const mergedData = await Promise.all(
+  data.map(async (participant) => {
+    const participantId = participant.participant_id || participant.id; // fallback
+    if (!participantId) return participant; // skip if still missing
+
+    try {
+      const itineraryRes = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/travel-itinerary/${participantId}`
+      );
+      const itineraryData = await itineraryRes.json();
+
+      const itinerary = itineraryData.itinerary?.find(
+        (it) => it.attendee_name.toLowerCase() === participant.fullName.toLowerCase()
+      );
+
+      return {
+        ...participant,
+        arrival_date: itinerary?.arrival?.date || "—",
+        arrival_time: itinerary?.arrival?.time || "—",
+        arrival_transport_no: itinerary?.arrival?.transport_no || "—",
+        return_date: itinerary?.return?.date || "—",
+        return_time: itinerary?.return?.time || "—",
+        return_transport_no: itinerary?.return?.transport_no || "—",
+      };
+    } catch (err) {
+      console.error(`Error fetching itinerary for ${participant.fullName}:`, err);
+      return participant;
+    }
+  })
+);
+
+
+    setRsvpData(mergedData); // keep this same
   } catch (err) {
     console.error("Error fetching backend RSVP data:", err);
   } finally {
@@ -88,27 +122,38 @@ const { getToken } = useKindeAuth();
 
 
   const filterData = () => {
-    let filtered = rsvpData;
+  let filtered = rsvpData;
 
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (item) =>
-          item.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          item.phoneNumber.includes(searchTerm) ||
-          item.eventName.toLowerCase().includes(searchTerm.toLowerCase())
+  if (searchTerm) {
+    const lower = searchTerm.toLowerCase();
+
+    filtered = filtered.filter((item) => {
+      return (
+        item.fullName?.toLowerCase().includes(lower) ||
+        item.phoneNumber?.toLowerCase().includes(lower) ||
+        item.eventName?.toLowerCase().includes(lower) ||
+
+        item.arrival_date?.toLowerCase().includes(lower) ||
+        item.arrival_time?.toLowerCase().includes(lower) ||
+        item.arrival_transport_no?.toLowerCase().includes(lower) ||
+
+        item.return_date?.toLowerCase().includes(lower) ||
+        item.return_time?.toLowerCase().includes(lower) ||
+        item.return_transport_no?.toLowerCase().includes(lower)
       );
-    }
+    });
+  }
 
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(
-        (item) =>
-          item.rsvpStatus.toLowerCase() === statusFilter.toLowerCase()
-      );
-    }
+  if (statusFilter !== "all") {
+    filtered = filtered.filter(
+      (item) => item.rsvpStatus?.toLowerCase() === statusFilter.toLowerCase()
+    );
+  }
 
-    setFilteredData(filtered);
-    setCurrentPage(1);
-  };
+  setFilteredData(filtered);
+  setCurrentPage(1);
+};
+
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -208,6 +253,12 @@ const { getToken } = useKindeAuth();
               <th>Date</th>
               <th>Notes</th>
               <th>Call Status</th>
+              <th>Arrival Date</th>
+              <th>Arrival Time</th>
+              <th>Arrival Transport No</th>
+              <th>Return Date</th>
+              <th>Return Time</th>
+              <th>Return Transport No</th>
             </tr>
           </thead>
           <tbody>
@@ -274,6 +325,16 @@ const { getToken } = useKindeAuth();
                       {item.callStatus ? item.callStatus : "pending"}
                     </span>
                   </td>
+
+                  <td>{item.arrival_date || "—"}</td>
+<td>{item.arrival_time || "—"}</td>
+<td>{item.arrival_transport_no || "—"}</td>
+
+
+<td>{item.return_date || "—"}</td>
+<td>{item.return_time || "—"}</td>
+<td>{item.return_transport_no || "—"}</td>
+
                 </tr>
               ))
             )}
