@@ -514,3 +514,40 @@
     padding: 0.5rem 0.25rem;
   }
 }
+
+/* ----------------------------------------------------- */
+
+/* 🔴 DELETE BUTTON STYLING */
+.event-delete-btn {
+  position: absolute;
+  bottom: 17px;
+  left: 12px;
+  background: #e63946;
+  color: white;
+  padding: 6px 12px;
+  font-size: 13px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 10;
+  margin-left: 250px;
+}
+
+.event-delete-btn:hover {
+  background: #c71c28;
+}
+
+/* RESPONSIVE */
+@media (max-width: 480px) {
+  .event-card {
+    padding: 16px;
+  }
+
+  .event-name {
+    font-size: 16px;
+  }
+
+  .event-delete-btn {
+    padding: 5px 10px;
+  }
+}

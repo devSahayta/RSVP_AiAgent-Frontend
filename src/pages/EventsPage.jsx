@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Calendar, Clock, Users, ArrowRight } from "lucide-react";
-import { useKindeAuth } from "@kinde-oss/kinde-auth-react"; // ✅ import auth
+import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import "../styles/pages.css";
 import "../styles/events.css";
 
@@ -14,7 +14,7 @@ const EventsPage = () => {
 
   useEffect(() => {
     if (!authLoading && isAuthenticated && user) {
-      fetchEvents(user.id); // ✅ pass Kinde user.id
+      fetchEvents(user.id);
     }
   }, [authLoading, isAuthenticated, user]);
 
@@ -36,11 +36,9 @@ const EventsPage = () => {
     }
   };
 
-  // 🔑 Navigate to Call Batch page instead of dashboard
   const handleEventClick = (eventId) => {
     navigate(`/call-batch/${eventId}`);
   };
-
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -79,7 +77,7 @@ const EventsPage = () => {
         <div className="no-events">
           <Calendar size={48} />
           <h3>No Events Found</h3>
-          <p>You haven’t created any events yet. Start by creating your first event!</p>
+          <p>You haven’t created any events yet.</p>
           <button
             className="btn btn-primary"
             onClick={() => navigate("/createEvent")}
@@ -95,8 +93,20 @@ const EventsPage = () => {
               <div
                 key={event.event_id}
                 className="event-card"
-                onClick={() => handleEventClick(event.event_id)} // ✅ pass backend event_id
+                onClick={() => handleEventClick(event.event_id)}
               >
+                {/* 🔴 DELETE BUTTON INSIDE CARD */}
+                <button
+                  className="event-delete-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log("🔴 Delete clicked:", event.event_id);
+                    // later: delete event API
+                  }}
+                >
+                  Delete
+                </button>
+
                 <div className="event-card-header">
                   <h3 className="event-name">{event.event_name}</h3>
                   <ArrowRight size={20} className="event-arrow" />
@@ -107,10 +117,6 @@ const EventsPage = () => {
                     <Calendar size={16} />
                     <span>{date}</span>
                   </div>
-                  {/* <div className="event-time">
-                    <Clock size={16} />
-                    <span>{time}</span>
-                  </div> */}
                 </div>
 
                 <p className="event-description">
