@@ -37,10 +37,10 @@ const Sidebar = ({ isOpen, onClose }) => {
       path: "/chatbot",
       icon: <MessageSquare size={18} />,
     },
-    { name: "AI Voice Agents", path: "/voice-agents", icon: <Mic size={18} /> },
+    { name: "Templates", path: "/templates", icon: <Mic size={18} /> },
     {
-      name: "Documents",
-      path: "/document-upload",
+      name: "Create Template",
+      path: "/template/create",
       icon: <FileText size={18} />,
     },
   ];
