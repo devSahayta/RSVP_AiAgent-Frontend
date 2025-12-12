@@ -140,6 +140,10 @@ import CallBatchPage from "./pages/CallBatchPage";
 import DocumentUpload from "./pages/DocumentUpload";
 import DocumentViewer from "./components/DocumentViewer";
 import ChatPage from "./pages/ChatPage";
+import TemplateList from "./pages/TemplateList";
+import CreateTemplate from "./pages/CreateTemplate";
+import SendTemplate from "./pages/SendTemplate";
+// import MediaList from "./pages/MediaList";
 import WAccountPage from "./pages/WAccountPage";
 
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
@@ -191,7 +195,7 @@ function AppContent() {
       )}
 
       {/* Sidebar overlay/drawer - only when authenticated and not on landing/doc-upload */}
-      {isAuthenticated && !hideSidebarPath && !hideNavBar && (
+      {isAuthenticated && !hideNavBar && (
         <Sidebar
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
@@ -250,6 +254,42 @@ function AppContent() {
           />
 
           <Route path="/whatsapp-account" element={<WAccountPage />} />
+
+          <Route
+            path="/templates"
+            element={
+              <PrivateRoute>
+                <TemplateList />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/template/create"
+            element={
+              <PrivateRoute>
+                <CreateTemplate />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/templates/send/:templateId"
+            element={
+              <PrivateRoute>
+                <SendTemplate />
+              </PrivateRoute>
+            }
+          />
+
+          {/* <Route
+            path="/templates/media"
+            element={
+              <PrivateRoute>
+                <MediaList />
+              </PrivateRoute>
+            }
+          /> */}
 
           <Route
             path="/document-upload/:participantId"
