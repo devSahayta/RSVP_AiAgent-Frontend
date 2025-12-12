@@ -517,37 +517,57 @@
 
 /* ----------------------------------------------------- */
 
-/* 🔴 DELETE BUTTON STYLING */
-.event-delete-btn {
+/* ============================
+   THREE DOTS MENU
+============================ */
+.event-menu {
   position: absolute;
-  bottom: 17px;
-  left: 12px;
-  background: #e63946;
-  color: white;
-  padding: 6px 12px;
-  font-size: 13px;
-  border: none;
-  border-radius: 6px;
+  top: 165px;
+  right: 10px;
+  z-index: 20;
+}
+
+.event-menu-icon {
   cursor: pointer;
-  z-index: 10;
-  margin-left: 250px;
+  color: #555;
+  transition: 0.2s;
 }
 
-.event-delete-btn:hover {
-  background: #c71c28;
+.event-menu-icon:hover {
+  color: #222;
 }
 
-/* RESPONSIVE */
-@media (max-width: 480px) {
-  .event-card {
-    padding: 16px;
-  }
+/* Dropdown Menu */
+.event-menu-dropdown {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  width: 120px;
+  padding: 6px 0;
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.15);
+  display: none;
+  z-index: 30;
+}
 
-  .event-name {
-    font-size: 16px;
-  }
+.event-menu-dropdown.show-menu {
+  display: block;
+}
 
-  .event-delete-btn {
-    padding: 5px 10px;
-  }
+.event-menu-item {
+  padding: 10px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.event-menu-item:hover {
+  background: #f5f5f5;
+}
+
+.event-menu-item.delete {
+  color: #c72020;
+  font-weight: 500;
 }

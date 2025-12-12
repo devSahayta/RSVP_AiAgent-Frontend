@@ -140,6 +140,7 @@ import CallBatchPage from "./pages/CallBatchPage";
 import DocumentUpload from "./pages/DocumentUpload";
 import DocumentViewer from "./components/DocumentViewer";
 import ChatPage from "./pages/ChatPage";
+import WAccountPage from "./pages/WAccountPage";
 
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { addUserToBackend } from "./api/userApi";
@@ -247,6 +248,8 @@ function AppContent() {
               </PrivateRoute>
             }
           />
+
+          <Route path="/whatsapp-account" element={<WAccountPage />} />
 
           <Route
             path="/document-upload/:participantId"

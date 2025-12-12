@@ -4,7 +4,8 @@
 }
 
 .document-form-container {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    sans-serif;
   background: #f8f9fa;
   min-height: 100vh;
   padding-bottom: 140px;
@@ -539,7 +540,7 @@
 }
 
 .save-edit-btn {
-  background-color:#000000;
+  background-color: #000000;
   color: white;
 }
 
@@ -853,24 +854,33 @@
 
 /* ========== ANIMATIONS ========== */
 @keyframes popupFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes popupSlideIn {
-  from { 
+  from {
     opacity: 0;
     transform: translateY(-20px) scale(0.95);
   }
-  to { 
+  to {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 /* ========== TABLET RESPONSIVE (768px - 1023px) ========== */
@@ -878,35 +888,35 @@
   .form-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .share-controls {
     flex-direction: row;
   }
-  
+
   .share-input {
     min-width: 200px;
   }
-  
+
   .copy-btn,
   .whatsapp-btn {
     width: auto;
   }
-  
+
   .footer-content {
     flex-direction: row;
     padding: 1rem;
   }
-  
+
   .footer-info {
     order: 2;
     min-width: auto;
   }
-  
+
   .footer-actions {
     order: 3;
     width: auto;
   }
-  
+
   .save-btn,
   .submit-btn {
     flex: 0 0 auto;
@@ -918,60 +928,60 @@
   .document-form-container {
     padding-bottom: 120px;
   }
-  
+
   .form-header {
     padding: 2rem 1rem;
   }
-  
+
   .header-content {
     flex-wrap: nowrap;
   }
-  
+
   .brand-icon {
     width: 40px;
     height: 40px;
   }
-  
+
   .brand-section h1 {
     font-size: 1.5rem;
   }
-  
+
   .event-chip,
   .invite-chip {
     font-size: 0.875rem;
     padding: 0.5rem 1rem;
   }
-  
+
   .form-main {
     padding: 2rem 1rem 0;
   }
-  
+
   .upload-form {
     gap: 2rem;
   }
-  
+
   .form-section {
     padding: 2rem;
     border-radius: 16px;
   }
-  
+
   .section-header h2 {
     font-size: 1.25rem;
   }
-  
+
   .section-header p {
     font-size: 0.875rem;
   }
-  
+
   .add-participant-btn {
     margin-left: auto;
   }
-  
+
   .participant-card {
     padding: 1.5rem;
     border-radius: 12px;
   }
-  
+
   .footer-actions button {
     max-width: none;
   }
@@ -982,34 +992,34 @@
   .brand-section h1 {
     font-size: 1.1rem;
   }
-  
+
   .event-chip,
   .invite-chip {
     font-size: 0.7rem;
     padding: 0.35rem 0.65rem;
   }
-  
+
   .form-section {
     padding: 1rem;
   }
-  
+
   .section-header {
     flex-direction: column;
   }
-  
+
   .file-preview {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .file-remove-btn {
     align-self: flex-end;
   }
-  
+
   .footer-content {
     padding: 0.75rem;
   }
-  
+
   .save-btn,
   .submit-btn {
     font-size: 0.75rem;
@@ -1022,7 +1032,7 @@
   .popup-content {
     max-height: 85vh;
   }
-  
+
   .success-icon {
     width: 50px;
     height: 50px;
@@ -1041,12 +1051,12 @@
   .edit-btn {
     min-height: 44px;
   }
-  
+
   .consent-checkbox {
     min-width: 24px;
     min-height: 24px;
   }
-  
+
   .file-remove-btn {
     min-width: 44px;
     min-height: 44px;
@@ -1222,27 +1232,27 @@
   .edit-actions {
     flex-direction: column;
   }
-  
+
   .save-edit-btn,
   .cancel-edit-btn {
     width: 100%;
     justify-content: center;
   }
-  
+
   .document-actions {
     width: 100%;
   }
-  
+
   .view-btn,
   .edit-btn {
     flex: 1;
   }
-  
+
   .existing-document-card {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .conversation-view .edit-btn {
     float: none;
     width: 100%;
@@ -1255,7 +1265,7 @@
   .sticky-footer {
     padding-bottom: env(safe-area-inset-bottom);
   }
-  
+
   .document-form-container {
     padding-bottom: calc(140px + env(safe-area-inset-bottom));
   }
@@ -1342,11 +1352,11 @@ select:focus-visible {
   .share-section {
     display: none !important;
   }
-  
+
   .document-form-container {
     padding-bottom: 0;
   }
-  
+
   .form-section {
     box-shadow: none;
     border: 1px solid #ddd;

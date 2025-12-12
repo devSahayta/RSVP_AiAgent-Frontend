@@ -1,7 +1,7 @@
 // pages/EventsPage.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Clock, Users, ArrowRight } from "lucide-react";
+import { Calendar, Users, ArrowRight, MoreVertical } from "lucide-react";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import "../styles/pages.css";
 import "../styles/events.css";
@@ -9,6 +9,8 @@ import "../styles/events.css";
 const EventsPage = () => {
   const [events, setEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [openMenu, setOpenMenu] = useState(null);
+
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading: authLoading } = useKindeAuth();
 
@@ -27,7 +29,6 @@ const EventsPage = () => {
       if (!response.ok) throw new Error("Failed to fetch events");
 
       const data = await response.json();
-      console.log("✅ Events fetched:", data);
       setEvents(data);
     } catch (error) {
       console.error("Error fetching events:", error);
@@ -35,6 +36,42 @@ const EventsPage = () => {
       setIsLoading(false);
     }
   };
+
+  // -------------------------------------------------------
+  // ✅ DELETE EVENT FUNCTION (BACKEND CONNECTED)
+  // -------------------------------------------------------
+  const deleteEvent = async (eventId) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this event and all related data?"
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || "Failed to delete event");
+        return;
+      }
+
+      // Remove event from UI
+      setEvents(events.filter((event) => event.event_id !== eventId));
+
+      alert("Event deleted successfully");
+    } catch (error) {
+      console.error("Delete error:", error);
+      alert("Something went wrong while deleting the event.");
+    }
+  };
+  // -------------------------------------------------------
 
   const handleEventClick = (eventId) => {
     navigate(`/call-batch/${eventId}`);
@@ -47,10 +84,6 @@ const EventsPage = () => {
         year: "numeric",
         month: "long",
         day: "numeric",
-      }),
-      time: date.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
       }),
     };
   };
@@ -88,24 +121,44 @@ const EventsPage = () => {
       ) : (
         <div className="events-grid">
           {events.map((event) => {
-            const { date, time } = formatDate(event.event_date);
+            const { date } = formatDate(event.event_date);
+
             return (
               <div
                 key={event.event_id}
                 className="event-card"
                 onClick={() => handleEventClick(event.event_id)}
               >
-                {/* 🔴 DELETE BUTTON INSIDE CARD */}
-                <button
-                  className="event-delete-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    console.log("🔴 Delete clicked:", event.event_id);
-                    // later: delete event API
-                  }}
+                {/* ⋮ THREE DOTS MENU */}
+                <div
+                  className="event-menu"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  Delete
-                </button>
+                  <MoreVertical
+                    size={22}
+                    className="event-menu-icon"
+                    onClick={() =>
+                      setOpenMenu(
+                        openMenu === event.event_id ? null : event.event_id
+                      )
+                    }
+                  />
+
+                  {/* DROPDOWN */}
+                  {openMenu === event.event_id && (
+                    <div className="event-menu-dropdown show-menu">
+                      <div
+                        className="event-menu-item delete"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteEvent(event.event_id); // ⬅️ connected to backend
+                        }}
+                      >
+                        Delete
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 <div className="event-card-header">
                   <h3 className="event-name">{event.event_name}</h3>

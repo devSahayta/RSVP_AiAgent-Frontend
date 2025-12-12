@@ -37,6 +37,13 @@ const Sidebar = ({ isOpen, onClose }) => {
       path: "/chatbot",
       icon: <MessageSquare size={18} />,
     },
+
+    {
+      name: "Whatsaap Accounts",
+      path: "/whatsapp-account",
+      icon: <Plus size={18} />,
+    },
+
     { name: "AI Voice Agents", path: "/voice-agents", icon: <Mic size={18} /> },
     {
       name: "Documents",
