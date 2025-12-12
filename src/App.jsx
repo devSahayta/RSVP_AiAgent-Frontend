@@ -144,6 +144,7 @@ import TemplateList from "./pages/TemplateList";
 import CreateTemplate from "./pages/CreateTemplate";
 import SendTemplate from "./pages/SendTemplate";
 // import MediaList from "./pages/MediaList";
+import WAccountPage from "./pages/WAccountPage";
 
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { addUserToBackend } from "./api/userApi";
@@ -251,6 +252,8 @@ function AppContent() {
               </PrivateRoute>
             }
           />
+
+          <Route path="/whatsapp-account" element={<WAccountPage />} />
 
           <Route
             path="/templates"

@@ -38,6 +38,14 @@ const Sidebar = ({ isOpen, onClose }) => {
       icon: <MessageSquare size={18} />,
     },
     { name: "Templates", path: "/templates", icon: <Mic size={18} /> },
+
+    {
+      name: "Whatsaap Accounts",
+      path: "/whatsapp-account",
+      icon: <Plus size={18} />,
+    },
+
+    { name: "AI Voice Agents", path: "/voice-agents", icon: <Mic size={18} /> },
     {
       name: "Create Template",
       path: "/template/create",

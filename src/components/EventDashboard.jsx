@@ -12,7 +12,9 @@ const EventDashboard = () => {
     const fetchEventData = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}`);
+        const response = await fetch(
+          `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}`
+        );
         if (!response.ok) throw new Error("Failed to fetch event");
         const data = await response.json();
         setEvent(data.event);
@@ -37,7 +39,9 @@ const EventDashboard = () => {
       </button>
 
       <h1>{event.name}</h1>
-      <p>{event.date} at {event.time}</p>
+      <p>
+        {event.date} at {event.time}
+      </p>
       <p>{event.description}</p>
 
       {/* 👇 insert table here */}
