@@ -1,7 +1,13 @@
 // src/components/Sidebar.jsx
 import React, { useEffect, useRef } from "react";
 import { NavLink } from "react-router-dom";
-import { Calendar, Plus, MessageSquare, Mic, FileText } from "lucide-react";
+import {
+  Calendar,
+  Plus,
+  MessageSquare,
+  FileText,
+  LayersIcon,
+} from "lucide-react";
 import "../styles/sidebar.css";
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -37,15 +43,8 @@ const Sidebar = ({ isOpen, onClose }) => {
       path: "/chatbot",
       icon: <MessageSquare size={18} />,
     },
-    { name: "Templates", path: "/templates", icon: <Mic size={18} /> },
+    { name: "Templates", path: "/templates", icon: <LayersIcon size={18} /> },
 
-    {
-      name: "Whatsaap Accounts",
-      path: "/whatsapp-account",
-      icon: <Plus size={18} />,
-    },
-
-    { name: "AI Voice Agents", path: "/voice-agents", icon: <Mic size={18} /> },
     {
       name: "Create Template",
       path: "/template/create",

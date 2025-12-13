@@ -1363,3 +1363,62 @@ select:focus-visible {
     page-break-inside: avoid;
   }
 }
+
+/* General page background */
+body {
+  background: #f3f4f6;
+  font-family: "Inter", sans-serif;
+} /* Card styling */
+.form-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  max-width: 550px;
+  margin: 40px auto;
+} /* Heading */
+.form-title {
+  font-size: 26px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 25px;
+  color: #111827;
+} /* Input fields */
+.form-input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  transition: 0.2s ease;
+  background: #f9fafb;
+}
+.form-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+  outline: none;
+} /* Label styling */
+.form-label {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 6px;
+  display: block;
+} /* Submit button */
+.submit-btn {
+  width: 100%;
+  padding: 14px;
+  margin-top: 15px;
+  background: #6366f1;
+  border-radius: 12px;
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  transition: 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+.submit-btn:hover {
+  background: #4f46e5;
+}
+.submit-btn:active {
+  transform: scale(0.97);
+}

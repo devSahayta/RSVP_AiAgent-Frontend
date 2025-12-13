@@ -236,7 +236,9 @@ export default function TemplateList() {
                     </button>
 
                     <button
-                      className=" px-3 py-1 text-sm bg-green-400 text-white rounded hover:bg-green-500"
+                      className={`px-3 py-1 text-sm bg-green-400 text-white rounded hover:bg-green-500 ${
+                        tpl.status === "APPROVED" ? "inline-block" : "hidden"
+                      } `}
                       onClick={() =>
                         (window.location.href = `/templates/send/${tpl.id}`)
                       }

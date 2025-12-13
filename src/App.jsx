@@ -150,11 +150,50 @@ import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { addUserToBackend } from "./api/userApi";
 
 import "./styles/global.css";
+import { fetchWhatsappAccount } from "./api/waccount";
+import useAuthUser from "./hooks/useAuthUser";
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, isLoading } = useKindeAuth();
   if (isLoading) return <p>Loading...</p>;
   return isAuthenticated ? children : <LandingPage />;
+}
+
+function WhatsappAccountRoute({ children }) {
+  const { user, isAuthenticated, isLoading } = useKindeAuth();
+  const [hasAccount, setHasAccount] = useState(null);
+  const [loadingAccount, setLoadingAccount] = useState(true);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const loadWhatsappAccount = async () => {
+      try {
+        const res = await fetchWhatsappAccount(user.id);
+
+        // if account exists
+        if (res?.data?.data?.wa_id) {
+          setHasAccount(true);
+        } else {
+          setHasAccount(false);
+        }
+      } catch (err) {
+        setHasAccount(false);
+      } finally {
+        setLoadingAccount(false);
+      }
+    };
+
+    loadWhatsappAccount();
+  }, [user?.id]);
+
+  if (isLoading || loadingAccount) return <p>Loading...</p>;
+
+  if (!isAuthenticated) {
+    return <LandingPage />;
+  }
+
+  return hasAccount ? children : <Navigate to="/whatsapp-account" replace />;
 }
 
 function AppContent() {
@@ -259,7 +298,9 @@ function AppContent() {
             path="/templates"
             element={
               <PrivateRoute>
-                <TemplateList />
+                <WhatsappAccountRoute>
+                  <TemplateList />
+                </WhatsappAccountRoute>
               </PrivateRoute>
             }
           />
@@ -268,7 +309,9 @@ function AppContent() {
             path="/template/create"
             element={
               <PrivateRoute>
-                <CreateTemplate />
+                <WhatsappAccountRoute>
+                  <CreateTemplate />
+                </WhatsappAccountRoute>
               </PrivateRoute>
             }
           />
@@ -277,7 +320,9 @@ function AppContent() {
             path="/templates/send/:templateId"
             element={
               <PrivateRoute>
-                <SendTemplate />
+                <WhatsappAccountRoute>
+                  <SendTemplate />
+                </WhatsappAccountRoute>
               </PrivateRoute>
             }
           />

@@ -948,7 +948,7 @@ Failed: ${data.summary.failed}`
                       </label> */}
                     </div>
 
-                    {mediaChoice === "existing" && (
+                    {/* {mediaChoice === "existing" && (
                       <div className="mb-3">
                         <label className="text-xs text-gray-600">
                           Select media
@@ -969,14 +969,13 @@ Failed: ${data.summary.failed}`
                           Selected media which will be used to send template.
                         </div>
                       </div>
-                    )}
+                    )} */}
 
-                    {/* {mediaChoice === "existing" && (
+                    {mediaChoice === "existing" && (
                       <div className="mb-3">
                         <label className="text-xs text-gray-600">
                           Select media
                         </label>
-
                         <select
                           className="w-full border p-2 rounded"
                           value={selectedMediaId || ""}
@@ -989,8 +988,7 @@ Failed: ${data.summary.failed}`
                             </option>
                           ))}
                         </select>
-
-                         Media preview 
+                        Media preview
                         {selectedMediaId && (
                           <div className="mt-3 border rounded p-2 bg-gray-50">
                             {(() => {
@@ -1033,12 +1031,11 @@ Failed: ${data.summary.failed}`
                             })()}
                           </div>
                         )}
-
                         <div className="text-xs text-gray-400 mt-1">
                           Selected media will be used as header media.
                         </div>
                       </div>
-                    )} */}
+                    )}
 
                     {mediaChoice === "upload" && (
                       <div className="mb-3">
