@@ -220,9 +220,12 @@ import React, { useState } from "react";
 import { User, LogOut, Coins, Calendar, Menu as MenuIcon } from "lucide-react";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { useUserCredits } from "../hooks/useUserCredits";
+import { useNavigate } from "react-router-dom";
 import "../styles/navbar.css";
 
 const NavBar = ({ onToggleSidebar, isSidebarOpen }) => {
+  const navigate = useNavigate();
+
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const { login, register, logout, isAuthenticated, user } = useKindeAuth();
@@ -313,6 +316,13 @@ const NavBar = ({ onToggleSidebar, isSidebarOpen }) => {
                     </button>
                   </div>
                 </div>
+
+                <button
+                  onClick={() => navigate("/whatsapp-account")}
+                  className=" w-full block text-left border-b-gray-100 border-b py-2 px-3 "
+                >
+                  Whatsapp Account
+                </button>
 
                 <button onClick={logout} className="dropdown-logout">
                   <LogOut size={14} className="inline mr-2" />
