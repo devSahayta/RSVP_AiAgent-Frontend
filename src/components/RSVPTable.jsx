@@ -16,6 +16,11 @@ import "../styles/table.css";
 import { useParams, useNavigate } from "react-router-dom";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import { Download } from "lucide-react";
+
+
 
 const RSVPTable = ({ eventId: propEventId }) => {
   const [rsvpData, setRsvpData] = useState([]);
@@ -180,6 +185,56 @@ const { getToken } = useKindeAuth();
     });
   };
 
+  const exportToExcel = () => {
+  if (!filteredData || filteredData.length === 0) {
+    alert("No data to export");
+    return;
+  }
+
+  // Map only required fields (Excel columns)
+  const excelData = filteredData.map((item, index) => ({
+    "S.No": index + 1,
+    "Full Name": item.fullName || "",
+    "Phone Number": item.phoneNumber || "",
+    "RSVP Status": item.rsvpStatus || "Pending",
+    "Guests": item.numberOfGuests || 0,
+    "Event Name": item.event_name || "",
+    "Call Status": item.callStatus || "pending",
+    "Notes": item.notes || "",
+    "Arrival Date": item.arrival_date || "",
+    "Arrival Time": item.arrival_time || "",
+    "Arrival Transport No": item.arrival_transport_no || "",
+    "Return Date": item.return_date || "",
+    "Return Time": item.return_time || "",
+    "Return Transport No": item.return_transport_no || "",
+    "Response Date": formatDate(item.timestamp),
+  }));
+
+  // Create worksheet
+  const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+  // Create workbook
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "RSVP Data");
+
+  // Generate Excel buffer
+  const excelBuffer = XLSX.write(workbook, {
+    bookType: "xlsx",
+    type: "array",
+  });
+
+  // Save file
+  const file = new Blob([excelBuffer], {
+    type:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+
+  saveAs(file, `RSVP_Data_${eventId}_${Date.now()}.xlsx`);
+};
+
+
+
+
   // Pagination logic
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const paginatedData = filteredData.slice(
@@ -238,6 +293,34 @@ const { getToken } = useKindeAuth();
           <option value="No">No</option>
         </select>
       </div>
+      
+
+      <div style={{
+  display: "flex",
+  justifyContent: "flex-end",
+  marginBottom: "12px",
+}}>
+  <button
+    onClick={exportToExcel}
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      padding: "10px 16px",
+      borderRadius: "8px",
+      border: "1px solid #ddd",
+      background: "#000",
+      color: "#fff",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: "600",
+    }}
+  >
+    <Download size={16} />
+    Export Excel
+  </button>
+</div>
+
 
       {/* Table */}
       <div className="table-wrapper">
@@ -249,7 +332,7 @@ const { getToken } = useKindeAuth();
               <th>RSVP Status</th>
               <th>Guests</th>
               <th>Document Upload</th>
-              <th>Event</th>
+              {/* <th>Event</th> */}
               <th>Date</th>
               <th>Notes</th>
               <th>Call Status</th>
@@ -303,9 +386,9 @@ const { getToken } = useKindeAuth();
                       <span className="no-doc">No file</span>
                     )}
                   </td>
-                  <td className="event-cell" title={item.event_name}>
+                  {/* <td className="event-cell" title={item.event_name}>
   {item.event_name}
-</td>
+</td> */}
 
                   <td className="date-cell">
                     <Calendar size={14} />
