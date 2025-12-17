@@ -198,7 +198,7 @@ const { getToken } = useKindeAuth();
     "Phone Number": item.phoneNumber || "",
     "RSVP Status": item.rsvpStatus || "Pending",
     "Guests": item.numberOfGuests || 0,
-    "Event Name": item.event_name || "",
+    // "Event Name": item.event_name || "",
     "Call Status": item.callStatus || "pending",
     "Notes": item.notes || "",
     "Arrival Date": item.arrival_date || "",
