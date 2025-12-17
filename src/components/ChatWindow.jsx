@@ -497,8 +497,11 @@
 
 // _________________________________________________________________new One______________________________________________________
 import { useEffect, useRef, useState } from "react";
+import useAuthUser from "../hooks/useAuthUser";
+import MediaPreview from "./MediaPreview";
 
 export default function ChatWindow({ chatId, userInfo }) {
+  const { userId } = useAuthUser();
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const messagesEndRef = useRef(null);
@@ -572,6 +575,8 @@ export default function ChatWindow({ chatId, userInfo }) {
 
         const data = await res.json();
         if (!data?.ok || !Array.isArray(data.messages)) return;
+
+        console.log({ data });
 
         if (!cancelled) {
           const sorted = normalizeAndSort(data.messages);
@@ -670,8 +675,31 @@ export default function ChatWindow({ chatId, userInfo }) {
               key={msg.message_id}
               className={`wa-message-bubble ${sent ? "sent" : "received"}`}
             >
+              {/* Render Media for template */}
+              <div className=" mb-4 ">
+                {msg.media_path && msg.message_type === "template" && (
+                  <div className="mt-3 border rounded-lg p-2 bg-gray-50">
+                    <MediaPreview mediaId={msg.media_path} userId={userId} />
+                  </div>
+                )}
+              </div>
+
               <div className="wa-message-text">
                 {msg.message && <div>{msg.message}</div>}
+
+                {/* BUTTONS */}
+                {msg.buttons && (
+                  <div className="border-t mt-4 ">
+                    {msg.buttons.map((btn, i) => (
+                      <button
+                        key={i}
+                        className="w-full text-blue-600 bg-gray-50 py-2 flex items-center justify-center mb-1 rounded-lg hover:bg-blue-50 transition"
+                      >
+                        ➜ {btn.text}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {/* IMAGE */}
                 {msg.media_path && isImage(msg.media_path) && (
@@ -683,7 +711,7 @@ export default function ChatWindow({ chatId, userInfo }) {
                 )}
 
                 {/* DOCUMENT */}
-                {msg.media_path && (
+                {msg.media_path && msg.message_type !== "template" && (
                   <a
                     href={msg.media_path}
                     target="_blank"
