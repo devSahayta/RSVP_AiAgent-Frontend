@@ -1425,7 +1425,7 @@ body {
 
 /* ===== Meta Logo Above Title ===== */
 .meta-logo {
-  width: 200px; /* Standard small logo size */
+  width: 100px; /* Standard small logo size */
   height: auto;
   display: block;
   margin: 0 auto 12px; /* Center + spacing below */

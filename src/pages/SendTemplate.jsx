@@ -683,6 +683,7 @@ export default function SendTemplate() {
       const bulkResp = await apiSendBulkTemplate(templateId, {
         user_id: userId,
         recipients,
+        event_id: selectedEvent,
         components: comps,
       });
 
@@ -807,7 +808,7 @@ Failed: ${data.summary.failed}`
     ...(placeholders.buttons || []),
   ];
 
-  console.log({ events });
+  // console.log({ events, selectedEvent });
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">

@@ -105,8 +105,8 @@
 /* ------------- LEFT CHAT LIST PANEL ------------- */
 .wa-chatlist {
   /* width: 30%; */
-  min-width: 15%;
-  max-width: 30%;
+  min-width: 10%;
+  max-width: 25%;
   background: #fff;
   border-right: 1px solid #ddd;
   overflow-y: auto;
