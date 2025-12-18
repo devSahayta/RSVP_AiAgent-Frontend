@@ -143,6 +143,9 @@ const WhatsaapForm = ({ mode, existingData, onSubmit }) => {
 
   return (
     <div className="form-card">
+      {/* Meta Logo */}
+      <img src="/images/meta.png" alt="Meta" className="meta-logo" />
+
       <h2 className="form-title">
         {mode === "create"
           ? "Connect WhatsApp Account"

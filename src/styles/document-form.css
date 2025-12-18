@@ -1422,3 +1422,21 @@ body {
 .submit-btn:active {
   transform: scale(0.97);
 }
+
+/* ===== Meta Logo Above Title ===== */
+.meta-logo {
+  width: 200px; /* Standard small logo size */
+  height: auto;
+  display: block;
+  margin: 0 auto 12px; /* Center + spacing below */
+  opacity: 0.9;
+  object-fit: contain;
+}
+
+/* Slightly smaller on mobile */
+@media (max-width: 480px) {
+  .meta-logo {
+    width: 36px;
+    margin-bottom: 10px;
+  }
+}
