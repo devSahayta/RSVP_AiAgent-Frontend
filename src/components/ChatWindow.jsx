@@ -646,6 +646,44 @@ export default function ChatWindow({ chatId, userInfo }) {
     }
   };
 
+  const normalizeButtons = (buttons) => {
+    if (!buttons) return [];
+
+    // Case 1: Already correct JSON array
+    if (Array.isArray(buttons)) return buttons;
+
+    // Case 2: JSON stored as string
+    if (typeof buttons === "string") {
+      try {
+        let str = buttons.trim();
+
+        // Remove wrapping quotes: "[{...}]"
+        if (
+          (str.startsWith('"') && str.endsWith('"')) ||
+          (str.startsWith("'") && str.endsWith("'"))
+        ) {
+          str = str.slice(1, -1);
+        }
+
+        // Unescape quotes & newlines
+        str = str
+          .replace(/\\"/g, '"')
+          .replace(/\\n/g, "")
+          .replace(/\\r/g, "")
+          .replace(/\\t/g, "");
+
+        const parsed = JSON.parse(str);
+
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (err) {
+        console.error("❌ Failed to parse buttons:", buttons, err);
+        return [];
+      }
+    }
+
+    return [];
+  };
+
   return (
     <div className="wa-chat-window">
       {/* HEADER */}
@@ -688,9 +726,9 @@ export default function ChatWindow({ chatId, userInfo }) {
                 {msg.message && <div>{msg.message}</div>}
 
                 {/* BUTTONS */}
-                {msg.buttons && (
-                  <div className="border-t mt-4 ">
-                    {msg.buttons.map((btn, i) => (
+                {normalizeButtons(msg.buttons).length > 0 && (
+                  <div className="border-t mt-4">
+                    {normalizeButtons(msg.buttons)?.map((btn, i) => (
                       <button
                         key={i}
                         className="w-full text-blue-600 bg-gray-50 py-2 flex items-center justify-center mb-1 rounded-lg hover:bg-blue-50 transition"
