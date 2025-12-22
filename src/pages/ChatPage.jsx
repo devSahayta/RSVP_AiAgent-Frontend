@@ -32,6 +32,8 @@ export default function ChatPage() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [activeChat, setActiveChat] = useState(null);
   const [activeChatUser, setActiveChatUser] = useState(null);
+  const [chatMode, setChatMode] = useState("AUTO");
+
 
   return (
     <div className="wa-container">
@@ -55,16 +57,26 @@ export default function ChatPage() {
         <ChatList
           eventId={selectedEvent}
           onSelectChat={(chatId, userData) => {
-            setActiveChat(chatId);
-            setActiveChatUser(userData);
-          }}
+  setActiveChat(chatId);
+  setActiveChatUser(userData);
+ setChatMode((userData.mode || "AI").toUpperCase().trim());
+
+
+}}
+
         />
       )}
 
       {/* Show Chat Window only when chat clicked */}
       {activeChat && (
-        <ChatWindow chatId={activeChat} userInfo={activeChatUser} />
-      )}
+  <ChatWindow
+    chatId={activeChat}
+    userInfo={activeChatUser}
+    chatMode={chatMode}
+    setChatMode={setChatMode}
+  />
+)}
+
     </div>
   );
 }
