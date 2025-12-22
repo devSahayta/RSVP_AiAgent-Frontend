@@ -497,11 +497,15 @@
 
 // _________________________________________________________________new One______________________________________________________
 import { useEffect, useRef, useState } from "react";
+import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 
-export default function ChatWindow({ chatId, userInfo }) {
+
+export default function ChatWindow({ chatId, userInfo,chatMode,setChatMode}) {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const messagesEndRef = useRef(null);
+  const { getToken } = useKindeAuth();
+
 
   const parseTs = (ts) => {
     try {
@@ -556,11 +560,18 @@ export default function ChatWindow({ chatId, userInfo }) {
   // };
 
   // 👉 Load messages (using your backend API)
+
+  useEffect(() => {
+  console.log("🔄 Chat mode changed:", chatMode);
+}, [chatMode]);
+
   useEffect(() => {
     if (!chatId) {
       setMessages([]);
       return;
     }
+
+    
 
     let cancelled = false;
 
@@ -597,68 +608,150 @@ export default function ChatWindow({ chatId, userInfo }) {
     return ["admin", "ai", "bot", "system"].includes(s);
   };
 
-  const sendMessage = async () => {
-    const trimmed = inputText.trim();
-    if (!trimmed || !chatId) return;
+  const resumeAI = async () => {
+  if (!chatId) return;
 
-    const temp = {
-      message_id: `temp-${Date.now()}`,
-      sender_type: "admin",
-      message: trimmed,
-      created_at: new Date().toISOString(),
-    };
+  try {
+    const token = await getToken();
 
-    setMessages((prev) => [...prev, temp]);
-    setInputText("");
-    scrollToBottom();
+const res = await fetch(
+  `${import.meta.env.VITE_BACKEND_URL}/admin/chat/resume-ai`,
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      chat_id: chatId,
+    }),
+  }
+);
 
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/chats/${chatId}/messages`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sender_type: "admin",
-            message: trimmed,
-            message_type: "text",
-          }),
-        }
-      );
 
-      const data = await res.json();
-      if (data?.ok && data.message) {
-        setMessages((prev) => {
-          const cleaned = prev.filter(
-            (m) => !String(m.message_id).startsWith("temp-")
-          );
-          return normalizeAndSort([...cleaned, data.message]);
-        });
-        scrollToBottom();
-      }
-    } catch (err) {
-      console.error("Send message failed:", err);
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      setChatMode("AI");
     }
+  } catch (err) {
+    console.error("Failed to resume AI", err);
+  }
+};
+
+
+
+ const sendMessage = async () => {
+  const trimmed = inputText.trim();
+  if (!trimmed || !chatId) return;
+
+  const temp = {
+    message_id: `temp-${Date.now()}`,
+    sender_type: "admin",
+    message: trimmed,
+    created_at: new Date().toISOString(),
   };
+
+  setMessages((prev) => [...prev, temp]);
+  setInputText("");
+  scrollToBottom();
+  setChatMode("MANUAL");
+
+  try {
+    const token = await getToken();
+
+const res = await fetch(
+  `${import.meta.env.VITE_BACKEND_URL}/admin/chat/send`,
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      chat_id: chatId,
+      message: trimmed,
+    }),
+  }
+);
+
+    const data = await res.json();
+    if (res.ok && data.success) {
+      // Optionally reload messages from backend
+      // Or just mark temp message as "sent"
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.message_id === temp.message_id ? { ...m, status: "sent" } : m
+        )
+      );
+      scrollToBottom();
+    } else {
+      console.error("Send failed:", data);
+    }
+  } catch (err) {
+    console.error("Send message failed:", err);
+  }
+};
+
 
   return (
     <div className="wa-chat-window">
       {/* HEADER */}
       <div className="wa-chat-header">
-        <div className="wa-header-left">
-          <div className="wa-header-avatar">
-            {userInfo?.person_name
-              ? userInfo.person_name.charAt(0).toUpperCase()
-              : "U"}
-          </div>
-          <div className="wa-header-meta">
-            <h3 className="wa-header-name">
-              {userInfo?.person_name || "User"}
-            </h3>
-            <div className="wa-last-seen">online</div>
-          </div>
-        </div>
+  <div className="wa-header-left">
+    <div className="wa-header-avatar">
+      {userInfo?.person_name
+        ? userInfo.person_name.charAt(0).toUpperCase()
+        : "U"}
+    </div>
+
+    <div className="wa-header-meta">
+      <h3 className="wa-header-name">
+        {userInfo?.person_name || "User"}
+      </h3>
+
+      <div className="wa-last-seen">
+        {chatMode === "AI" ? "🤖 AI active" : "👤 Admin mode"}
       </div>
+
+      {/* DEBUG – remove later */}
+      <div style={{ fontSize: "11px", color: "#999" }}>
+        Mode: {chatMode}
+      </div>
+    </div>
+  </div>
+
+  {/* RESUME AI BANNER */}
+{chatMode === "MANUAL" && (
+  <div
+    className="resume-ai-banner"
+    onClick={resumeAI}
+    title="Click to resume AI"
+  >
+    <span className="resume-ai-icon">▶</span>
+    <span className="resume-ai-text">
+      AI is paused. Click to resume automated replies
+    </span>
+  </div>
+)}
+
+</div>
+
+
+    {/* {chatMode !== "AI" && (
+  <div className="ai-paused-banner">
+    🛑 AI is paused. You are chatting as admin.
+  </div>
+)} */}
+
+{/* {chatMode !== "AI" && (
+  <button className="resume-ai-btn" onClick={resumeAI}>
+    ▶ Resume AI
+  </button>
+)} */}
+
+
+
 
       {/* MESSAGES */}
       <div className="wa-messages">
@@ -674,25 +767,29 @@ export default function ChatWindow({ chatId, userInfo }) {
                 {msg.message && <div>{msg.message}</div>}
 
                 {/* IMAGE */}
-                {msg.media_path && isImage(msg.media_path) && (
-                  <img
-                    src={msg.media_path}
-                    alt="media"
-                    className="wa-chat-image"
-                  />
-                )}
+{msg.message_type === "image" &&
+  typeof msg.media_path === "string" && (
+    <img
+      src={msg.media_path}
+      alt="media"
+      className="wa-chat-image"
+    />
+)}
 
-                {/* DOCUMENT */}
-                {msg.media_path && (
-                  <a
-                    href={msg.media_path}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="wa-chat-doc"
-                  >
-                    📄 {msg.media_path.split("/").pop().split("?")[0]}
-                  </a>
-                )}
+{/* DOCUMENT */}
+{msg.message_type === "document" &&
+  typeof msg.media_path === "string" && (
+    <a
+      href={msg.media_path}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="wa-chat-doc"
+    >
+      📄 {msg.media_path.split("/").pop().split("?")[0]}
+    </a>
+)}
+
+
               </div>
 
               <div className="wa-message-time">
