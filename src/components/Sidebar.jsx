@@ -7,6 +7,7 @@ import {
   MessageSquare,
   FileText,
   LayersIcon,
+  Library,
 } from "lucide-react";
 import "../styles/sidebar.css";
 
@@ -49,6 +50,12 @@ const Sidebar = ({ isOpen, onClose }) => {
       name: "Create Template",
       path: "/template/create",
       icon: <FileText size={18} />,
+    },
+
+    {
+      name: "Knowledge Base",
+      path: "/knowledge-bases",
+      icon: <Library size={18} />,
     },
   ];
 

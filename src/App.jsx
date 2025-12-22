@@ -152,6 +152,9 @@ import { addUserToBackend } from "./api/userApi";
 import "./styles/global.css";
 import { fetchWhatsappAccount } from "./api/waccount";
 import useAuthUser from "./hooks/useAuthUser";
+import KnowledgeBases from "./pages/KnowledgeBases";
+import CreateKnowledgeBase from "./pages/CreateKnowledgeBase";
+import KnowledgeBaseDetail from "./pages/KnowledgeBaseDetail";
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, isLoading } = useKindeAuth();
@@ -343,6 +346,16 @@ function AppContent() {
           <Route
             path="/document-viewer/:participantId"
             element={<DocumentViewer />}
+          />
+
+          <Route path="/knowledge-bases" element={<KnowledgeBases />} />
+          <Route
+            path="/knowledge-bases/create"
+            element={<CreateKnowledgeBase />}
+          />
+          <Route
+            path="/knowledge-bases/:id"
+            element={<KnowledgeBaseDetail />}
           />
 
           <Route path="*" element={<Navigate to="/" replace />} />

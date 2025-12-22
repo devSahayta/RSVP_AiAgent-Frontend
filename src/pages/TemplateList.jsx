@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import useAuthUser from "../hooks/useAuthUser";
 import { fetchMetaTemplates } from "../api/templates";
 import { deleteMetaTemplate } from "../api/templates";
+import { useNavigate } from "react-router-dom";
 
 // WhatsApp-style Preview Component
 function TemplatePreview({ template, userId }) {
@@ -133,6 +134,7 @@ function TemplatePreview({ template, userId }) {
 
 export default function TemplateList() {
   const { userId } = useAuthUser();
+  const navigate = useNavigate();
   const [templates, setTemplates] = useState([]);
   const [expanded, setExpanded] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -234,9 +236,7 @@ export default function TemplateList() {
                       className={`px-3 py-1 text-sm bg-green-400 text-white rounded hover:bg-green-500 ${
                         tpl.status === "APPROVED" ? "inline-block" : "hidden"
                       } `}
-                      onClick={() =>
-                        (window.location.href = `/templates/send/${tpl.id}`)
-                      }
+                      onClick={() => navigate(`/templates/send/${tpl.id}`)}
                       disabled={tpl.status === "APPROVED" ? false : true}
                     >
                       Send
