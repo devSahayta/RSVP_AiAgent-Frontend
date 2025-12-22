@@ -112,11 +112,6 @@ function TemplatePreview({ template, userId }) {
             })()}
           </div>
 
-          {/* TIME */}
-          <div className="px-4 pb-2 text-right text-xs text-gray-400">
-            13:18
-          </div>
-
           {/* BUTTONS */}
           {buttons?.buttons && (
             <div className="border-t">

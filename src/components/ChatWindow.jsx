@@ -498,9 +498,12 @@
 // _________________________________________________________________new One______________________________________________________
 import { useEffect, useRef, useState } from "react";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
-
+import useAuthUser from "../hooks/useAuthUser";
+import MediaPreview from "./MediaPreview";
 
 export default function ChatWindow({ chatId, userInfo,chatMode,setChatMode}) {
+ {
+  const { userId } = useAuthUser();
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const messagesEndRef = useRef(null);
@@ -583,6 +586,8 @@ export default function ChatWindow({ chatId, userInfo,chatMode,setChatMode}) {
 
         const data = await res.json();
         if (!data?.ok || !Array.isArray(data.messages)) return;
+
+        console.log({ data });
 
         if (!cancelled) {
           const sorted = normalizeAndSort(data.messages);
@@ -693,6 +698,43 @@ const res = await fetch(
   }
 };
 
+  const normalizeButtons = (buttons) => {
+    if (!buttons) return [];
+
+    // Case 1: Already correct JSON array
+    if (Array.isArray(buttons)) return buttons;
+
+    // Case 2: JSON stored as string
+    if (typeof buttons === "string") {
+      try {
+        let str = buttons.trim();
+
+        // Remove wrapping quotes: "[{...}]"
+        if (
+          (str.startsWith('"') && str.endsWith('"')) ||
+          (str.startsWith("'") && str.endsWith("'"))
+        ) {
+          str = str.slice(1, -1);
+        }
+
+        // Unescape quotes & newlines
+        str = str
+          .replace(/\\"/g, '"')
+          .replace(/\\n/g, "")
+          .replace(/\\r/g, "")
+          .replace(/\\t/g, "");
+
+        const parsed = JSON.parse(str);
+
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (err) {
+        console.error("❌ Failed to parse buttons:", buttons, err);
+        return [];
+      }
+    }
+
+    return [];
+  };
 
   return (
     <div className="wa-chat-window">
@@ -763,8 +805,31 @@ const res = await fetch(
               key={msg.message_id}
               className={`wa-message-bubble ${sent ? "sent" : "received"}`}
             >
+              {/* Render Media for template */}
+              <div className=" mb-4 ">
+                {msg.media_path && msg.message_type === "template" && (
+                  <div className="mt-3 border rounded-lg p-2 bg-gray-50">
+                    <MediaPreview mediaId={msg.media_path} userId={userId} />
+                  </div>
+                )}
+              </div>
+
               <div className="wa-message-text">
                 {msg.message && <div>{msg.message}</div>}
+
+                {/* BUTTONS */}
+                {normalizeButtons(msg.buttons).length > 0 && (
+                  <div className="border-t mt-4">
+                    {normalizeButtons(msg.buttons)?.map((btn, i) => (
+                      <button
+                        key={i}
+                        className="w-full text-blue-600 bg-gray-50 py-2 flex items-center justify-center mb-1 rounded-lg hover:bg-blue-50 transition"
+                      >
+                        ➜ {btn.text}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {/* IMAGE */}
 {msg.message_type === "image" &&
@@ -790,6 +855,17 @@ const res = await fetch(
 )}
 
 
+                {/* DOCUMENT */}
+                {msg.media_path && msg.message_type !== "template" && (
+                  <a
+                    href={msg.media_path}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="wa-chat-doc"
+                  >
+                    📄 {msg.media_path.split("/").pop().split("?")[0]}
+                  </a>
+                )}
               </div>
 
               <div className="wa-message-time">
@@ -813,4 +889,5 @@ const res = await fetch(
       </div>
     </div>
   );
+}
 }
