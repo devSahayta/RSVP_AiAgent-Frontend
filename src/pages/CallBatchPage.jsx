@@ -35,7 +35,7 @@ useEffect(() => {
 }, [hasConversations, navigate, eventId]);
 
 
- const API_URL = "https://rsvp-aiagent-backend.onrender.com";
+//  const API_URL = "https://rsvp-aiagent-backend.onrender.com";
 
   const fetchEventData = async () => {
   try {
@@ -145,7 +145,7 @@ if (hasConversations) {
       console.log(`📤 user_id: ${userId}, batch_id: ${batchId}`);
 
       // ✅ Call backend endpoint that uses ElevenLabs API
-      const response = await fetch(`${API_URL}/api/credits/reduce-batch-elevenlabs`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/credits/reduce-batch-elevenlabs`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -231,7 +231,7 @@ if (hasConversations) {
     setCallResult(null);
 
     try {
-      const res = await fetch(`${API_URL}/api/events/${event.id}/call-batch`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/events/${event.id}/call-batch`, {
         method: 'POST',
       });
 
