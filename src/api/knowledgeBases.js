@@ -19,3 +19,8 @@ export const fetchKnowledgeBases = (userId) =>
  */
 export const fetchKnowledgeBaseById = (kbId) =>
   api.get(`/api/knowledge-bases/${kbId}`);
+
+export const deleteKnowledgeBase = (kbId, userId) =>
+  api.delete(`/api/knowledge-bases/${kbId}`, {
+    data: { user_id: userId },
+  });
