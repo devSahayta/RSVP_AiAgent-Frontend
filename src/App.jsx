@@ -155,6 +155,7 @@ import useAuthUser from "./hooks/useAuthUser";
 import KnowledgeBases from "./pages/KnowledgeBases";
 import CreateKnowledgeBase from "./pages/CreateKnowledgeBase";
 import KnowledgeBaseDetail from "./pages/KnowledgeBaseDetail";
+import { Toaster } from "react-hot-toast";
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, isLoading } = useKindeAuth();
@@ -368,6 +369,29 @@ function AppContent() {
 export default function App() {
   return (
     <Router>
+      {/* Global toaster */}
+      <Toaster
+        position="top-right"
+        reverseOrder={false}
+        // toastOptions={{
+        //   duration: 3000,
+        // }}
+        toastOptions={{
+          duration: 3000,
+          success: {
+            style: {
+              background: "#16a34a",
+              color: "#fff",
+            },
+          },
+          error: {
+            style: {
+              background: "#dc2626",
+              color: "#fff",
+            },
+          },
+        }}
+      />
       <AppContent />
     </Router>
   );

@@ -1,5 +1,5 @@
 // components/EventForm.jsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Upload,
   Calendar,
@@ -10,18 +10,39 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { fetchKnowledgeBases } from "../api/knowledgeBases";
 import "../styles/form.css";
 
 const EventForm = ({ user }) => {
+  // const [formData, setFormData] = useState({
+  //   eventName: "",
+  //   eventDate: "",
+  //   dataset: null,
+  // });
+
   const [formData, setFormData] = useState({
     eventName: "",
     eventDate: "",
+    eventType: "wedding",
+    knowledgeBaseId: "",
     dataset: null,
   });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
   const [message, setMessage] = useState("");
+  const [knowledgeBases, setKnowledgeBases] = useState([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    fetchKnowledgeBases(user.id)
+      .then((res) => setKnowledgeBases(res.data))
+      .catch((err) => console.error("Failed to load KBs", err));
+  }, [user]);
+
+  console.log({ formData });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -56,6 +77,9 @@ const EventForm = ({ user }) => {
       payload.append("user_id", user.id);
       payload.append("event_name", formData.eventName);
       payload.append("event_date", formData.eventDate);
+      payload.append("event_type", formData.eventType);
+      payload.append("knowledge_base_id", formData.knowledgeBaseId);
+
       if (formData.dataset) {
         payload.append("dataset", formData.dataset);
       }
@@ -141,6 +165,37 @@ const EventForm = ({ user }) => {
             required
             className="form-input"
           />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Event Type</label>
+          <select
+            name="eventType"
+            value={formData.eventType}
+            onChange={handleInputChange}
+            className="form-input"
+          >
+            <option value="wedding">Wedding</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Knowledge Base</label>
+          <select
+            name="knowledgeBaseId"
+            value={formData.knowledgeBaseId}
+            onChange={handleInputChange}
+            required
+            className="form-input"
+          >
+            <option value="">Select Knowledge Base</option>
+
+            {knowledgeBases.map((kb) => (
+              <option key={kb.id} value={kb.id}>
+                {kb.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="form-group">

@@ -53,7 +53,7 @@ export default function KnowledgeBases() {
               </h3>
 
               <p className="text-xs text-gray-400 break-all">
-                ElevenLabs ID: {kb.elevenlabs_kb_id}
+                Created At: {kb.created_at.slice(0, 10)}
               </p>
 
               <div className="mt-3 text-sm text-indigo-600">View content →</div>
