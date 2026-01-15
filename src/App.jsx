@@ -156,6 +156,7 @@ import KnowledgeBases from "./pages/KnowledgeBases";
 import CreateKnowledgeBase from "./pages/CreateKnowledgeBase";
 import KnowledgeBaseDetail from "./pages/KnowledgeBaseDetail";
 import { Toaster } from "react-hot-toast";
+import TransportPlanning from './components/transportPlanning';
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, isLoading } = useKindeAuth();
@@ -358,6 +359,8 @@ function AppContent() {
             path="/knowledge-bases/:id"
             element={<KnowledgeBaseDetail />}
           />
+
+          <Route path="/transport-planning/:eventId" element={<TransportPlanning />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

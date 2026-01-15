@@ -19,6 +19,7 @@ import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { Download } from "lucide-react";
+import { Truck } from 'lucide-react';
 
 
 
@@ -299,6 +300,7 @@ const { getToken } = useKindeAuth();
   display: "flex",
   justifyContent: "flex-end",
   marginBottom: "12px",
+  gap:"12px"
 }}>
   <button
     onClick={exportToExcel}
@@ -319,6 +321,28 @@ const { getToken } = useKindeAuth();
     <Download size={16} />
     Export Excel
   </button>
+
+{/* NEW: Transport Planning Button */}
+  <button
+    onClick={() => navigate(`/transport-planning/${eventId}`)}
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      padding: "10px 16px",
+      borderRadius: "8px",
+      border: "1px solid #ddd",
+      background: "#000",
+      color: "#fff",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: "600",
+    }}
+  >
+    <Truck size={16} />
+    Transport Planning
+  </button>
+
 </div>
 
 
