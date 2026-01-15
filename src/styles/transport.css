@@ -635,6 +635,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  -webkit-user-select: none; /* Safari */
   user-select: none;
   transition: all 0.2s;
 }

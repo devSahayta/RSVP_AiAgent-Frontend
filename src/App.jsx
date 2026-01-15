@@ -156,7 +156,8 @@ import KnowledgeBases from "./pages/KnowledgeBases";
 import CreateKnowledgeBase from "./pages/CreateKnowledgeBase";
 import KnowledgeBaseDetail from "./pages/KnowledgeBaseDetail";
 import { Toaster } from "react-hot-toast";
-import TransportPlanning from './components/transportPlanning';
+import TransportPlanning from './components/TransportPlanning';
+import FlightStatus from "./pages/FlightStatus";
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, isLoading } = useKindeAuth();
@@ -361,6 +362,7 @@ function AppContent() {
           />
 
           <Route path="/transport-planning/:eventId" element={<TransportPlanning />} />
+          <Route path="/flight-status/:eventId" element={<FlightStatus />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -376,24 +378,24 @@ export default function App() {
       <Toaster
         position="top-right"
         reverseOrder={false}
-        // toastOptions={{
-        //   duration: 3000,
-        // }}
         toastOptions={{
           duration: 3000,
-          success: {
-            style: {
-              background: "#16a34a",
-              color: "#fff",
-            },
-          },
-          error: {
-            style: {
-              background: "#dc2626",
-              color: "#fff",
-            },
-          },
         }}
+        // toastOptions={{
+        //   duration: 3000,
+        //   success: {
+        //     style: {
+        //       background: "#16a34a",
+        //       color: "#fff",
+        //     },
+        //   },
+        //   error: {
+        //     style: {
+        //       background: "#dc2626",
+        //       color: "#fff",
+        //     },
+        //   },
+        // }}
       />
       <AppContent />
     </Router>

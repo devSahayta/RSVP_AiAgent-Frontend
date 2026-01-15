@@ -428,6 +428,10 @@ const TransportPlanning = () => {
                 onChange={(e) =>
                   setSettings({ ...settings, max_wait_minutes: parseInt(e.target.value) })
                 }
+                style={{
+    maxWidth: "40%",
+    width: "100%"
+  }}
               />
             </div>
 

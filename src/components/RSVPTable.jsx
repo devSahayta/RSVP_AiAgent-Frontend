@@ -21,8 +21,6 @@ import { saveAs } from "file-saver";
 import { Download } from "lucide-react";
 import { Truck } from 'lucide-react';
 
-
-
 const RSVPTable = ({ eventId: propEventId }) => {
   const [rsvpData, setRsvpData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
@@ -36,11 +34,14 @@ const RSVPTable = ({ eventId: propEventId }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [showStatusPopup, setShowStatusPopup] = useState(false);
-  const [retryStatus, setRetryStatus] = useState({ success: false, message: '' });
+  const [retryStatus, setRetryStatus] = useState({
+    success: false,
+    message: "",
+  });
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
-const { getToken } = useKindeAuth();
+  const { getToken } = useKindeAuth();
 
   useEffect(() => {
     if (!eventId) return;
@@ -49,13 +50,20 @@ const { getToken } = useKindeAuth();
       try {
         await fetchRSVPData();
 
-        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/sync-batch-status`, {
-          method: "POST",
-        });
+        const res = await fetch(
+          `${
+            import.meta.env.VITE_BACKEND_URL
+          }/api/events/${eventId}/sync-batch-status`,
+          {
+            method: "POST",
+          }
+        );
 
         if (res.ok) {
           const data = await res.json();
-          console.log(`✅ Auto-synced ${data.updated}/${data.total} participants`);
+          console.log(
+            `✅ Auto-synced ${data.updated}/${data.total} participants`
+          );
           await fetchRSVPData();
         } else {
           console.warn("⚠️ Sync batch status failed");
@@ -78,95 +86,99 @@ const { getToken } = useKindeAuth();
     filterData();
   }, [rsvpData, searchTerm, statusFilter]);
 
- const fetchRSVPData = async () => {
-  try {
-    setIsLoading(true);
-
-    // 1️⃣ Fetch RSVP data
-    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/rsvp-data`);
-    const data = await res.json();
-
-   const mergedData = await Promise.all(
-  data.map(async (participant) => {
-    const participantId = participant.participant_id || participant.id; // fallback
-    if (!participantId) return participant; // skip if still missing
-
+  const fetchRSVPData = async () => {
     try {
-      const itineraryRes = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/travel-itinerary/${participantId}`
-      );
-      const itineraryData = await itineraryRes.json();
+      setIsLoading(true);
 
-      const itinerary = itineraryData.itinerary?.find(
-        (it) => it.attendee_name.toLowerCase() === participant.fullName.toLowerCase()
+      // 1️⃣ Fetch RSVP data
+      const res = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/rsvp-data`
+      );
+      const data = await res.json();
+
+      const mergedData = await Promise.all(
+        data.map(async (participant) => {
+          const participantId = participant.participant_id || participant.id; // fallback
+          if (!participantId) return participant; // skip if still missing
+
+          try {
+            const itineraryRes = await fetch(
+              `${
+                import.meta.env.VITE_BACKEND_URL
+              }/api/travel-itinerary/${participantId}`
+            );
+            const itineraryData = await itineraryRes.json();
+
+            const itinerary = itineraryData.itinerary?.find(
+              (it) =>
+                it.attendee_name.toLowerCase() ===
+                participant.fullName.toLowerCase()
+            );
+
+            return {
+              ...participant,
+              arrival_date: itinerary?.arrival?.date || "—",
+              arrival_time: itinerary?.arrival?.time || "—",
+              arrival_transport_no: itinerary?.arrival?.transport_no || "—",
+              return_date: itinerary?.return?.date || "—",
+              return_time: itinerary?.return?.time || "—",
+              return_transport_no: itinerary?.return?.transport_no || "—",
+            };
+          } catch (err) {
+            console.error(
+              `Error fetching itinerary for ${participant.fullName}:`,
+              err
+            );
+            return participant;
+          }
+        })
       );
 
-      return {
-        ...participant,
-        arrival_date: itinerary?.arrival?.date || "—",
-        arrival_time: itinerary?.arrival?.time || "—",
-        arrival_transport_no: itinerary?.arrival?.transport_no || "—",
-        return_date: itinerary?.return?.date || "—",
-        return_time: itinerary?.return?.time || "—",
-        return_transport_no: itinerary?.return?.transport_no || "—",
-      };
+      setRsvpData(mergedData); // keep this same
     } catch (err) {
-      console.error(`Error fetching itinerary for ${participant.fullName}:`, err);
-      return participant;
+      console.error("Error fetching backend RSVP data:", err);
+    } finally {
+      setIsLoading(false);
     }
-  })
-);
-
-
-    setRsvpData(mergedData); // keep this same
-  } catch (err) {
-    console.error("Error fetching backend RSVP data:", err);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+  };
 
   const filterData = () => {
-  let filtered = rsvpData;
+    let filtered = rsvpData;
 
-  if (searchTerm) {
-    const lower = searchTerm.toLowerCase();
+    if (searchTerm) {
+      const lower = searchTerm.toLowerCase();
 
-    filtered = filtered.filter((item) => {
-      return (
-        item.fullName?.toLowerCase().includes(lower) ||
-        item.phoneNumber?.toLowerCase().includes(lower) ||
-        item.eventName?.toLowerCase().includes(lower) ||
+      filtered = filtered.filter((item) => {
+        return (
+          item.fullName?.toLowerCase().includes(lower) ||
+          item.phoneNumber?.toLowerCase().includes(lower) ||
+          item.eventName?.toLowerCase().includes(lower) ||
+          item.arrival_date?.toLowerCase().includes(lower) ||
+          item.arrival_time?.toLowerCase().includes(lower) ||
+          item.arrival_transport_no?.toLowerCase().includes(lower) ||
+          item.return_date?.toLowerCase().includes(lower) ||
+          item.return_time?.toLowerCase().includes(lower) ||
+          item.return_transport_no?.toLowerCase().includes(lower)
+        );
+      });
+    }
 
-        item.arrival_date?.toLowerCase().includes(lower) ||
-        item.arrival_time?.toLowerCase().includes(lower) ||
-        item.arrival_transport_no?.toLowerCase().includes(lower) ||
-
-        item.return_date?.toLowerCase().includes(lower) ||
-        item.return_time?.toLowerCase().includes(lower) ||
-        item.return_transport_no?.toLowerCase().includes(lower)
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(
+        (item) => item.rsvpStatus?.toLowerCase() === statusFilter.toLowerCase()
       );
-    });
-  }
+    }
 
-  if (statusFilter !== "all") {
-    filtered = filtered.filter(
-      (item) => item.rsvpStatus?.toLowerCase() === statusFilter.toLowerCase()
-    );
-  }
-
-  setFilteredData(filtered);
-  setCurrentPage(1);
-};
-
+    setFilteredData(filtered);
+    setCurrentPage(1);
+  };
 
   const getStatusIcon = (status) => {
     switch (status) {
       case "Yes":
         return <CheckCircle size={16} className="status-icon confirmed" />;
       case "No":
-        return <XCircle size={16} className="status-icon declined" />
+        return <XCircle size={16} className="status-icon declined" />;
       default:
         return <Clock size={16} className="status-icon pending" />;
     }
@@ -187,54 +199,50 @@ const { getToken } = useKindeAuth();
   };
 
   const exportToExcel = () => {
-  if (!filteredData || filteredData.length === 0) {
-    alert("No data to export");
-    return;
-  }
+    if (!filteredData || filteredData.length === 0) {
+      alert("No data to export");
+      return;
+    }
 
-  // Map only required fields (Excel columns)
-  const excelData = filteredData.map((item, index) => ({
-    "S.No": index + 1,
-    "Full Name": item.fullName || "",
-    "Phone Number": item.phoneNumber || "",
-    "RSVP Status": item.rsvpStatus || "Pending",
-    "Guests": item.numberOfGuests || 0,
-    // "Event Name": item.event_name || "",
-    "Call Status": item.callStatus || "pending",
-    "Notes": item.notes || "",
-    "Arrival Date": item.arrival_date || "",
-    "Arrival Time": item.arrival_time || "",
-    "Arrival Transport No": item.arrival_transport_no || "",
-    "Return Date": item.return_date || "",
-    "Return Time": item.return_time || "",
-    "Return Transport No": item.return_transport_no || "",
-    "Response Date": formatDate(item.timestamp),
-  }));
+    // Map only required fields (Excel columns)
+    const excelData = filteredData.map((item, index) => ({
+      "S.No": index + 1,
+      "Full Name": item.fullName || "",
+      "Phone Number": item.phoneNumber || "",
+      "RSVP Status": item.rsvpStatus || "Pending",
+      Guests: item.numberOfGuests || 0,
+      // "Event Name": item.event_name || "",
+      "Call Status": item.callStatus || "pending",
+      Notes: item.notes || "",
+      "Arrival Date": item.arrival_date || "",
+      "Arrival Time": item.arrival_time || "",
+      "Arrival Transport No": item.arrival_transport_no || "",
+      "Return Date": item.return_date || "",
+      "Return Time": item.return_time || "",
+      "Return Transport No": item.return_transport_no || "",
+      "Response Date": formatDate(item.timestamp),
+    }));
 
-  // Create worksheet
-  const worksheet = XLSX.utils.json_to_sheet(excelData);
+    // Create worksheet
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
 
-  // Create workbook
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "RSVP Data");
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "RSVP Data");
 
-  // Generate Excel buffer
-  const excelBuffer = XLSX.write(workbook, {
-    bookType: "xlsx",
-    type: "array",
-  });
+    // Generate Excel buffer
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
 
-  // Save file
-  const file = new Blob([excelBuffer], {
-    type:
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
+    // Save file
+    const file = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
 
-  saveAs(file, `RSVP_Data_${eventId}_${Date.now()}.xlsx`);
-};
-
-
-
+    saveAs(file, `RSVP_Data_${eventId}_${Date.now()}.xlsx`);
+  };
 
   // Pagination logic
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
@@ -259,17 +267,16 @@ const { getToken } = useKindeAuth();
     );
   }
 
-  const notResponded = filteredData.filter(item =>
-  !item.rsvpStatus ||
-  item.rsvpStatus === null ||
-  item.rsvpStatus === "NULL" ||
-  item.rsvpStatus.toLowerCase() === "pending"
-);
-
+  const notResponded = filteredData.filter(
+    (item) =>
+      !item.rsvpStatus ||
+      item.rsvpStatus === null ||
+      item.rsvpStatus === "NULL" ||
+      item.rsvpStatus.toLowerCase() === "pending"
+  );
 
   return (
     <div className="table-container">
-    
       {/* Filters */}
       <div className="table-filters">
         <div className="search-container">
@@ -294,7 +301,6 @@ const { getToken } = useKindeAuth();
           <option value="No">No</option>
         </select>
       </div>
-      
 
       <div style={{
   display: "flex",
@@ -343,8 +349,55 @@ const { getToken } = useKindeAuth();
     Transport Planning
   </button>
 
-</div>
+  <button
+          onClick={() => navigate(`/flight-status/${eventId}`)}
+          style={{
+            display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      padding: "10px 16px",
+      borderRadius: "8px",
+      border: "1px solid #ddd",
+      background: "#000",
+      color: "#fff",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: "600",
+          }}
+        >
+          ✈️ View Flight Status
+        </button>
 
+</div>
+      {/* <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginBottom: "12px",
+        }}
+      >
+        <button
+          onClick={exportToExcel}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "10px 16px",
+            borderRadius: "8px",
+            border: "1px solid #ddd",
+            background: "#000",
+            color: "#fff",
+            cursor: "pointer",
+            fontSize: "14px",
+            fontWeight: "600",
+          }}
+        >
+          <Download size={16} />
+          Export Excel
+        </button>
+
+        
+      </div> */}
 
       {/* Table */}
       <div className="table-wrapper">
@@ -391,7 +444,9 @@ const { getToken } = useKindeAuth();
                     </div>
                   </td>
                   <td>
-                    <div className={`status-cell ${item.rsvpStatus.toLowerCase()}`}>
+                    <div
+                      className={`status-cell ${item.rsvpStatus.toLowerCase()}`}
+                    >
                       {getStatusIcon(item.rsvpStatus)}
                       {item.rsvpStatus}
                     </div>
@@ -428,20 +483,20 @@ const { getToken } = useKindeAuth();
                     )}
                   </td>
                   <td>
-                    <span className={`call-status-cell ${item.callStatus?.toLowerCase()}`}>
+                    <span
+                      className={`call-status-cell ${item.callStatus?.toLowerCase()}`}
+                    >
                       {item.callStatus ? item.callStatus : "pending"}
                     </span>
                   </td>
 
                   <td>{item.arrival_date || "—"}</td>
-<td>{item.arrival_time || "—"}</td>
-<td>{item.arrival_transport_no || "—"}</td>
+                  <td>{item.arrival_time || "—"}</td>
+                  <td>{item.arrival_transport_no || "—"}</td>
 
-
-<td>{item.return_date || "—"}</td>
-<td>{item.return_time || "—"}</td>
-<td>{item.return_transport_no || "—"}</td>
-
+                  <td>{item.return_date || "—"}</td>
+                  <td>{item.return_time || "—"}</td>
+                  <td>{item.return_transport_no || "—"}</td>
                 </tr>
               ))
             )}
@@ -463,7 +518,9 @@ const { getToken } = useKindeAuth();
             {Array.from({ length: totalPages }, (_, i) => (
               <button
                 key={i}
-                className={`page-number ${currentPage === i + 1 ? "active" : ""}`}
+                className={`page-number ${
+                  currentPage === i + 1 ? "active" : ""
+                }`}
                 onClick={() => handlePageChange(i + 1)}
               >
                 {i + 1}
@@ -562,50 +619,76 @@ const { getToken } = useKindeAuth();
       </div>
 
       {/* Retry Batch Call Button */}
-      <div className="retry-batch-container" style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '8px',
-        marginTop: '24px',
-        padding: '0 16px',
-      }}>
+      <div
+        className="retry-batch-container"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "8px",
+          marginTop: "24px",
+          padding: "0 16px",
+        }}
+      >
         <button
           className="retry-batch-btn"
-          disabled={filteredData.length > 0 && filteredData.every(item => item.callStatus === "completed")}
+          disabled={
+            filteredData.length > 0 &&
+            filteredData.every((item) => item.callStatus === "completed")
+          }
           style={{
-            padding: '12px 24px',
-            fontSize: '14px',
-            fontWeight: '600',
-            color: '#fff',
-            backgroundColor: filteredData.length > 0 && filteredData.every(item => item.callStatus === "completed") 
-              ? '#9ca3af' 
-              : '#000000',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: filteredData.length > 0 && filteredData.every(item => item.callStatus === "completed") 
-              ? 'not-allowed' 
-              : 'pointer',
-            transition: 'all 0.3s ease',
-            boxShadow: filteredData.length > 0 && filteredData.every(item => item.callStatus === "completed")
-              ? 'none'
-              : '0 2px 8px rgba(0, 0, 0, 0.2)',
-            width: '100%',
-            maxWidth: '300px',
-            opacity: filteredData.length > 0 && filteredData.every(item => item.callStatus === "completed") ? 0.6 : 1,
+            padding: "12px 24px",
+            fontSize: "14px",
+            fontWeight: "600",
+            color: "#fff",
+            backgroundColor:
+              filteredData.length > 0 &&
+              filteredData.every((item) => item.callStatus === "completed")
+                ? "#9ca3af"
+                : "#000000",
+            border: "none",
+            borderRadius: "8px",
+            cursor:
+              filteredData.length > 0 &&
+              filteredData.every((item) => item.callStatus === "completed")
+                ? "not-allowed"
+                : "pointer",
+            transition: "all 0.3s ease",
+            boxShadow:
+              filteredData.length > 0 &&
+              filteredData.every((item) => item.callStatus === "completed")
+                ? "none"
+                : "0 2px 8px rgba(0, 0, 0, 0.2)",
+            width: "100%",
+            maxWidth: "300px",
+            opacity:
+              filteredData.length > 0 &&
+              filteredData.every((item) => item.callStatus === "completed")
+                ? 0.6
+                : 1,
           }}
           onMouseEnter={(e) => {
-            if (!(filteredData.length > 0 && filteredData.every(item => item.callStatus === "completed"))) {
-              e.target.style.backgroundColor = '#1a1a1a';
-              e.target.style.transform = 'translateY(-2px)';
-              e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+            if (
+              !(
+                filteredData.length > 0 &&
+                filteredData.every((item) => item.callStatus === "completed")
+              )
+            ) {
+              e.target.style.backgroundColor = "#1a1a1a";
+              e.target.style.transform = "translateY(-2px)";
+              e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.3)";
             }
           }}
           onMouseLeave={(e) => {
-            if (!(filteredData.length > 0 && filteredData.every(item => item.callStatus === "completed"))) {
-              e.target.style.backgroundColor = '#000000';
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.2)';
+            if (
+              !(
+                filteredData.length > 0 &&
+                filteredData.every((item) => item.callStatus === "completed")
+              )
+            ) {
+              e.target.style.backgroundColor = "#000000";
+              e.target.style.transform = "translateY(0)";
+              e.target.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.2)";
             }
           }}
           onClick={() => setShowConfirmModal(true)}
@@ -613,219 +696,243 @@ const { getToken } = useKindeAuth();
           Retry Batch Call
         </button>
 
-        <p className="retry-hint" style={{
-          marginTop: '8px',
-          fontSize: '13px',
-          color: filteredData.length > 0 && filteredData.every(item => item.callStatus === "completed")
-            ? '#10b981'
-            : '#f59e0b',
-          fontWeight: '500',
-          textAlign: 'center',
-          width: '100%',
-          maxWidth: '300px',
-        }}>
-          {filteredData.length > 0 && filteredData.every(item => item.callStatus === "completed")
+        <p
+          className="retry-hint"
+          style={{
+            marginTop: "8px",
+            fontSize: "13px",
+            color:
+              filteredData.length > 0 &&
+              filteredData.every((item) => item.callStatus === "completed")
+                ? "#10b981"
+                : "#f59e0b",
+            fontWeight: "500",
+            textAlign: "center",
+            width: "100%",
+            maxWidth: "300px",
+          }}
+        >
+          {filteredData.length > 0 &&
+          filteredData.every((item) => item.callStatus === "completed")
             ? "✅ All participants completed — retry not needed."
-            : filteredData.length > 0 
-              ? `⚠️ ${filteredData.filter(item => item.callStatus !== "completed").length} call(s) pending - Retry available`
-              : ""}
+            : filteredData.length > 0
+            ? `⚠️ ${
+                filteredData.filter((item) => item.callStatus !== "completed")
+                  .length
+              } call(s) pending - Retry available`
+            : ""}
         </p>
-<button
-  className="retry-batch-btn"
-  disabled={
-    filteredData.length === 0 ||
-    filteredData.filter(item =>
-      !item.rsvpStatus ||
-      item.rsvpStatus === null ||
-      item.rsvpStatus === "NULL" ||
-      item.rsvpStatus.toLowerCase() === "pending"
-    ).length === 0
-  }
-  style={{
-    padding: "12px 24px",
-    fontSize: "14px",
-    fontWeight: "600",
-    color: "#fff",
-    backgroundColor:
-      filteredData.length === 0 ||
-      filteredData.filter(item =>
-        !item.rsvpStatus ||
-        item.rsvpStatus === null ||
-        item.rsvpStatus === "NULL" ||
-        item.rsvpStatus.toLowerCase() === "pending"
-      ).length === 0
-        ? "#9ca3af"
-        : "#000000",
-    border: "none",
-    borderRadius: "8px",
-    cursor:
-      filteredData.length === 0 ||
-      filteredData.filter(item =>
-        !item.rsvpStatus ||
-        item.rsvpStatus === null ||
-        item.rsvpStatus === "NULL" ||
-        item.rsvpStatus.toLowerCase() === "pending"
-      ).length === 0
-        ? "not-allowed"
-        : "pointer",
-    transition: "all 0.3s ease",
-    boxShadow:
-      filteredData.length === 0 ||
-      filteredData.filter(item =>
-        !item.rsvpStatus ||
-        item.rsvpStatus === null ||
-        item.rsvpStatus === "NULL" ||
-        item.rsvpStatus.toLowerCase() === "pending"
-      ).length === 0
-        ? "none"
-        : "0 2px 8px rgba(0, 0, 0, 0.2)",
-    width: "100%",
-    maxWidth: "300px",
-    opacity:
-      filteredData.length === 0 ||
-      filteredData.filter(item =>
-        !item.rsvpStatus ||
-        item.rsvpStatus === null ||
-        item.rsvpStatus === "NULL" ||
-        item.rsvpStatus.toLowerCase() === "pending"
-      ).length === 0
-        ? 0.6
-        : 1,
-  }}
-  onClick={async () => {
+        <button
+          className="retry-batch-btn"
+          disabled={
+            filteredData.length === 0 ||
+            filteredData.filter(
+              (item) =>
+                !item.rsvpStatus ||
+                item.rsvpStatus === null ||
+                item.rsvpStatus === "NULL" ||
+                item.rsvpStatus.toLowerCase() === "pending"
+            ).length === 0
+          }
+          style={{
+            padding: "12px 24px",
+            fontSize: "14px",
+            fontWeight: "600",
+            color: "#fff",
+            backgroundColor:
+              filteredData.length === 0 ||
+              filteredData.filter(
+                (item) =>
+                  !item.rsvpStatus ||
+                  item.rsvpStatus === null ||
+                  item.rsvpStatus === "NULL" ||
+                  item.rsvpStatus.toLowerCase() === "pending"
+              ).length === 0
+                ? "#9ca3af"
+                : "#000000",
+            border: "none",
+            borderRadius: "8px",
+            cursor:
+              filteredData.length === 0 ||
+              filteredData.filter(
+                (item) =>
+                  !item.rsvpStatus ||
+                  item.rsvpStatus === null ||
+                  item.rsvpStatus === "NULL" ||
+                  item.rsvpStatus.toLowerCase() === "pending"
+              ).length === 0
+                ? "not-allowed"
+                : "pointer",
+            transition: "all 0.3s ease",
+            boxShadow:
+              filteredData.length === 0 ||
+              filteredData.filter(
+                (item) =>
+                  !item.rsvpStatus ||
+                  item.rsvpStatus === null ||
+                  item.rsvpStatus === "NULL" ||
+                  item.rsvpStatus.toLowerCase() === "pending"
+              ).length === 0
+                ? "none"
+                : "0 2px 8px rgba(0, 0, 0, 0.2)",
+            width: "100%",
+            maxWidth: "300px",
+            opacity:
+              filteredData.length === 0 ||
+              filteredData.filter(
+                (item) =>
+                  !item.rsvpStatus ||
+                  item.rsvpStatus === null ||
+                  item.rsvpStatus === "NULL" ||
+                  item.rsvpStatus.toLowerCase() === "pending"
+              ).length === 0
+                ? 0.6
+                : 1,
+          }}
+          onClick={async () => {
+            const pendingParticipants = filteredData.filter(
+              (item) =>
+                !item.rsvpStatus ||
+                item.rsvpStatus === null ||
+                item.rsvpStatus === "NULL" ||
+                item.rsvpStatus.toLowerCase() === "pending"
+            );
 
-    const pendingParticipants = filteredData.filter(
-      item =>
-        !item.rsvpStatus ||
-        item.rsvpStatus === null ||
-        item.rsvpStatus === "NULL" ||
-        item.rsvpStatus.toLowerCase() === "pending"
-    );
+            console.log("Pending:", pendingParticipants.length);
 
-    console.log("Pending:", pendingParticipants.length);
+            const token = await getToken();
 
-    const token = await getToken();
+            await fetch(
+              `${import.meta.env.VITE_BACKEND_URL}/whatsapp/send-batch`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ event_id: eventId }),
+              }
+            );
 
-    await fetch(`${import.meta.env.VITE_BACKEND_URL}/whatsapp/send-batch`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ event_id: eventId }),
-    });
+            setRetryStatus({
+              success: true,
+              message: `Sending messages to ${pendingParticipants.length} participant(s)!`,
+            });
+            setShowStatusPopup(true);
+            setTimeout(() => setShowStatusPopup(false), 3000);
+            await fetchRSVPData();
+          }}
+        >
+          Start Batch Message
+        </button>
 
-    setRetryStatus({
-      success: true,
-      message: `Sending messages to ${pendingParticipants.length} participant(s)!`,
-    });
-    setShowStatusPopup(true);
-    setTimeout(() => setShowStatusPopup(false), 3000);
-    await fetchRSVPData();
-  }}
->
-  Start Batch Message
-</button>
-
-
-{/* Optional hint below */}
-<p
-  className="retry-hint"
-  style={{
-    marginTop: "8px",
-    fontSize: "13px",
-    color: notResponded.length === 0 ? "#10b981" : "#f59e0b",
-    fontWeight: "500",
-    textAlign: "center",
-    width: "100%",
-    maxWidth: "300px",
-  }}
->
-  {filteredData.length === 0
-    ? ""
-    : notResponded.length === 0
-    ? "✅ All participants have responded — messages not needed."
-    : `⚠️ ${notResponded.length} participant(s) haven't responded — Start available`}
-</p>
-
-
-
-        
+        {/* Optional hint below */}
+        <p
+          className="retry-hint"
+          style={{
+            marginTop: "8px",
+            fontSize: "13px",
+            color: notResponded.length === 0 ? "#10b981" : "#f59e0b",
+            fontWeight: "500",
+            textAlign: "center",
+            width: "100%",
+            maxWidth: "300px",
+          }}
+        >
+          {filteredData.length === 0
+            ? ""
+            : notResponded.length === 0
+            ? "✅ All participants have responded — messages not needed."
+            : `⚠️ ${notResponded.length} participant(s) haven't responded — Start available`}
+        </p>
       </div>
-
- 
-
 
       {/* Confirmation Modal */}
       {showConfirmModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '16px',
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: '24px',
-            maxWidth: '400px',
-            width: '100%',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-          }}>
-            <h3 style={{
-              fontSize: '18px',
-              fontWeight: '600',
-              color: '#000',
-              marginBottom: '12px',
-            }}>
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "16px",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              borderRadius: "12px",
+              padding: "24px",
+              maxWidth: "400px",
+              width: "100%",
+              boxShadow:
+                "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+            }}
+          >
+            <h3
+              style={{
+                fontSize: "18px",
+                fontWeight: "600",
+                color: "#000",
+                marginBottom: "12px",
+              }}
+            >
               Retry Batch Call?
             </h3>
-            <p style={{
-              fontSize: '14px',
-              color: '#6b7280',
-              lineHeight: '1.5',
-              marginBottom: '24px',
-            }}>
-              This will retry calls for {filteredData.filter(item => item.callStatus !== "completed").length} participant(s) who haven't completed their calls yet.
+            <p
+              style={{
+                fontSize: "14px",
+                color: "#6b7280",
+                lineHeight: "1.5",
+                marginBottom: "24px",
+              }}
+            >
+              This will retry calls for{" "}
+              {
+                filteredData.filter((item) => item.callStatus !== "completed")
+                  .length
+              }{" "}
+              participant(s) who haven't completed their calls yet.
             </p>
-            <div style={{
-              display: 'flex',
-              gap: '12px',
-              flexDirection: window.innerWidth < 400 ? 'column' : 'row',
-            }}>
+            <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                flexDirection: window.innerWidth < 400 ? "column" : "row",
+              }}
+            >
               <button
                 onClick={() => setShowConfirmModal(false)}
                 disabled={isRetrying}
                 style={{
                   flex: 1,
-                  padding: '10px 16px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#374151',
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  cursor: isRetrying ? 'not-allowed' : 'pointer',
+                  padding: "10px 16px",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  color: "#374151",
+                  backgroundColor: "white",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  cursor: isRetrying ? "not-allowed" : "pointer",
                   opacity: isRetrying ? 0.5 : 1,
-                  transition: 'all 0.2s ease',
+                  transition: "all 0.2s ease",
                 }}
                 onMouseEnter={(e) => {
                   if (!isRetrying) {
-                    e.target.style.backgroundColor = '#f9fafb';
-                    e.target.style.borderColor = '#d1d5db';
+                    e.target.style.backgroundColor = "#f9fafb";
+                    e.target.style.borderColor = "#d1d5db";
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isRetrying) {
-                    e.target.style.backgroundColor = 'white';
-                    e.target.style.borderColor = '#e5e7eb';
+                    e.target.style.backgroundColor = "white";
+                    e.target.style.borderColor = "#e5e7eb";
                   }
                 }}
               >
@@ -836,30 +943,33 @@ const { getToken } = useKindeAuth();
                   try {
                     setIsRetrying(true);
                     const response = await fetch(
-                      `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/retry-batch`,
+                      `${
+                        import.meta.env.VITE_BACKEND_URL
+                      }/api/events/${eventId}/retry-batch`,
                       { method: "POST" }
                     );
 
-                    if (!response.ok) throw new Error("Retry batch call failed");
+                    if (!response.ok)
+                      throw new Error("Retry batch call failed");
 
                     setShowConfirmModal(false);
-                    setRetryStatus({ 
-                      success: true, 
-                      message: '✅ Retry batch call started successfully!' 
+                    setRetryStatus({
+                      success: true,
+                      message: "✅ Retry batch call started successfully!",
                     });
                     setShowStatusPopup(true);
                     await fetchRSVPData();
-                    
+
                     setTimeout(() => setShowStatusPopup(false), 3000);
                   } catch (error) {
                     console.error("Error retrying batch call:", error);
                     setShowConfirmModal(false);
-                    setRetryStatus({ 
-                      success: false, 
-                      message: '❌ Failed to start retry batch call.' 
+                    setRetryStatus({
+                      success: false,
+                      message: "❌ Failed to start retry batch call.",
                     });
                     setShowStatusPopup(true);
-                    
+
                     setTimeout(() => setShowStatusPopup(false), 4000);
                   } finally {
                     setIsRetrying(false);
@@ -868,28 +978,28 @@ const { getToken } = useKindeAuth();
                 disabled={isRetrying}
                 style={{
                   flex: 1,
-                  padding: '10px 16px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: 'white',
-                  backgroundColor: isRetrying ? '#9ca3af' : '#000',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: isRetrying ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease',
+                  padding: "10px 16px",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  color: "white",
+                  backgroundColor: isRetrying ? "#9ca3af" : "#000",
+                  border: "none",
+                  borderRadius: "8px",
+                  cursor: isRetrying ? "not-allowed" : "pointer",
+                  transition: "all 0.2s ease",
                 }}
                 onMouseEnter={(e) => {
                   if (!isRetrying) {
-                    e.target.style.backgroundColor = '#1a1a1a';
+                    e.target.style.backgroundColor = "#1a1a1a";
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isRetrying) {
-                    e.target.style.backgroundColor = '#000';
+                    e.target.style.backgroundColor = "#000";
                   }
                 }}
               >
-                {isRetrying ? 'Retrying...' : 'Confirm Retry'}
+                {isRetrying ? "Retrying..." : "Confirm Retry"}
               </button>
             </div>
           </div>
@@ -898,47 +1008,53 @@ const { getToken } = useKindeAuth();
 
       {/* Status Popup (Toast) */}
       {showStatusPopup && (
-        <div style={{
-          position: 'fixed',
-          top: '24px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 1001,
-          animation: 'slideDown 0.3s ease-out',
-        }}>
-          <div style={{
-            backgroundColor: retryStatus.success ? '#000' : '#dc2626',
-            color: 'white',
-            padding: '16px 24px',
-            borderRadius: '8px',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            minWidth: '320px',
-            maxWidth: '90vw',
-          }}>
-            <span style={{
-              fontSize: '14px',
-              fontWeight: '600',
-              flex: 1,
-            }}>
+        <div
+          style={{
+            position: "fixed",
+            top: "24px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 1001,
+            animation: "slideDown 0.3s ease-out",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: retryStatus.success ? "#000" : "#dc2626",
+              color: "white",
+              padding: "16px 24px",
+              borderRadius: "8px",
+              boxShadow: "0 10px 25px rgba(0, 0, 0, 0.2)",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              minWidth: "320px",
+              maxWidth: "90vw",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "14px",
+                fontWeight: "600",
+                flex: 1,
+              }}
+            >
               {retryStatus.message}
             </span>
             <button
               onClick={() => setShowStatusPopup(false)}
               style={{
-                background: 'none',
-                border: 'none',
-                color: 'white',
-                cursor: 'pointer',
-                fontSize: '18px',
-                padding: '0',
-                lineHeight: '1',
+                background: "none",
+                border: "none",
+                color: "white",
+                cursor: "pointer",
+                fontSize: "18px",
+                padding: "0",
+                lineHeight: "1",
                 opacity: 0.8,
               }}
-              onMouseEnter={(e) => e.target.style.opacity = '1'}
-              onMouseLeave={(e) => e.target.style.opacity = '0.8'}
+              onMouseEnter={(e) => (e.target.style.opacity = "1")}
+              onMouseLeave={(e) => (e.target.style.opacity = "0.8")}
             >
               ×
             </button>
