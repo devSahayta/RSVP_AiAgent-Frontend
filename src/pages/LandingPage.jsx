@@ -1,62 +1,37 @@
-import React, { useEffect } from "react";
-import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
-import { useNavigate } from "react-router-dom";
+// src/pages/LandingPage.jsx
+import LandingNavbar from "../components/landing/sections/LandingNavbar";
+import HeroSection from "../components/landing/sections/HeroSection";
+import ProblemSection from "../components/landing/sections/ProblemSection";
+import SolutionSection from "../components/landing/sections/SolutionSection";
+import FeaturesSection from "../components/landing/sections/FeaturesSection";
+import HowItWorksSection from "../components/landing/sections/HowItWorksSection";
+import WhySutrakSection from "../components/landing/sections/WhySutrakSection";
+import UseCasesSection from "../components/landing/sections/UseCasesSection";
+import AIAgentsSection from "../components/landing/sections/AIAgentsSection";
+import IntegrationsSection from "../components/landing/sections/IntegrationsSection";
+import EarlyAccessSection from "../components/landing/sections/EarlyAccessSection";
+import FinalCTASection from "../components/landing/sections/FinalCTASection";
+import FooterSection from "../components/landing/sections/FooterSection";
 
-const LandingPage = () => {
-  const { login, register, isAuthenticated, user, logout, getToken } =
-    useKindeAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const fetchToken = async () => {
-      try {
-        const token = await getToken();
-        console.log("🔥 Kinde Access Token:", token);
-      } catch (err) {
-        console.error("Failed to get token:", err);
-      }
-    };
-
-    if (isAuthenticated) {
-      fetchToken();
-    }
-  }, [isAuthenticated, getToken]);
-
+export default function LandingPage() {
   return (
-    <div className="flex flex-col items-center justify-center h-[80vh] text-center">
-      <h1 className="text-4xl font-bold mb-4">Welcome to RSVP AI 🎉</h1>
-      <p className="mb-6 text-gray-600">Manage events and track RSVPs with AI.</p>
-
-      {!isAuthenticated ? (
-        <div className="space-x-4">
-          <button onClick={() => login()} className="auth-button">
-            Login
-          </button>
-          <button onClick={() => register()} className="auth-button">
-            Sign Up
-          </button>
-        </div>
-      ) : (
-        <div className="space-x-4">
-          <button
-            onClick={() => navigate("/createEvent")}
-            className="auth-button"
-          >
-            Create Event
-          </button>
-          <button onClick={() => logout()} className="auth-button bg-red-500">
-            Logout
-          </button>
-        </div>
-      )}
-
-      {isAuthenticated && (
-        <p className="mt-4 text-gray-500">
-          Logged in as <span className="font-medium">{user?.email}</span>
-        </p>
-      )}
+    <div className="bg-black text-white">
+      {/* Landing Page Navbar */}
+      <LandingNavbar />
+      
+      {/* All Sections */}
+      <HeroSection />
+      <ProblemSection />
+      <SolutionSection />
+      <FeaturesSection />
+      <HowItWorksSection />
+      <WhySutrakSection />
+      <UseCasesSection />
+      <AIAgentsSection />
+      <IntegrationsSection />
+      <EarlyAccessSection />
+      <FinalCTASection />
+      <FooterSection />
     </div>
   );
-};
-
-export default LandingPage;
+}

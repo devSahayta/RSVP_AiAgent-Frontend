@@ -1,125 +1,4 @@
-// // src/App.jsx
-// import React, { useEffect } from "react";
-// import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
-// import NavBar from "./components/NavBar";
-// import CreateEvent from "./pages/CreateEvent";
-// import Dashboard from "./pages/Dashboard";
-// import LandingPage from "./pages/LandingPage";
-// import EventsPage from "./pages/EventsPage";
-// import EventDashboard from "./components/EventDashboard";
-// import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
-// import { addUserToBackend } from "./api/userApi";
-// import "./styles/global.css";
-// import CallBatchPage from "./pages/CallBatchPage";
-// import RSVPTable from "./components/RSVPTable";
-// import DocumentUpload from "./pages/DocumentUpload";
-// import DocumentViewerPage from './pages/DocumentViewerPage';
-// import DocumentViewer from "./components/DocumentViewer";
-// import "./pages/LandingPage"
-
-// // PrivateRoute for protected pages
-// function PrivateRoute({ children }) {
-//   const { isAuthenticated, isLoading } = useKindeAuth();
-
-//   if (isLoading) return <p>Loading...</p>;
-//   return isAuthenticated ? children : <LandingPage />;
-// }
-
-// // Component to conditionally render NavBar
-// function ConditionalNavBar() {
-//   const location = useLocation();
-
-//   // Hide NavBar on document upload page
-//   const hideNavBar = location.pathname.startsWith('/document-upload');
-
-//   return !hideNavBar ? <NavBar /> : null;
-// }
-
-// function AppContent() {
-//   const { user, isAuthenticated, isLoading } = useKindeAuth();
-//   const location = useLocation();
-
-//   // Hide NavBar on document upload page
-//   const hideNavBar = location.pathname.startsWith('/document-upload');
-
-//   // Sync new users to backend (only once)
-//   useEffect(() => {
-//     if (isAuthenticated && user) {
-//       addUserToBackend(user).then((storedUser) => {
-//         if (storedUser) console.log("User synced with backend:", storedUser);
-//       });
-//     }
-//   }, [isAuthenticated, user]);
-
-//   if (isLoading) return <p>Loading authentication...</p>;
-
-//   return (
-//     <div className="min-h-screen bg-white">
-//       <ConditionalNavBar />
-//       <main className={hideNavBar ? '' : 'pt-16'}>
-//         <Routes>
-//           {/* Public Route */}
-//           <Route path="/" element={<LandingPage />} />
-
-//           {/* Protected Routes */}
-//           <Route
-//             path="/events"
-//             element={
-//               <PrivateRoute>
-//                 <EventsPage />
-//               </PrivateRoute>
-//             }
-//           />
-//           <Route
-//             path="/createEvent"
-//             element={
-//               <PrivateRoute>
-//                 <CreateEvent />
-//               </PrivateRoute>
-//             }
-//           />
-//           <Route
-//             path="/dashboard/:eventId"
-//             element={
-//               <PrivateRoute>
-//                 <Dashboard />
-//               </PrivateRoute>
-//             }
-//           />
-
-//           <Route
-//             path="/call-batch/:eventId"
-//             element={
-//               <PrivateRoute>
-//                 <CallBatchPage />
-//               </PrivateRoute>
-//             }
-//           />
-
-//           <Route path="/document-upload/:participantId" element={<DocumentUpload />} />
-//           <Route path="/document-viewer/:participantId" element={<DocumentViewer />} />
-
-//           {/* Redirect unknown routes */}
-//           <Route path="*" element={<Navigate to="/" replace />} />
-//         </Routes>
-//       </main>
-//     </div>
-//   );
-// }
-
-// function App() {
-//   return (
-//     <Router>
-//       <AppContent />
-//     </Router>
-//   );
-// }
-
-// export default App;
-
-// ---------------------------------------------------------- Update --------------------------------------------------------
-
-// src/App.jsx
+// src/App.jsx - UPDATED VERSION
 import React, { useEffect, useState } from "react";
 import {
   BrowserRouter as Router,
@@ -130,8 +9,7 @@ import {
 } from "react-router-dom";
 
 import NavBar from "./components/NavBar";
-import Sidebar from "./components/Sidebar"; // sliding drawer
-
+import Sidebar from "./components/Sidebar";
 import CreateEvent from "./pages/CreateEvent";
 import Dashboard from "./pages/Dashboard";
 import LandingPage from "./pages/LandingPage";
@@ -143,7 +21,6 @@ import ChatPage from "./pages/ChatPage";
 import TemplateList from "./pages/TemplateList";
 import CreateTemplate from "./pages/CreateTemplate";
 import SendTemplate from "./pages/SendTemplate";
-// import MediaList from "./pages/MediaList";
 import WAccountPage from "./pages/WAccountPage";
 
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
@@ -151,7 +28,6 @@ import { addUserToBackend } from "./api/userApi";
 
 import "./styles/global.css";
 import { fetchWhatsappAccount } from "./api/waccount";
-import useAuthUser from "./hooks/useAuthUser";
 import KnowledgeBases from "./pages/KnowledgeBases";
 import CreateKnowledgeBase from "./pages/CreateKnowledgeBase";
 import KnowledgeBaseDetail from "./pages/KnowledgeBaseDetail";
@@ -176,8 +52,6 @@ function WhatsappAccountRoute({ children }) {
     const loadWhatsappAccount = async () => {
       try {
         const res = await fetchWhatsappAccount(user.id);
-
-        // if account exists
         if (res?.data?.data?.wa_id) {
           setHasAccount(true);
         } else {
@@ -206,14 +80,12 @@ function AppContent() {
   const { user, isAuthenticated, isLoading } = useKindeAuth();
   const location = useLocation();
 
-  // Sidebar open/close state managed here
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Hide NavBar on document upload
-  const hideNavBar = location.pathname.startsWith("/document-upload");
-
-  // Don't render sidebar on landing page "/"
-  const hideSidebarPath = location.pathname === "/";
+  // ✅ KEY CHANGE: Hide default NavBar on landing page AND document upload
+  const hideNavBar = 
+    location.pathname === "/" || 
+    location.pathname.startsWith("/document-upload");
 
   // Sync user on first login
   useEffect(() => {
@@ -222,7 +94,7 @@ function AppContent() {
     }
   }, [isAuthenticated, user]);
 
-  // Close sidebar on route change (so X works predictably)
+  // Close sidebar on route change
   useEffect(() => {
     setIsSidebarOpen(false);
   }, [location.pathname]);
@@ -231,7 +103,7 @@ function AppContent() {
 
   return (
     <div className="app-root">
-      {/* Navbar: pass toggle and state. NavBar itself decides whether hamburger is shown based on auth */}
+      {/* ✅ Default NavBar - Hidden on landing page */}
       {!hideNavBar && (
         <NavBar
           onToggleSidebar={() => setIsSidebarOpen((s) => !s)}
@@ -239,7 +111,7 @@ function AppContent() {
         />
       )}
 
-      {/* Sidebar overlay/drawer - only when authenticated and not on landing/doc-upload */}
+      {/* Sidebar */}
       {isAuthenticated && !hideNavBar && (
         <Sidebar
           isOpen={isSidebarOpen}
@@ -247,11 +119,12 @@ function AppContent() {
         />
       )}
 
-      {/* Main content area */}
+      {/* Main content */}
       <main
         className={hideNavBar ? "content no-navbar" : "content with-navbar"}
       >
         <Routes>
+          {/* ✅ Landing page has its own LandingNavbar component */}
           <Route path="/" element={<LandingPage />} />
 
           <Route
@@ -289,6 +162,7 @@ function AppContent() {
               </PrivateRoute>
             }
           />
+          
           <Route
             path="/chatbot"
             element={
@@ -333,35 +207,30 @@ function AppContent() {
             }
           />
 
-          {/* <Route
-            path="/templates/media"
-            element={
-              <PrivateRoute>
-                <MediaList />
-              </PrivateRoute>
-            }
-          /> */}
-
           <Route
             path="/document-upload/:participantId"
             element={<DocumentUpload />}
           />
+          
           <Route
             path="/document-viewer/:participantId"
             element={<DocumentViewer />}
           />
 
           <Route path="/knowledge-bases" element={<KnowledgeBases />} />
+          
           <Route
             path="/knowledge-bases/create"
             element={<CreateKnowledgeBase />}
           />
+          
           <Route
             path="/knowledge-bases/:id"
             element={<KnowledgeBaseDetail />}
           />
 
           <Route path="/transport-planning/:eventId" element={<TransportPlanning />} />
+          
           <Route path="/flight-status/:eventId" element={<FlightStatus />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -374,28 +243,12 @@ function AppContent() {
 export default function App() {
   return (
     <Router>
-      {/* Global toaster */}
       <Toaster
         position="top-right"
         reverseOrder={false}
         toastOptions={{
           duration: 3000,
         }}
-        // toastOptions={{
-        //   duration: 3000,
-        //   success: {
-        //     style: {
-        //       background: "#16a34a",
-        //       color: "#fff",
-        //     },
-        //   },
-        //   error: {
-        //     style: {
-        //       background: "#dc2626",
-        //       color: "#fff",
-        //     },
-        //   },
-        // }}
       />
       <AppContent />
     </Router>
