@@ -19,6 +19,7 @@ import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { Download } from "lucide-react";
+import { Truck } from 'lucide-react';
 
 const RSVPTable = ({ eventId: propEventId }) => {
   const [rsvpData, setRsvpData] = useState([]);
@@ -301,7 +302,74 @@ const RSVPTable = ({ eventId: propEventId }) => {
         </select>
       </div>
 
-      <div
+      <div style={{
+  display: "flex",
+  justifyContent: "flex-end",
+  marginBottom: "12px",
+  gap:"12px"
+}}>
+  <button
+    onClick={exportToExcel}
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      padding: "10px 16px",
+      borderRadius: "8px",
+      border: "1px solid #ddd",
+      background: "#000",
+      color: "#fff",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: "600",
+    }}
+  >
+    <Download size={16} />
+    Export Excel
+  </button>
+
+{/* NEW: Transport Planning Button */}
+  <button
+    onClick={() => navigate(`/transport-planning/${eventId}`)}
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      padding: "10px 16px",
+      borderRadius: "8px",
+      border: "1px solid #ddd",
+      background: "#000",
+      color: "#fff",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: "600",
+    }}
+  >
+    <Truck size={16} />
+    Transport Planning
+  </button>
+
+  <button
+          onClick={() => navigate(`/flight-status/${eventId}`)}
+          style={{
+            display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      padding: "10px 16px",
+      borderRadius: "8px",
+      border: "1px solid #ddd",
+      background: "#000",
+      color: "#fff",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: "600",
+          }}
+        >
+          ✈️ View Flight Status
+        </button>
+
+</div>
+      {/* <div
         style={{
           display: "flex",
           justifyContent: "flex-end",
@@ -328,23 +396,8 @@ const RSVPTable = ({ eventId: propEventId }) => {
           Export Excel
         </button>
 
-        <button
-          onClick={() => navigate(`/flight-status/${eventId}`)}
-          style={{
-            padding: "10px 16px",
-            borderRadius: "8px",
-            background: "#000",
-            color: "#fff",
-            fontWeight: "600",
-            fontSize: "14px",
-            border: "none",
-            cursor: "pointer",
-            marginLeft: "15px",
-          }}
-        >
-          ✈️ View Flight Status
-        </button>
-      </div>
+        
+      </div> */}
 
       {/* Table */}
       <div className="table-wrapper">
