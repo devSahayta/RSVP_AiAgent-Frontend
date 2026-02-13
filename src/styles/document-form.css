@@ -4,8 +4,8 @@
 }
 
 .document-form-container {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
-    sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
   background: #f8f9fa;
   min-height: 100vh;
   padding-bottom: 140px;
@@ -204,7 +204,7 @@
 
 .file-input {
   padding: 0.65rem !important;
-  background: #f8f9fa !important;
+  background: #f8f9fa;
   cursor: pointer;
   font-size: 0.85rem !important;
 }
@@ -1366,11 +1366,13 @@ select:focus-visible {
 
 /* General page background */
 body {
-  background: #f3f4f6;
+  /* background: #f3f4f6; */
+  background: #111111;
   font-family: "Inter", sans-serif;
 } /* Card styling */
 .form-card {
-  background: #ffffff;
+  /* background: #ffffff; */
+  background: #111111;
   border-radius: 20px;
   padding: 30px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
@@ -1382,7 +1384,8 @@ body {
   font-weight: 700;
   text-align: center;
   margin-bottom: 25px;
-  color: #111827;
+  /* color: #111827; */
+  color: #ffffff;
 } /* Input fields */
 .form-input {
   width: 100%;

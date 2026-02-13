@@ -114,7 +114,7 @@ useEffect(() => {
             marginBottom: '1rem',
             transition: 'color 0.2s ease'
           }}
-          onMouseEnter={(e) => e.target.style.color = '#000000'}
+          onMouseEnter={(e) => e.target.style.color = '#ffffff'}
           onMouseLeave={(e) => e.target.style.color = '#6b7280'}
         >
           <ArrowLeft size={20} />
@@ -360,7 +360,7 @@ if (hasConversations) {
             marginBottom: '1rem',
             transition: 'color 0.2s ease'
           }}
-          onMouseEnter={(e) => e.target.style.color = '#000000'}
+          onMouseEnter={(e) => e.target.style.color = '#ffffff'}
           onMouseLeave={(e) => e.target.style.color = '#6b7280'}
         >
           <ArrowLeft size={20} />
@@ -403,7 +403,7 @@ if (hasConversations) {
           marginBottom: '2rem',
           transition: 'color 0.2s ease'
         }}
-        onMouseEnter={(e) => e.target.style.color = '#000000'}
+        onMouseEnter={(e) => e.target.style.color = '#ffffff'}
         onMouseLeave={(e) => e.target.style.color = '#6b7280'}
       >
         <ArrowLeft size={20} />
@@ -416,8 +416,8 @@ if (hasConversations) {
         textAlign: 'center'
       }}>
         <div style={{
-          background: 'white',
-          border: '1px solid #e5e7eb',
+          background: '#111111',
+          border: '1px solid #2a2a2a',
           borderRadius: '12px',
           padding: '3rem 2rem',
           boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
@@ -425,7 +425,7 @@ if (hasConversations) {
           <h1 style={{
             fontSize: '2.5rem',
             fontWeight: '700',
-            color: '#000000',
+            color: '#ffffff',
             marginBottom: '1rem'
           }}>
             {event.name}
@@ -434,7 +434,7 @@ if (hasConversations) {
           <h2 style={{
             fontSize: '1.5rem',
             fontWeight: '600',
-            color: '#374151',
+            color: '#e5e7eb',
             marginBottom: '1.5rem'
           }}>
             Trigger AI Calls to Participants
@@ -640,7 +640,7 @@ if (hasConversations) {
         exit={{ scale: 0.8, opacity: 0 }}
         transition={{ duration: 0.3 }}
         style={{
-          background: 'white',
+          background: '#111111',
           borderRadius: '16px',
           padding: '2.5rem 3rem',
           textAlign: 'center',
@@ -653,13 +653,13 @@ if (hasConversations) {
           style={{
             animation: 'spin 1s linear infinite',
             margin: '0 auto 1rem auto',
-            color: '#000'
+            color: '#ffffff'
           }}
         />
         <h3 style={{
           fontSize: '1.25rem',
           fontWeight: '600',
-          color: '#111827',
+          color: '#ffffff',
           marginBottom: '0.5rem'
         }}>
           Starting AI Calls...
@@ -702,7 +702,7 @@ if (hasConversations) {
           fontSize: "1.5rem",
           fontWeight: "600",
           marginBottom: "1rem",
-          color: "#374151"
+          color: "#e5e7eb"
         }}>
           RSVP Dashboard
         </h2>

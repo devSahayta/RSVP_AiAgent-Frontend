@@ -157,6 +157,7 @@ import CreateKnowledgeBase from "./pages/CreateKnowledgeBase";
 import KnowledgeBaseDetail from "./pages/KnowledgeBaseDetail";
 import { Toaster } from "react-hot-toast";
 import FlightStatus from "./pages/FlightStatus";
+import FloatingLines from "./components/background/FloatingLines";
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, isLoading } = useKindeAuth();
@@ -230,109 +231,122 @@ function AppContent() {
 
   return (
     <div className="app-root">
-      {/* Navbar: pass toggle and state. NavBar itself decides whether hamburger is shown based on auth */}
-      {!hideNavBar && (
-        <NavBar
-          onToggleSidebar={() => setIsSidebarOpen((s) => !s)}
-          isSidebarOpen={isSidebarOpen}
+      <div className="app-background-layer" aria-hidden>
+        <FloatingLines
+          enabledWaves={["top", "middle", "bottom"]}
+          lineCount={[10, 14, 10]}
+          lineDistance={[18, 12, 18]}
+          animationSpeed={0.7}
+          interactive={false}
+          parallax={false}
+          mixBlendMode="screen"
         />
-      )}
+      </div>
 
-      {/* Sidebar overlay/drawer - only when authenticated and not on landing/doc-upload */}
-      {isAuthenticated && !hideNavBar && (
-        <Sidebar
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
-        />
-      )}
-
-      {/* Main content area */}
-      <main
-        className={hideNavBar ? "content no-navbar" : "content with-navbar"}
-      >
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-
-          <Route
-            path="/events"
-            element={
-              <PrivateRoute>
-                <EventsPage />
-              </PrivateRoute>
-            }
+      <div className="app-foreground-layer">
+        {/* Navbar: pass toggle and state. NavBar itself decides whether hamburger is shown based on auth */}
+        {!hideNavBar && (
+          <NavBar
+            onToggleSidebar={() => setIsSidebarOpen((s) => !s)}
+            isSidebarOpen={isSidebarOpen}
           />
+        )}
 
-          <Route
-            path="/createEvent"
-            element={
-              <PrivateRoute>
-                <CreateEvent />
-              </PrivateRoute>
-            }
+        {/* Sidebar overlay/drawer - only when authenticated and not on landing/doc-upload */}
+        {isAuthenticated && !hideNavBar && (
+          <Sidebar
+            isOpen={isSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
           />
+        )}
 
-          <Route
-            path="/dashboard/:eventId"
-            element={
-              <PrivateRoute>
-                <Dashboard />
-              </PrivateRoute>
-            }
-          />
+        {/* Main content area */}
+        <main
+          className={hideNavBar ? "content no-navbar" : "content with-navbar"}
+        >
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
 
-          <Route
-            path="/call-batch/:eventId"
-            element={
-              <PrivateRoute>
-                <CallBatchPage />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/chatbot"
-            element={
-              <PrivateRoute>
-                <ChatPage />
-              </PrivateRoute>
-            }
-          />
+            <Route
+              path="/events"
+              element={
+                <PrivateRoute>
+                  <EventsPage />
+                </PrivateRoute>
+              }
+            />
 
-          <Route path="/whatsapp-account" element={<WAccountPage />} />
+            <Route
+              path="/createEvent"
+              element={
+                <PrivateRoute>
+                  <CreateEvent />
+                </PrivateRoute>
+              }
+            />
 
-          <Route
-            path="/templates"
-            element={
-              <PrivateRoute>
-                <WhatsappAccountRoute>
-                  <TemplateList />
-                </WhatsappAccountRoute>
-              </PrivateRoute>
-            }
-          />
+            <Route
+              path="/dashboard/:eventId"
+              element={
+                <PrivateRoute>
+                  <Dashboard />
+                </PrivateRoute>
+              }
+            />
 
-          <Route
-            path="/template/create"
-            element={
-              <PrivateRoute>
-                <WhatsappAccountRoute>
-                  <CreateTemplate />
-                </WhatsappAccountRoute>
-              </PrivateRoute>
-            }
-          />
+            <Route
+              path="/call-batch/:eventId"
+              element={
+                <PrivateRoute>
+                  <CallBatchPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/chatbot"
+              element={
+                <PrivateRoute>
+                  <ChatPage />
+                </PrivateRoute>
+              }
+            />
 
-          <Route
-            path="/templates/send/:templateId"
-            element={
-              <PrivateRoute>
-                <WhatsappAccountRoute>
-                  <SendTemplate />
-                </WhatsappAccountRoute>
-              </PrivateRoute>
-            }
-          />
+            <Route path="/whatsapp-account" element={<WAccountPage />} />
 
-          {/* <Route
+            <Route
+              path="/templates"
+              element={
+                <PrivateRoute>
+                  <WhatsappAccountRoute>
+                    <TemplateList />
+                  </WhatsappAccountRoute>
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/template/create"
+              element={
+                <PrivateRoute>
+                  <WhatsappAccountRoute>
+                    <CreateTemplate />
+                  </WhatsappAccountRoute>
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/templates/send/:templateId"
+              element={
+                <PrivateRoute>
+                  <WhatsappAccountRoute>
+                    <SendTemplate />
+                  </WhatsappAccountRoute>
+                </PrivateRoute>
+              }
+            />
+
+            {/* <Route
             path="/templates/media"
             element={
               <PrivateRoute>
@@ -341,30 +355,31 @@ function AppContent() {
             }
           /> */}
 
-          <Route
-            path="/document-upload/:participantId"
-            element={<DocumentUpload />}
-          />
-          <Route
-            path="/document-viewer/:participantId"
-            element={<DocumentViewer />}
-          />
+            <Route
+              path="/document-upload/:participantId"
+              element={<DocumentUpload />}
+            />
+            <Route
+              path="/document-viewer/:participantId"
+              element={<DocumentViewer />}
+            />
 
-          <Route path="/knowledge-bases" element={<KnowledgeBases />} />
-          <Route
-            path="/knowledge-bases/create"
-            element={<CreateKnowledgeBase />}
-          />
-          <Route
-            path="/knowledge-bases/:id"
-            element={<KnowledgeBaseDetail />}
-          />
+            <Route path="/knowledge-bases" element={<KnowledgeBases />} />
+            <Route
+              path="/knowledge-bases/create"
+              element={<CreateKnowledgeBase />}
+            />
+            <Route
+              path="/knowledge-bases/:id"
+              element={<KnowledgeBaseDetail />}
+            />
 
-          <Route path="/flight-status/:eventId" element={<FlightStatus />} />
+            <Route path="/flight-status/:eventId" element={<FlightStatus />} />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+      </div>
     </div>
   );
 }

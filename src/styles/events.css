@@ -571,3 +571,57 @@
   color: #c72020;
   font-weight: 500;
 }
+
+/* Dark theme overrides */
+.event-card,
+.stat-card,
+.search-box input,
+.filter-box select,
+.event-menu-dropdown {
+  background: #111111;
+  /* background: rgba(17, 17, 17, 0.4); */
+  border-color: #2a2a2a;
+  color: #ffffff;
+}
+
+.event-name,
+.event-title,
+.stat-number,
+.table-header h2 {
+  color: #ffffff;
+}
+
+.event-description,
+.event-date,
+.event-time,
+.event-stats,
+.no-events,
+.no-events h3,
+.no-events p,
+.back-button,
+.stat-label,
+.search-box svg,
+.filter-box svg,
+.event-menu-icon {
+  color: #d1d5db;
+}
+
+.event-card-footer,
+.event-header {
+  border-color: #2a2a2a;
+}
+
+.event-card:hover,
+.stat-card:hover {
+  border-color: #3a3a3a;
+  /* background: rgba(17, 17, 17, 0.7); */
+}
+
+.event-menu-item:hover {
+  background: #1a1a1a;
+}
+
+.event-menu-icon:hover,
+.event-card:hover .event-arrow {
+  color: #ffffff !important;
+}
