@@ -1,25 +1,3 @@
-// import React, { useState } from "react";
-// import ChatList from "../components/ChatList";
-// import ChatWindow from "../components/ChatWindow";
-// import "../styles/chat.css";
-
-// export default function ChatPage() {
-//   const [activeChat, setActiveChat] = useState(null);
-//   const [activeChatUser, setActiveChatUser] = useState(null);
-
-//   return (
-//     <div className="wa-container">
-//       <ChatList
-//         onSelectChat={(chat, user) => {
-//           setActiveChat(chat);
-//           setActiveChatUser(user);
-//         }}
-//       />
-
-//       <ChatWindow chatId={activeChat} userInfo={activeChatUser} />
-//     </div>
-//   );
-// }
 "use client";
 
 import React, { useState } from "react";
@@ -81,41 +59,3 @@ export default function ChatPage() {
   );
 }
 
-// // ----------------------------connection--------------------
-
-// "use client";
-
-// import React, { useState } from "react";
-// import EventChatSelector from "../components/EventChatSelector";
-// import ChatList from "../components/ChatList";
-// import ChatWindow from "../components/ChatWindow";
-// import "../styles/chat.css";
-
-// export default function ChatPage() {
-//   const [eventId, setEventId] = useState(null);
-//   const [activeChat, setActiveChat] = useState(null);
-//   const [activeChatUser, setActiveChatUser] = useState(null);
-
-//   return (
-//     <div className="wa-container">
-//       <div style={{ padding: "20px" }}>
-//         <h1>Event Chat Dashboard</h1>
-
-//         <EventChatSelector onSelectEvent={(id) => setEventId(id)} />
-//       </div>
-
-//       {/* Only show chats after selecting event */}
-//       {eventId && (
-//         <ChatList
-//           eventId={eventId}
-//           onSelectChat={(chat, user) => {
-//             setActiveChat(chat);
-//             setActiveChatUser(user);
-//           }}
-//         />
-//       )}
-
-//       <ChatWindow chatId={activeChat} userInfo={activeChatUser} />
-//     </div>
-//   );
-// }

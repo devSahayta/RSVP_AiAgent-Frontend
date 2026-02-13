@@ -1,0 +1,332 @@
+/* ============================================================
+   LocationSummarySection.css  —  Black & White theme
+   ============================================================ */
+
+/* ── Root ─────────────────────────────────────────────── */
+.lss-root {
+  padding: 0 0 32px;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* ── Section Header ───────────────────────────────────── */
+.lss-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.lss-header__left {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.lss-heading {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #111;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.lss-subheading {
+  font-size: 0.8rem;
+  color: #888;
+  margin: 0;
+}
+
+/* ── Stats pill ───────────────────────────────────────── */
+.lss-header__stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 8px 18px;
+}
+
+.lss-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.lss-stat__num {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #111;
+  line-height: 1;
+}
+
+.lss-stat__label {
+  font-size: 0.65rem;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.lss-stat-divider {
+  width: 1px;
+  height: 26px;
+  background: #ddd;
+}
+
+/* ── Cards grid ───────────────────────────────────────── */
+.lss-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 14px;
+  align-items: start; /* prevent cards from stretching to match tallest */
+}
+
+/* ── Card ─────────────────────────────────────────────── */
+.lss-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  animation: lssCardIn 0.35s ease both;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.lss-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+@keyframes lssCardIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Card Header ──────────────────────────────────────── */
+.lss-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 16px 14px;
+}
+
+.lss-card__icon-wrap {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: #f0f0f0;
+  border: 1px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+}
+
+.lss-card__icon-wrap svg {
+  width: 17px;
+  height: 17px;
+}
+
+.lss-card__title-block {
+  flex: 1;
+  min-width: 0;
+}
+
+.lss-card__title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #111;
+  margin: 0 0 5px;
+  line-height: 1.25;
+}
+
+.lss-card__time-range {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: #999;
+  font-weight: 500;
+}
+
+.lss-card__time-range svg {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+}
+
+/* ── Member count badge ───────────────────────────────── */
+.lss-card__badge {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #111;
+  border-radius: 9px;
+  padding: 6px 10px;
+  min-width: 44px;
+}
+
+.lss-badge__count {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+
+.lss-badge__label {
+  font-size: 0.58rem;
+  color: #aaa;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── Divider ──────────────────────────────────────────── */
+.lss-divider {
+  height: 1px;
+  background: #f0f0f0;
+  margin: 0 16px;
+}
+
+/* ── Passenger list ───────────────────────────────────── */
+.lss-passenger-list {
+  list-style: none;
+  margin: 0;
+  padding: 12px 16px 16px;
+ 
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.lss-passenger-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Avatar — monochrome ──────────────────────────────── */
+.lss-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #111;
+  border: 1.5px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.lss-passenger-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.lss-passenger-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lss-passenger-arrival {
+  font-size: 0.68rem;
+  color: #aaa;
+  font-weight: 500;
+}
+
+/* ── Expand / collapse button ─────────────────────────── */
+.lss-expand-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 16px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #555;
+  transition: color 0.15s;
+  text-align: left;
+}
+
+.lss-expand-btn:hover {
+  color: #111;
+}
+
+.lss-expand-btn svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+/* ── Loading skeleton ─────────────────────────────────── */
+.lss-skeleton-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lss-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e4e4e4 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 5px;
+  animation: lssShimmer 1.4s infinite;
+  height: 13px;
+}
+
+.lss-skeleton--title  { height: 17px; width: 65%; }
+.lss-skeleton--line   { width: 100%; }
+.lss-skeleton--short  { width: 42%; }
+
+@keyframes lssShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Error ────────────────────────────────────────────── */
+.lss-error {
+  padding: 14px 18px;
+  background: #fafafa;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  color: #555;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* ── Responsive ───────────────────────────────────────── */
+@media (max-width: 640px) {
+  .lss-grid {
+    grid-template-columns: 1fr;
+  }
+  .lss-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .lss-header__stats {
+    width: 100%;
+    justify-content: center;
+  }
+}

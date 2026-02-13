@@ -1,5 +1,3 @@
-//TransportPlanning.jsx
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -10,7 +8,6 @@ import {
   Clock,
   Users,
   MapPin,
-  DollarSign,
   TrendingDown,
   AlertCircle,
   CheckCircle,
@@ -19,14 +16,136 @@ import {
   Loader
 } from 'lucide-react';
 import '../styles/transport.css';
+import LocationDemandSection from "../components/Transport/LocationSummarySection";
+
+// ── Unassigned Warning Component ─────────────────────────────────────────────
+//
+// Compares per-location passenger counts (from locationSummary) against what
+// actually got assigned in pickup_groups to surface exactly WHERE the gaps are.
+
+function UnassignedWarning({ plan, locationSummary, onAddVehicleClick }) {
+  if (!plan || !plan.pickup_groups) return null;
+
+  const totalAssigned = plan.pickup_groups.reduce(
+    (sum, g) => sum + g.passenger_count, 0
+  );
+  const totalUnassigned = plan.total_passengers - totalAssigned;
+  if (totalUnassigned <= 0) return null;
+
+  // Count how many passengers were assigned per location from the plan
+  const assignedPerLocation = {};
+  plan.pickup_groups.forEach((g) => {
+    const loc = g.pickup_location;
+    assignedPerLocation[loc] = (assignedPerLocation[loc] || 0) + g.passenger_count;
+  });
+
+  // Build gap list using locationSummary if available, otherwise fallback
+  let locationGaps = [];
+
+  if (locationSummary?.locations) {
+    locationSummary.locations.forEach((loc) => {
+      const total = loc.passenger_count;
+      // fuzzy match: plan location strings might be substrings of summary location names
+      const assignedKey = Object.keys(assignedPerLocation).find(
+        (k) =>
+          k.toLowerCase().includes(loc.location.toLowerCase()) ||
+          loc.location.toLowerCase().includes(k.toLowerCase())
+      );
+      const assigned = assignedKey ? assignedPerLocation[assignedKey] : 0;
+      const unassigned = total - assigned;
+      if (unassigned > 0) {
+        locationGaps.push({
+          location: loc.location,
+          total,
+          assigned,
+          unassigned,
+        });
+      }
+    });
+  } else {
+    // Fallback: just show total without breakdown
+    locationGaps = null;
+  }
+
+  return (
+    <div className="unassigned-warning">
+      {/* Top bar */}
+      <div className="uw-topbar">
+        <div className="uw-topbar__left">
+          <div className="uw-icon">
+            <AlertCircle size={18} />
+          </div>
+          <div>
+            <span className="uw-title">
+              {totalUnassigned} passenger{totalUnassigned > 1 ? 's' : ''} couldn't be assigned
+            </span>
+            <span className="uw-subtitle">
+              {plan.total_passengers - totalUnassigned} of {plan.total_passengers} assigned successfully
+            </span>
+          </div>
+        </div>
+        <div className="uw-progress-wrap">
+          <div className="uw-progress-bar">
+            <div
+              className="uw-progress-fill"
+              style={{ width: `${Math.round(((plan.total_passengers - totalUnassigned) / plan.total_passengers) * 100)}%` }}
+            />
+          </div>
+          <span className="uw-progress-label">
+            {Math.round(((plan.total_passengers - totalUnassigned) / plan.total_passengers) * 100)}%
+          </span>
+        </div>
+      </div>
+
+      {/* Per-location breakdown */}
+      {locationGaps && locationGaps.length > 0 && (
+        <div className="uw-gaps">
+          <p className="uw-gaps__heading">Locations needing vehicles:</p>
+          <div className="uw-gap-list">
+            {locationGaps.map((gap) => (
+              <div key={gap.location} className="uw-gap-item">
+                <div className="uw-gap-item__left">
+                  <MapPin size={14} />
+                  <div>
+                    <span className="uw-gap-item__name">{gap.location}</span>
+                    <span className="uw-gap-item__detail">
+                      {gap.assigned} assigned · <strong>{gap.unassigned} still waiting</strong>
+                    </span>
+                  </div>
+                </div>
+                <button
+                  className="uw-gap-item__btn"
+                  onClick={() => onAddVehicleClick(gap.location)}
+                >
+                  <Plus size={13} />
+                  Add vehicle here
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Fix hints */}
+      <div className="uw-hints">
+        <span className="uw-hints__label">How to fix:</span>
+        <span className="uw-hint-tag">Add more vehicles to the flagged locations</span>
+        <span className="uw-hint-sep">or</span>
+        <span className="uw-hint-tag">Increase max wait time in settings</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
 
 const TransportPlanning = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
-  
-  // State
+
   const [vehicles, setVehicles] = useState([]);
   const [plan, setPlan] = useState(null);
+  const [locationSummary, setLocationSummary] = useState(null); // store fetched summary
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showVehicleForm, setShowVehicleForm] = useState(false);
@@ -35,7 +154,6 @@ const TransportPlanning = () => {
     avg_distance_km: 30
   });
 
-  // Vehicle form state
   const [newVehicle, setNewVehicle] = useState({
     vehicle_name: '',
     vehicle_type: 'Bus',
@@ -44,9 +162,9 @@ const TransportPlanning = () => {
     assigned_location: ''
   });
 
-  // Fetch existing vehicles on load
   useEffect(() => {
     fetchVehicles();
+    fetchLocationSummary();
   }, [eventId]);
 
   const fetchVehicles = async () => {
@@ -55,12 +173,34 @@ const TransportPlanning = () => {
         `${import.meta.env.VITE_BACKEND_URL}/api/transport/vehicles/${eventId}`
       );
       const data = await res.json();
-      if (data.success) {
-        setVehicles(data.data);
-      }
+      if (data.success) setVehicles(data.data);
     } catch (err) {
       console.error('Error fetching vehicles:', err);
     }
+  };
+
+  // Fetch and cache location summary so UnassignedWarning can use it
+  const fetchLocationSummary = async () => {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/transport/location-summary/${eventId}`
+      );
+      const data = await res.json();
+      if (data.success) setLocationSummary(data.data);
+    } catch (err) {
+      console.error('Error fetching location summary:', err);
+    }
+  };
+
+  // When "Add vehicle here" is clicked in the warning, open the form
+  // pre-filled with that location
+  const handleAddVehicleForLocation = (locationName) => {
+    setNewVehicle((prev) => ({ ...prev, assigned_location: locationName }));
+    setShowVehicleForm(true);
+    // Scroll to the vehicles card
+    setTimeout(() => {
+      document.getElementById('vehicles-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
   const handleAddVehicle = async () => {
@@ -116,19 +256,16 @@ const TransportPlanning = () => {
 
       if (!res.ok) {
         if (data.error && data.error.includes('pickup plan')) {
-          setError('⚠️ Cannot delete vehicle - it\'s being used in the current pickup plan. Please delete the plan first using the "Delete Plan" button below.');
+          setError("⚠️ Cannot delete vehicle - it's being used in the current pickup plan. Please delete the plan first using the \"Delete Plan\" button below.");
         } else {
           setError(data.error || 'Failed to delete vehicle');
         }
-        // Scroll to top to show error
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
 
-      if (res.ok) {
-        setVehicles(vehicles.filter(v => v.vehicle_id !== vehicleId));
-        setError('');
-      }
+      setVehicles(vehicles.filter(v => v.vehicle_id !== vehicleId));
+      setError('');
     } catch (err) {
       console.error('Error deleting vehicle:', err);
       setError('Failed to delete vehicle. Please try again.');
@@ -150,39 +287,22 @@ const TransportPlanning = () => {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            event_id: eventId,
-            ...settings
-          })
+          body: JSON.stringify({ event_id: eventId, ...settings })
         }
       );
 
       const data = await res.json();
-      
+
       if (data.success) {
-        // Fetch full plan details
         const planRes = await fetch(
           `${import.meta.env.VITE_BACKEND_URL}/api/transport/plan/${eventId}`
         );
         const planData = await planRes.json();
-        
+
         if (planData.success) {
           setPlan(planData.data);
-          
-          // Check for unassigned passengers
-          const totalPassengersInGroups = planData.data.pickup_groups.reduce(
-            (sum, group) => sum + group.passenger_count, 
-            0
-          );
-          const unassignedCount = planData.data.total_passengers - totalPassengersInGroups;
-          
-          if (unassignedCount > 0) {
-            setError(
-              `⚠️ Warning: ${unassignedCount} out of ${planData.data.total_passengers} passengers could not be assigned! ` +
-              `Solutions: (1) Add more vehicles, OR (2) Increase max wait time to allow better grouping.`
-            );
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }
+          // Clear old error — UnassignedWarning will surface issues visually
+          setError('');
         }
       } else {
         setError(data.error);
@@ -202,9 +322,7 @@ const TransportPlanning = () => {
     });
   };
 
-  const formatCurrency = (amount) => {
-    return `₹${amount.toLocaleString('en-IN')}`;
-  };
+  const formatCurrency = (amount) => `₹${amount.toLocaleString('en-IN')}`;
 
   const handleDeletePlan = async () => {
     if (!confirm('Are you sure you want to delete this plan? This will allow you to delete vehicles and generate a new plan.')) return;
@@ -232,7 +350,7 @@ const TransportPlanning = () => {
     <div className="transport-container">
       {/* Header */}
       <div className="transport-header">
-        <button 
+        <button
           className="back-btn"
           onClick={() => navigate(`/event/${eventId}`)}
         >
@@ -243,7 +361,7 @@ const TransportPlanning = () => {
         <p className="transport-subtitle">Optimize your guest pickup schedule</p>
       </div>
 
-      {/* Error Alert */}
+      {/* Generic error alert (keep for non-unassigned errors) */}
       {error && (
         <div className="alert alert-error">
           <AlertCircle size={20} />
@@ -252,11 +370,13 @@ const TransportPlanning = () => {
         </div>
       )}
 
-      {/* Main Content */}
       <div className="transport-content">
-        
-        {/* Step 1: Available Vehicles */}
-        <div className="card">
+
+        {/* Pickup Locations Summary */}
+        <LocationDemandSection eventId={eventId} />
+
+        {/* Step 1: Vehicles */}
+        <div className="card" id="vehicles-card">
           <div className="card-header">
             <div>
               <h2 className="card-title">
@@ -276,7 +396,6 @@ const TransportPlanning = () => {
             </button>
           </div>
 
-          {/* Add Vehicle Form */}
           {showVehicleForm && (
             <div className="vehicle-form">
               <div className="form-grid">
@@ -352,14 +471,12 @@ const TransportPlanning = () => {
                   Cancel
                 </button>
                 <button className="btn btn-primary" onClick={handleAddVehicle}>
-                  {/* <Plus size={18} /> */}
                   Add Vehicle
                 </button>
               </div>
             </div>
           )}
 
-          {/* Vehicle List */}
           {vehicles.length === 0 ? (
             <div className="empty-state">
               <Bus size={48} />
@@ -428,28 +545,9 @@ const TransportPlanning = () => {
                 onChange={(e) =>
                   setSettings({ ...settings, max_wait_minutes: parseInt(e.target.value) })
                 }
-                style={{
-    maxWidth: "40%",
-    width: "100%"
-  }}
+                style={{ maxWidth: '40%', width: '100%' }}
               />
             </div>
-
-            {/* <div className="form-group">
-              <label>
-                Average Distance (km)
-                <span className="label-hint">For cost calculation</span>
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="200"
-                value={settings.avg_distance_km}
-                onChange={(e) =>
-                  setSettings({ ...settings, avg_distance_km: parseInt(e.target.value) })
-                }
-              />
-            </div> */}
           </div>
         </div>
 
@@ -481,38 +579,17 @@ const TransportPlanning = () => {
         {/* Results */}
         {plan && (
           <>
-            {/* Unassigned Passengers Warning */}
-            {(() => {
-              const totalAssigned = plan.pickup_groups.reduce(
-                (sum, group) => sum + group.passenger_count, 
-                0
-              );
-              const unassigned = plan.total_passengers - totalAssigned;
-              
-              if (unassigned > 0) {
-                return (
-                  <div className="alert alert-warning">
-                    <AlertCircle size={20} />
-                    <div>
-                      <strong>⚠️ {unassigned} Passengers Unassigned</strong>
-                      <p style={{ margin: '4px 0 0 0', fontSize: '14px' }}>
-                        Only {totalAssigned} out of {plan.total_passengers} passengers were assigned. 
-                        <br />
-                        <strong>Solutions:</strong> Add more vehicles OR increase max wait time.
-                      </p>
-                    </div>
-                  </div>
-                );
-              }
-              return null;
-            })()}
+            {/* ── Smart Unassigned Warning ── */}
+            <UnassignedWarning
+              plan={plan}
+              locationSummary={locationSummary}
+              onAddVehicleClick={handleAddVehicleForLocation}
+            />
 
             {/* Summary Stats */}
             <div className="stats-grid">
               <div className="stat-card stat-primary">
-                <div className="stat-icon">
-                  <Bus size={24} />
-                </div>
+                <div className="stat-icon"><Bus size={24} /></div>
                 <div>
                   <div className="stat-value">{plan.total_vehicles_used}</div>
                   <div className="stat-label">Vehicles Used</div>
@@ -520,9 +597,7 @@ const TransportPlanning = () => {
               </div>
 
               <div className="stat-card stat-success">
-                <div className="stat-icon">
-                  <TrendingDown size={24} />
-                </div>
+                <div className="stat-icon"><TrendingDown size={24} /></div>
                 <div>
                   <div className="stat-value">{plan.vehicles_saved}</div>
                   <div className="stat-label">Vehicles Saved</div>
@@ -530,24 +605,12 @@ const TransportPlanning = () => {
               </div>
 
               <div className="stat-card stat-warning">
-                <div className="stat-icon">
-                  <Clock size={24} />
-                </div>
+                <div className="stat-icon"><Clock size={24} /></div>
                 <div>
                   <div className="stat-value">{plan.avg_wait_time_minutes} min</div>
                   <div className="stat-label">Avg Wait Time</div>
                 </div>
               </div>
-
-              {/* <div className="stat-card stat-money">
-                <div className="stat-icon">
-                  <DollarSign size={24} />
-                </div>
-                <div>
-                  <div className="stat-value">{formatCurrency(plan.cost_saved)}</div>
-                  <div className="stat-label">Cost Saved</div>
-                </div>
-              </div> */}
             </div>
 
             {/* Pickup Groups */}
@@ -564,7 +627,7 @@ const TransportPlanning = () => {
                       Export Plan ▼
                     </button>
                     <div className="export-menu">
-                      <a 
+                      <a
                         href={`${import.meta.env.VITE_BACKEND_URL}/api/transport/export/pdf/${plan.plan_id}`}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -573,7 +636,7 @@ const TransportPlanning = () => {
                         <Download size={16} />
                         Export as PDF
                       </a>
-                      <a 
+                      <a
                         href={`${import.meta.env.VITE_BACKEND_URL}/api/transport/export/excel/${plan.plan_id}`}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -584,7 +647,7 @@ const TransportPlanning = () => {
                       </a>
                     </div>
                   </div>
-                  <button 
+                  <button
                     className="btn btn-danger-outline"
                     onClick={handleDeletePlan}
                   >
@@ -595,7 +658,7 @@ const TransportPlanning = () => {
               </div>
 
               <div className="groups-container">
-                {plan.pickup_groups.map((group, index) => (
+                {plan.pickup_groups.map((group) => (
                   <div key={group.group_id} className="group-card">
                     <div className="group-header">
                       <div className="group-title">
@@ -651,7 +714,6 @@ const TransportPlanning = () => {
                       </div>
                     </div>
 
-                    {/* Passenger List */}
                     <details className="passenger-details">
                       <summary>
                         View {group.passenger_count} Passengers
