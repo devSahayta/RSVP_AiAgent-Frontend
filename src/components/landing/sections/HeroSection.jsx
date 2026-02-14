@@ -2,9 +2,14 @@ import { useEffect, useRef } from "react";
 import { Button } from "../../../components/ui/button";
 import { ArrowRight, Play } from "lucide-react";
 import { gsap } from "gsap";
+import { useNavigate } from "react-router-dom";
+
 
 const HeroSection = () => {
   const sectionRef = useRef(null);
+const navigate = useNavigate();
+
+  
 
   useEffect(() => {
     const el = sectionRef.current;
@@ -63,6 +68,10 @@ const HeroSection = () => {
     };
   }, []);
 
+  const handleGetStarted = () => {
+  navigate("/contact");
+};
+
   return (
     <section ref={sectionRef} className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
       <div className="absolute inset-0 grid-bg opacity-40" />
@@ -92,7 +101,7 @@ const HeroSection = () => {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-          <Button onlclick=""size="lg" className="hero-btn opacity-0 bg-gradient-to-r from-secondary to-accent text-primary-foreground hover:opacity-90 transition-opacity px-8 text-base">
+          <Button onClick={handleGetStarted} size="lg" className="hero-btn opacity-0 bg-gradient-to-r from-secondary to-accent text-primary-foreground hover:opacity-90 transition-opacity px-8 text-base">
             Book a Demo <ArrowRight className="ml-1 w-4 h-4" />
           </Button>
           <Button size="lg" variant="outline" className="hero-btn opacity-0 border-border/50 text-foreground hover:bg-muted/50 px-8 text-base">
