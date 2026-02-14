@@ -1,14 +1,16 @@
 // src/pages/SendTemplate.jsx
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import useAuthUser from "../hooks/useAuthUser";
 import {
   fetchMetaTemplatesById,
   sendTemplate as apiSendTemplate,
   sendTemplateBulk as apiSendBulkTemplate,
+  fetchTemplateBulkProgress,
 } from "../api/templates";
 import { fetchEvents, fetchEventParticipants } from "../api/events";
 import { listMedia, uploadMedia } from "../api/media";
+import { showError, showSuccess } from "../utils/toast";
 
 /*
   SendTemplate Page
@@ -57,7 +59,7 @@ function TemplatePreviewSmall({ template, mapping, mediaProxyUrl }) {
   const filledBody = body ? fillTemplateText(body.text || "", mapping) : "";
 
   return (
-    <div className="bg-gray-50 rounded-lg p-4 border shadow-sm w-full">
+    <div className="bg-[#111111] rounded-lg p-4 border border-[#2a2a2a] shadow-sm w-full">
       {header && headerFormat === "image" && mediaProxyUrl && (
         <img
           src={mediaProxyUrl}
@@ -68,14 +70,14 @@ function TemplatePreviewSmall({ template, mapping, mediaProxyUrl }) {
       {header && headerFormat === "video" && mediaProxyUrl && (
         <video src={mediaProxyUrl} controls className="w-full mb-3" />
       )}
-      <div className="bg-white p-4 rounded">
-        <div className="text-gray-800 whitespace-pre-wrap">{filledBody}</div>
+      <div className="bg-[#0f0f0f] p-4 rounded border border-[#2a2a2a]">
+        <div className="text-gray-100 whitespace-pre-wrap">{filledBody}</div>
         {buttons?.buttons?.length > 0 && (
           <div className="mt-3 space-y-2">
             {buttons.buttons.map((b, i) => (
               <div
                 key={i}
-                className="inline-block px-3 py-2 rounded-full border text-sm bg-blue-50 text-blue-700"
+                className="inline-block px-3 py-2 rounded-full border border-blue-800/60 text-sm bg-blue-900/30 text-blue-300"
               >
                 {b.text}
               </div>
@@ -91,6 +93,8 @@ export default function SendTemplate() {
   const { templateId } = useParams();
   const navigate = useNavigate();
   const { userId } = useAuthUser();
+
+  const progressRef = useRef(null);
 
   const [template, setTemplate] = useState(null);
   const [loadingTemplate, setLoadingTemplate] = useState(true);
@@ -187,7 +191,7 @@ export default function SendTemplate() {
       return `${
         import.meta.env.VITE_BACKEND_URL
       }/api/watemplates/media-proxy-url?url=${encodeURIComponent(
-        header.example.header_handle[0]
+        header.example.header_handle[0],
       )}&user_id=${userId}`;
     }
 
@@ -409,7 +413,7 @@ export default function SendTemplate() {
       if (numericKeys.length > 0) {
         // get unique numeric, sorted ascending
         const nums = Array.from(
-          new Set(numericKeys.map((k) => Number(k)))
+          new Set(numericKeys.map((k) => Number(k))),
         ).sort((a, b) => a - b);
         const params = nums.map((n) => ({
           type: "text",
@@ -639,7 +643,7 @@ export default function SendTemplate() {
 
     const recipients = [];
     const selectedIds = Object.keys(selectedParticipants).filter(
-      (k) => selectedParticipants[k]
+      (k) => selectedParticipants[k],
     );
 
     if (selectedIds.length > 0) {
@@ -657,7 +661,7 @@ export default function SendTemplate() {
     if (!comps || comps.length === 0) {
       if (
         !window.confirm(
-          "No components detected. Continue sending without parameters?"
+          "No components detected. Continue sending without parameters?",
         )
       ) {
         return;
@@ -665,18 +669,39 @@ export default function SendTemplate() {
     }
 
     setSending(true);
+
+    // to scroll to progress UI
+    setTimeout(() => {
+      progressRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 100);
+
     setSendingProgress({ total: recipients.length, current: 0 });
     setSendResults(null);
 
     // -------------------------
     // Simulated progress
     // -------------------------
-    let progress = 0;
-    const progressTimer = setInterval(() => {
-      progress += Math.ceil(recipients.length / 25); // smooth animation
-      if (progress > recipients.length) progress = recipients.length;
-      setSendingProgress({ total: recipients.length, current: progress });
-    }, 120);
+    // let progress = 0;
+    // const progressTimer = setInterval(() => {
+    //   progress += Math.ceil(recipients.length / 25); // smooth animation
+    //   if (progress > recipients.length) progress = recipients.length;
+    //   setSendingProgress({ total: recipients.length, current: progress });
+    // }, 120);
+
+    const progressInterval = setInterval(async () => {
+      const r = await fetchTemplateBulkProgress(userId, templateId);
+      const data = r.data;
+
+      if (data.total > 0) {
+        setSendingProgress({
+          total: data.total,
+          current: data.completed,
+        });
+      }
+    }, 500);
 
     try {
       // --------------- CALL BULK SEND ---------------
@@ -687,11 +712,11 @@ export default function SendTemplate() {
         components: comps,
       });
 
-      clearInterval(progressTimer);
-      setSendingProgress({
-        total: recipients.length,
-        current: recipients.length,
-      });
+      // clearInterval(progressTimer);
+      // setSendingProgress({
+      //   total: recipients.length,
+      //   current: recipients.length,
+      // });
 
       const data = bulkResp.data;
 
@@ -707,12 +732,25 @@ export default function SendTemplate() {
           error: f.error,
         })),
       ]);
+
+      if (bulkResp.status === 200) {
+        showSuccess(`Sending Status:
+          Success: ${data.summary.success}
+          Failed: ${data.summary.failed}`);
+      }
     } catch (err) {
-      clearInterval(progressTimer);
+      // clearInterval(progressTimer);
+      // console.error("Bulk send failed", err);
+      // alert("Bulk send failed: " + (err?.message || JSON.stringify(err)));
+      clearInterval(progressInterval);
       console.error("Bulk send failed", err);
-      alert("Bulk send failed: " + (err?.message || JSON.stringify(err)));
+      showError("Bulk send failed: " + (err?.message || JSON.stringify(err)));
+      // alert("Bulk send failed: " + (err?.message || JSON.stringify(err)));
     } finally {
+      // setSending(false);
       setSending(false);
+      clearInterval(progressInterval);
+      setSendingProgress(null);
     }
   };
 
@@ -727,13 +765,25 @@ export default function SendTemplate() {
 
     setSending(true);
     setSendingProgress({ total: failed.length, current: 0 });
-    let progress = 0;
+    // let progress = 0;
 
-    const timer = setInterval(() => {
-      progress += Math.ceil(failed.length / 20);
-      if (progress > failed.length) progress = failed.length;
-      setSendingProgress({ total: failed.length, current: progress });
-    }, 120);
+    // const timer = setInterval(() => {
+    //   progress += Math.ceil(failed.length / 20);
+    //   if (progress > failed.length) progress = failed.length;
+    //   setSendingProgress({ total: failed.length, current: progress });
+    // }, 120);
+
+    const progressInterval = setInterval(async () => {
+      const r = await fetchTemplateBulkProgress(userId, templateId);
+      const data = r.data;
+
+      if (data.total > 0) {
+        setSendingProgress({
+          total: data.total,
+          current: data.completed,
+        });
+      }
+    }, 500);
 
     try {
       const bulkResp = await apiSendBulkTemplate(templateId, {
@@ -742,15 +792,19 @@ export default function SendTemplate() {
         components: comps,
       });
 
-      clearInterval(timer);
+      // clearInterval(timer);
 
       const data = bulkResp.data;
 
-      alert(
-        `Retry complete:
+      //       alert(
+      //         `Retry complete:
+      // Success: ${data.summary.success}
+      // Failed: ${data.summary.failed}`
+      //       );
+
+      showSuccess(`Retry complete:
 Success: ${data.summary.success}
-Failed: ${data.summary.failed}`
-      );
+Failed: ${data.summary.failed}`);
 
       // Update results
       const successes = data.results.success.map((s) => ({
@@ -770,15 +824,21 @@ Failed: ${data.summary.failed}`
           (x) =>
             successes.find((y) => y.to === x.to) ||
             failures.find((y) => y.to === x.to) ||
-            x
+            x,
         );
         return updated;
       });
     } catch (err) {
-      clearInterval(timer);
-      alert("Retry failed: " + err.message);
+      // clearInterval(timer);
+      // alert("Retry failed: " + err.message);
+      clearInterval(progressInterval);
+      showError("Retry failed: " + err.message);
+      // alert("Retry failed: " + err.message);
     } finally {
+      // setSending(false);
       setSending(false);
+      clearInterval(progressInterval);
+      setSendingProgress(null);
     }
   };
 
@@ -811,10 +871,10 @@ Failed: ${data.summary.failed}`
   // console.log({ events, selectedEvent });
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
+    <div className="p-6 max-w-5xl mx-auto space-y-6 text-gray-100">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Send Template — {template.name}</h1>
-        <div className="text-sm text-gray-500">{template.language}</div>
+        <div className="text-sm text-gray-400">{template.language}</div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -831,11 +891,11 @@ Failed: ${data.summary.failed}`
           </div>
 
           {/* Variables */}
-          <div className="bg-white p-4 rounded shadow">
+          <div className="bg-[#111111] border border-[#2a2a2a] p-4 rounded shadow">
             <h3 className="font-semibold mb-3">Variables</h3>
 
             {allPlaceholders.length === 0 && (
-              <div className="text-sm text-gray-500">
+              <div className="text-sm text-gray-400">
                 No variables found in template.
               </div>
             )}
@@ -843,11 +903,11 @@ Failed: ${data.summary.failed}`
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {allPlaceholders.map((ph) => (
                 <div key={ph} className="flex flex-col">
-                  <label className="text-xs text-gray-600 mb-1">
+                  <label className="text-xs text-gray-300 mb-1">
                     {placeholderLabel(ph)}
                   </label>
                   <input
-                    className="border p-2 rounded"
+                    className="border border-[#2a2a2a] bg-[#0f0f0f] text-gray-100 p-2 rounded"
                     value={variableMap[ph] || ""}
                     onChange={(e) => setVar(ph, e.target.value)}
                     placeholder={`Value for ${placeholderLabel(ph)}`}
@@ -859,16 +919,16 @@ Failed: ${data.summary.failed}`
 
           {/* Buttons (show button param inputs separately if exist) */}
           {placeholders.buttons.length > 0 && (
-            <div className="bg-white p-4 rounded shadow">
+            <div className="bg-[#111111] border border-[#2a2a2a] p-4 rounded shadow">
               <h3 className="font-semibold mb-2">Button URL Parameters</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {placeholders.buttons.map((ph) => (
                   <div key={ph} className="flex flex-col">
-                    <label className="text-xs text-gray-600 mb-1">
+                    <label className="text-xs text-gray-300 mb-1">
                       {placeholderLabel(ph)}
                     </label>
                     <input
-                      className="border p-2 rounded"
+                      className="border border-[#2a2a2a] bg-[#0f0f0f] text-gray-100 p-2 rounded"
                       value={variableMap[ph] || ""}
                       onChange={(e) => setVar(ph, e.target.value)}
                       placeholder={`Value for ${placeholderLabel(ph)}`}
@@ -887,21 +947,21 @@ Failed: ${data.summary.failed}`
                 "VIDEO" ||
               template.components.find((c) => c.type === "HEADER").format ===
                 "TEXT") && (
-              <div className="bg-white p-4 rounded shadow">
+              <div className="bg-[#111111] border border-[#2a2a2a] p-4 rounded shadow">
                 <h3 className="font-semibold mb-3">Header</h3>
 
                 {/* If header is text we show preview and editable text mapping */}
                 {template.components.find((c) => c.type === "HEADER").format ===
                   "TEXT" && (
                   <div className="mb-3">
-                    <label className="text-xs text-gray-600">Header Text</label>
+                    <label className="text-xs text-gray-300">Header Text</label>
                     <input
-                      className="w-full border p-2 rounded"
+                      className="w-full border border-[#2a2a2a] bg-[#0f0f0f] text-gray-100 p-2 rounded"
                       value={
                         fillTemplateText(
                           template.components.find((c) => c.type === "HEADER")
                             .text || "",
-                          variableMap
+                          variableMap,
                         ) || ""
                       }
                       readOnly
@@ -914,7 +974,7 @@ Failed: ${data.summary.failed}`
 
                 {/* If header is image/video allow choose existing or upload */}
                 {["IMAGE", "VIDEO"].includes(
-                  template.components.find((c) => c.type === "HEADER").format
+                  template.components.find((c) => c.type === "HEADER").format,
                 ) && (
                   <>
                     <div className="flex items-center gap-3 mb-3">
@@ -951,11 +1011,11 @@ Failed: ${data.summary.failed}`
 
                     {/* {mediaChoice === "existing" && (
                       <div className="mb-3">
-                        <label className="text-xs text-gray-600">
+                        <label className="text-xs text-gray-300">
                           Select media
                         </label>
                         <select
-                          className="w-full border p-2 rounded"
+                          className="w-full border border-[#2a2a2a] bg-[#0f0f0f] text-gray-100 p-2 rounded"
                           value={selectedMediaId || ""}
                           onChange={(e) => setSelectedMediaId(e.target.value)}
                         >
@@ -974,11 +1034,11 @@ Failed: ${data.summary.failed}`
 
                     {mediaChoice === "existing" && (
                       <div className="mb-3">
-                        <label className="text-xs text-gray-600">
+                        <label className="text-xs text-gray-300">
                           Select media
                         </label>
                         <select
-                          className="w-full border p-2 rounded"
+                          className="w-full border border-[#2a2a2a] bg-[#0f0f0f] text-gray-100 p-2 rounded"
                           value={selectedMediaId || ""}
                           onChange={(e) => setSelectedMediaId(e.target.value)}
                         >
@@ -991,10 +1051,10 @@ Failed: ${data.summary.failed}`
                         </select>
                         Media preview
                         {selectedMediaId && (
-                          <div className="mt-3 border rounded p-2 bg-gray-50">
+                          <div className="mt-3 border border-[#2a2a2a] rounded p-2 bg-[#161616]">
                             {(() => {
                               const media = mediaList.find(
-                                (m) => m.wmu_id === selectedMediaId
+                                (m) => m.wmu_id === selectedMediaId,
                               );
                               if (!media) return null;
 
@@ -1025,7 +1085,7 @@ Failed: ${data.summary.failed}`
                               }
 
                               return (
-                                <div className="text-xs text-gray-500">
+                                <div className="text-xs text-gray-400">
                                   Preview not available
                                 </div>
                               );
@@ -1040,7 +1100,7 @@ Failed: ${data.summary.failed}`
 
                     {mediaChoice === "upload" && (
                       <div className="mb-3">
-                        <label className="text-xs text-gray-600">
+                        <label className="text-xs text-gray-300">
                           Upload file
                         </label>
                         <input
@@ -1065,13 +1125,13 @@ Failed: ${data.summary.failed}`
             )}
 
           {/* Events & Participants */}
-          <div className="bg-white p-4 rounded shadow">
+          <div className="bg-[#111111] border border-[#2a2a2a] p-4 rounded shadow">
             <h3 className="font-semibold mb-3">Send to participants</h3>
 
             <div className="mb-3">
-              <label className="text-xs text-gray-600">Select Event</label>
+              <label className="text-xs text-gray-300">Select Event</label>
               <select
-                className="w-full border p-2 rounded"
+                className="w-full border border-[#2a2a2a] bg-[#0f0f0f] text-gray-100 p-2 rounded"
                 value={selectedEvent || ""}
                 onChange={(e) => setSelectedEvent(e.target.value || null)}
               >
@@ -1101,15 +1161,15 @@ Failed: ${data.summary.failed}`
                   </label>
                 </div>
 
-                <div className="max-h-56 overflow-auto border rounded p-2 grid gap-2">
+                <div className="max-h-56 overflow-auto border border-[#2a2a2a] rounded p-2 grid gap-2 bg-[#0f0f0f]">
                   {participants.map((p) => (
                     <label
                       key={p.participant_id}
-                      className="flex items-center justify-between gap-2 bg-gray-50 p-2 rounded"
+                      className="flex items-center justify-between gap-2 bg-[#161616] p-2 rounded"
                     >
                       <div>
                         <div className="text-sm font-medium">{p.full_name}</div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-gray-400">
                           {p.phone_number}
                         </div>
                       </div>
@@ -1136,7 +1196,7 @@ Failed: ${data.summary.failed}`
             </button>
 
             <button
-              className="px-4 py-2 bg-gray-200 rounded"
+              className="px-4 py-2 bg-[#1f1f1f] text-gray-200 rounded border border-[#2a2a2a]"
               onClick={() => navigate("/templates")}
             >
               Cancel
@@ -1145,7 +1205,7 @@ Failed: ${data.summary.failed}`
 
           {/* send results */}
           {/* {sendResults && (
-            <div className="bg-white p-3 rounded shadow mt-4">
+            <div className="bg-[#111111] border border-[#2a2a2a] p-3 rounded shadow mt-4">
               <h3 className="font-semibold mb-2">Send results</h3>
               <ul className="space-y-2 text-sm">
                 {sendResults.map((r) => (
@@ -1171,60 +1231,175 @@ Failed: ${data.summary.failed}`
           )} */}
 
           {/* Send Results */}
-          {sendResults && (
-            <div className="bg-white p-3 rounded shadow mt-4">
-              <h3 className="font-semibold mb-2">Send results</h3>
+          {/* Progress & Results Anchor */}
+          <div ref={progressRef}>
+            {/* Sending Progress */}
+            {sendingProgress && (
+              <div className="mt-4 bg-white p-4 rounded shadow space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-gray-700">
+                    Sending messages…
+                  </span>
+                  <span className="text-gray-500">
+                    {sendingProgress.current} / {sendingProgress.total}
+                  </span>
+                </div>
 
-              <ul className="space-y-2 text-sm">
-                {sendResults.map((r) => (
-                  <li
-                    key={r.to}
-                    className={r.ok ? "text-green-700" : "text-red-600"}
-                  >
-                    {r.to}: {r.ok ? "SENT" : "FAILED"}
-                    {!r.ok && (
-                      <pre className="text-xs bg-red-50 p-2 rounded mt-1 text-wrap">
-                        {JSON.stringify(r.error)}
-                      </pre>
-                    )}
-                  </li>
-                ))}
-              </ul>
+                {/* Progress bar */}
+                <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="h-2 bg-blue-600 transition-all duration-300"
+                    style={{
+                      width: `${Math.min(
+                        (sendingProgress.current / sendingProgress.total) * 100,
+                        100,
+                      )}%`,
+                    }}
+                  />
+                </div>
 
-              {/* Retry Failed Button */}
-              {sendResults.some((r) => !r.ok) && (
-                <button
-                  className="mt-4 px-4 py-2 bg-orange-500 text-white rounded"
-                  onClick={retryFailed}
-                >
-                  Retry Failed Sends
-                </button>
-              )}
-            </div>
-          )}
+                <div className="text-xs text-gray-500">
+                  Please don’t close this page while sending is in progress.
+                </div>
+              </div>
+            )}
+
+            {/* Send Results */}
+            {/* Send Results */}
+            {sendResults && (
+              <div className="bg-white p-4 rounded shadow mt-6 space-y-4">
+                <h3 className="font-semibold text-black text-lg">
+                  Send Summary
+                </h3>
+
+                {/* Summary cards */}
+                {(() => {
+                  const total = sendResults.length;
+                  const successCount = sendResults.filter((r) => r.ok).length;
+                  const failedCount = total - successCount;
+
+                  return (
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-blue-50 p-3 rounded text-center">
+                        <div className="text-xs text-gray-500">Total</div>
+                        <div className="text-xl font-bold text-blue-700">
+                          {total}
+                        </div>
+                      </div>
+
+                      <div className="bg-green-50 p-3 rounded text-center">
+                        <div className="text-xs text-gray-500">Sent</div>
+                        <div className="text-xl font-bold text-green-700">
+                          {successCount}
+                        </div>
+                      </div>
+
+                      <div className="bg-red-50 p-3 rounded text-center">
+                        <div className="text-xs text-gray-500">Failed</div>
+                        <div className="text-xl font-bold text-red-700">
+                          {failedCount}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Successful sends */}
+                {sendResults.some((r) => r.ok) && (
+                  <div>
+                    <h4 className="font-medium text-green-700 mb-2">
+                      ✅ Successfully Sent
+                    </h4>
+                    <ul className="max-h-40 overflow-auto space-y-1 text-sm">
+                      {sendResults
+                        .filter((r) => r.ok)
+                        .map((r) => (
+                          <li
+                            key={r.to}
+                            className="flex items-center justify-between bg-green-50 px-3 py-2 rounded"
+                          >
+                            <span className=" text-black ">{r.to}</span>
+                            <span className="text-xs font-medium text-green-700">
+                              SENT
+                            </span>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Failed sends */}
+                {sendResults.some((r) => !r.ok) && (
+                  <div>
+                    <h4 className="font-medium text-red-700 mb-2">
+                      ❌ Failed to Send
+                    </h4>
+
+                    <ul className="max-h-40 overflow-auto space-y-2 text-sm">
+                      {sendResults
+                        .filter((r) => !r.ok)
+                        .map((r) => (
+                          <li
+                            key={r.to}
+                            className="bg-red-50 border border-red-200 p-3 rounded"
+                          >
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium">{r.to}</span>
+                              <span className="text-xs font-semibold text-red-700">
+                                FAILED
+                              </span>
+                            </div>
+
+                            <div className="mt-1 text-xs text-red-600 break-words">
+                              {typeof r.error === "string"
+                                ? r.error
+                                : JSON.stringify(
+                                    r?.error?.error?.message ||
+                                      r?.error?.error ||
+                                      r?.error,
+                                  )}
+                            </div>
+                          </li>
+                        ))}
+                    </ul>
+
+                    {/* Retry button */}
+                    <div className="mt-4">
+                      <button
+                        className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded"
+                        onClick={retryFailed}
+                      >
+                        Retry Failed Sends
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right column: summary & help */}
         <div className="col-span-1 space-y-4">
-          <div className="bg-white p-4 rounded shadow">
+          <div className="bg-[#111111] border border-[#2a2a2a] p-4 rounded shadow">
             <h4 className="font-semibold text-lg mb-2">Template info</h4>
-            <div className="text-sm text-gray-700 mb-1">
+            <div className="text-sm text-gray-200 mb-1">
               <strong>Name:</strong> {template.name}
             </div>
-            <div className="text-sm text-gray-700 mb-1">
+            <div className="text-sm text-gray-200 mb-1">
               <strong>Category:</strong> {template.category}
             </div>
-            <div className="text-sm text-gray-700 mb-1">
+            <div className="text-sm text-gray-200 mb-1">
               <strong>Language:</strong> {template.language}
             </div>
-            <div className="text-sm text-gray-700">
+            <div className="text-sm text-gray-200">
               <strong>Status:</strong> {template.status}
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded shadow">
+          <div className="bg-[#111111] border border-[#2a2a2a] p-4 rounded shadow">
             <h4 className="font-semibold mb-2">Preview variables</h4>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-300">
               Live preview updates as you type above. Variables are replaced in
               body, header text and URL buttons.
             </div>
@@ -1232,7 +1407,7 @@ Failed: ${data.summary.failed}`
               <strong>Variables</strong>
               <ul className="text-sm mt-2 space-y-1">
                 {allPlaceholders.length === 0 && (
-                  <li className="text-gray-500">None</li>
+                  <li className="text-gray-400">None</li>
                 )}
                 {allPlaceholders.map((k) => (
                   <li key={k}>
@@ -1246,7 +1421,7 @@ Failed: ${data.summary.failed}`
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded shadow text-sm text-gray-500">
+          <div className="bg-[#111111] border border-[#2a2a2a] p-4 rounded shadow text-sm text-gray-400">
             <div className="font-semibold mb-2">Notes</div>
             {/* <div>
               - For URL buttons that use {{ n }} or {{ name }}, fill the values

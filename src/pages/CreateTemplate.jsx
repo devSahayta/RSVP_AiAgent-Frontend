@@ -4,6 +4,12 @@ import { useNavigate } from "react-router-dom";
 import useAuthUser from "../hooks/useAuthUser";
 import { createTemplate as apiCreateTemplate } from "../api/templates";
 import { createUploadSession, uploadBinary } from "../api/media";
+import {
+  dismissToast,
+  showError,
+  showLoading,
+  showSuccess,
+} from "../utils/toast";
 
 /**
  * CreateTemplate.jsx
@@ -110,13 +116,13 @@ export default function CreateTemplate() {
   // find body component
   const bodyComponent = useMemo(
     () => components.find((c) => c.type === "BODY"),
-    [components]
+    [components],
   );
 
   // Derived: variables in body text
   const bodyVariables = useMemo(
     () => detectVariables(bodyComponent?.text || ""),
-    [bodyComponent]
+    [bodyComponent],
   );
 
   // Example values management (we store as array of strings, matching variable order)
@@ -140,8 +146,8 @@ export default function CreateTemplate() {
               ...c,
               example: { body_text: [Array(len).fill("")] },
             }
-          : c
-      )
+          : c,
+      ),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bodyVariables.join("|")]);
@@ -206,6 +212,15 @@ export default function CreateTemplate() {
   };
 
   const removeComponent = (compId) => {
+    // console.log({ compId });
+    const checkBody = components.find((c) => c.id === compId);
+    // console.log({ checkBody, newdata: checkBody.type });
+
+    if (checkBody.type === "BODY") {
+      showError("Body can not be removed");
+      return;
+    }
+
     setComponents((p) => p.filter((c) => c.id !== compId));
     // cleanup header if removed
     const removed = components.find((c) => c.id === compId);
@@ -234,8 +249,8 @@ export default function CreateTemplate() {
               ...c,
               text: newText,
             }
-          : c
-      )
+          : c,
+      ),
     );
   };
 
@@ -248,8 +263,8 @@ export default function CreateTemplate() {
               ...c,
               example: { body_text: [exampleValues.map((v) => v || "")] },
             }
-          : c
-      )
+          : c,
+      ),
     );
   }, [exampleValues]);
 
@@ -261,8 +276,8 @@ export default function CreateTemplate() {
       prev.map((c) =>
         c.type === "BUTTONS"
           ? { ...c, buttons: [...(c.buttons || []), item] }
-          : c
-      )
+          : c,
+      ),
     );
   };
 
@@ -280,8 +295,8 @@ export default function CreateTemplate() {
       prev.map((c) =>
         c.type === "BUTTONS"
           ? { ...c, buttons: [...(c.buttons || []), item] }
-          : c
-      )
+          : c,
+      ),
     );
   };
 
@@ -298,8 +313,8 @@ export default function CreateTemplate() {
       prev.map((c) =>
         c.type === "BUTTONS"
           ? { ...c, buttons: [...(c.buttons || []), item] }
-          : c
-      )
+          : c,
+      ),
     );
   };
 
@@ -311,11 +326,11 @@ export default function CreateTemplate() {
           ? {
               ...c,
               buttons: (c.buttons || []).map((b) =>
-                b.id === id ? { ...b, ...patch } : b
+                b.id === id ? { ...b, ...patch } : b,
               ),
             }
-          : c
-      )
+          : c,
+      ),
     );
   };
 
@@ -325,8 +340,8 @@ export default function CreateTemplate() {
       prev.map((c) =>
         c.type === "BUTTONS"
           ? { ...c, buttons: (c.buttons || []).filter((b) => b.id !== id) }
-          : c
-      )
+          : c,
+      ),
     );
   };
 
@@ -357,7 +372,7 @@ export default function CreateTemplate() {
     } catch (err) {
       console.error("Create session failed", err);
       setUploadError(
-        err?.response?.data || err.message || "Session creation failed"
+        err?.response?.data || err.message || "Session creation failed",
       );
       return null;
     } finally {
@@ -410,15 +425,15 @@ export default function CreateTemplate() {
                 format: headerType === "TEXT" ? "TEXT" : headerType,
                 example: { header_handle: [h] },
               }
-            : c
-        )
+            : c,
+        ),
       );
 
       return h;
     } catch (err) {
       console.error("Binary upload failed", err);
       setUploadError(
-        err?.response?.data || err.message || "Binary upload failed"
+        err?.response?.data || err.message || "Binary upload failed",
       );
       return null;
     } finally {
@@ -464,8 +479,8 @@ export default function CreateTemplate() {
                 ...c,
                 format: newType,
               }
-            : c
-        )
+            : c,
+        ),
       );
     }
   };
@@ -684,17 +699,21 @@ export default function CreateTemplate() {
     };
 
     try {
+      const toastId = showLoading("Creating template...");
       setSubmitting(true);
       setLoading(true);
       const resp = await apiCreateTemplate(payload);
       // success: show toast and redirect
-      alert("Template created successfully. Redirecting to list...");
+      // alert("Template created successfully. Redirecting to list...");
+      dismissToast(toastId);
+      showSuccess("Template created successfully. Redirecting to list...");
       navigate("/templates");
     } catch (err) {
       console.error("Create template error", err);
       const msg =
         err?.response?.data || err?.message || "Create template failed";
-      alert("Create failed: " + JSON.stringify(msg));
+      // alert("Create failed: " + JSON.stringify(msg));
+      showError("Create failed: " + JSON.stringify(msg));
     } finally {
       setSubmitting(false);
       setLoading(false);
@@ -733,20 +752,20 @@ export default function CreateTemplate() {
         // document
         return (
           <div className="flex items-center gap-3 p-4">
-            <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center">
+            <div className="w-10 h-10 bg-[#1f1f1f] rounded flex items-center justify-center">
               📄
             </div>
             <div>
               <div className="font-medium">
                 {headerFileRef.current?.files?.[0]?.name || "Uploaded document"}
               </div>
-              <div className="text-xs text-gray-500">Document preview</div>
+              <div className="text-xs text-gray-400">Document preview</div>
             </div>
           </div>
         );
       } else {
         return (
-          <div className="p-6 text-sm text-gray-500">
+          <div className="p-6 text-sm text-gray-400">
             No media preview (upload to preview)
           </div>
         );
@@ -759,7 +778,7 @@ export default function CreateTemplate() {
     const text = bodyComponent?.text || "";
     if (!text)
       return (
-        <div className="text-gray-500">Body preview (type your message)</div>
+        <div className="text-gray-400">Body preview (type your message)</div>
       );
 
     // Replace variables with example values (wrap variable tokens with <strong>)
@@ -780,7 +799,7 @@ export default function CreateTemplate() {
       rendered.push(
         <strong key={`v-${match.index}`} className="bg-yellow-50 px-1 rounded">
           {replacement}
-        </strong>
+        </strong>,
       );
       lastIndex = match.index + match[0].length;
       varIndex++;
@@ -798,17 +817,17 @@ export default function CreateTemplate() {
 
       {/* Top area */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white p-4 rounded shadow">
-          <label className="block text-sm font-medium text-gray-700">
+        <div className="bg-[#111111] border border-[#2a2a2a] p-4 rounded shadow">
+          <label className="block text-sm font-medium text-gray-300">
             Template Name
           </label>
           <input
-            className="mt-1 block w-full border p-2 rounded"
+            className="mt-1 block w-full border border-[#2a2a2a] bg-[#0f0f0f] text-gray-100 p-2 rounded"
             value={templateNameRaw}
             onChange={(e) => setTemplateNameRaw(e.target.value)}
             placeholder="friendly_name_here (will be slugified)"
           />
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="text-xs text-gray-400 mt-1">
             Generated name: <code>{templateName}</code>
           </div>
           {nameError && (
@@ -816,12 +835,12 @@ export default function CreateTemplate() {
           )}
         </div>
 
-        <div className="bg-white p-4 rounded shadow">
-          <label className="block text-sm font-medium text-gray-700">
+        <div className="bg-[#111111] border border-[#2a2a2a] p-4 rounded shadow">
+          <label className="block text-sm font-medium text-gray-300">
             Category
           </label>
           <select
-            className="mt-1 block w-full border p-2 rounded"
+            className="mt-1 block w-full border border-[#2a2a2a] bg-[#0f0f0f] text-gray-100 p-2 rounded"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
           >
@@ -832,10 +851,10 @@ export default function CreateTemplate() {
             ))}
           </select>
 
-          <div className="mt-3 text-sm text-gray-600">
+          <div className="mt-3 text-sm text-gray-300">
             Language: <strong>{language}</strong>
           </div>
-          <div className="mt-1 text-sm text-gray-600">
+          <div className="mt-1 text-sm text-gray-300">
             Parameter format: <strong>{parameter_format}</strong>
           </div>
         </div>
@@ -845,34 +864,34 @@ export default function CreateTemplate() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         {/* Left: Builder */}
         <form className="space-y-6" onSubmit={handleSubmit}>
-          <div className="bg-white p-4 rounded shadow">
+          <div className="bg-[#111111] border border-[#2a2a2a] p-4 rounded shadow">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold">Components</h2>
               <div className="flex gap-2">
                 <button
                   type="button"
-                  className="px-3 py-1 bg-gray-100 rounded text-sm"
+                  className="px-3 py-1 bg-[#1f1f1f] border border-[#2a2a2a] rounded text-sm text-gray-200"
                   onClick={() => addComponent("HEADER")}
                 >
                   Add Header
                 </button>
                 <button
                   type="button"
-                  className="px-3 py-1 bg-gray-100 rounded text-sm"
+                  className="px-3 py-1 bg-[#1f1f1f] border border-[#2a2a2a] rounded text-sm text-gray-200"
                   onClick={() => addComponent("BODY")}
                 >
                   Add Body
                 </button>
                 <button
                   type="button"
-                  className="px-3 py-1 bg-gray-100 rounded text-sm"
+                  className="px-3 py-1 bg-[#1f1f1f] border border-[#2a2a2a] rounded text-sm text-gray-200"
                   onClick={() => addComponent("FOOTER")}
                 >
                   Add Footer
                 </button>
                 <button
                   type="button"
-                  className="px-3 py-1 bg-gray-100 rounded text-sm"
+                  className="px-3 py-1 bg-[#1f1f1f] border border-[#2a2a2a] rounded text-sm text-gray-200"
                   onClick={() => addComponent("BUTTONS")}
                 >
                   Add Buttons
@@ -901,11 +920,11 @@ export default function CreateTemplate() {
                     {/* BODY */}
                     {comp.type === "BODY" && (
                       <>
-                        <label className="text-xs text-gray-600">
+                        <label className="text-xs text-gray-300">
                           Body text
                         </label>
                         <textarea
-                          className="mt-1 block w-full border p-2 rounded min-h-[120px]"
+                          className="mt-1 block w-full border border-[#2a2a2a] bg-[#0f0f0f] text-gray-100 p-2 rounded min-h-[120px]"
                           value={comp.text}
                           onChange={(e) => {
                             updateBodyText(e.target.value);
@@ -914,7 +933,7 @@ export default function CreateTemplate() {
                             "Hi {{1}}, your order number is {{2}} ..."
                           }
                         />
-                        <div className="text-xs text-gray-500 mt-2">
+                        <div className="text-xs text-gray-400 mt-2">
                           Variables detected:{" "}
                           {bodyVariables.length === 0 ? (
                             <span className="text-gray-400">none</span>
@@ -922,7 +941,7 @@ export default function CreateTemplate() {
                             bodyVariables.map((v, i) => (
                               <code
                                 key={v}
-                                className="mx-1 bg-gray-100 px-1 rounded"
+                                className="mx-1 bg-[#1f1f1f] px-1 rounded"
                               >
                                 {`{{${v}}}`}
                               </code>
@@ -936,24 +955,24 @@ export default function CreateTemplate() {
                             <div className="text-sm font-medium">
                               Example values (required)
                             </div>
-                            <div className="text-xs text-gray-500 mb-2">
+                            <div className="text-xs text-gray-400 mb-2">
                               Enter values in same order as variables appear.
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {bodyVariables.map((v, i) => (
                                 <div key={v} className="space-y-1">
-                                  <div className="text-xs text-gray-600">
+                                  <div className="text-xs text-gray-300">
                                     Value for <code>{`{{${v}}}`}</code>
                                   </div>
                                   <input
                                     type="text"
-                                    className="w-full border p-2 rounded"
+                                    className="w-full border border-[#2a2a2a] bg-[#0f0f0f] text-gray-100 p-2 rounded"
                                     value={exampleValues[i] || ""}
                                     onChange={(e) =>
                                       setExampleValues((prev) =>
                                         prev.map((x, idx) =>
-                                          idx === i ? e.target.value : x
-                                        )
+                                          idx === i ? e.target.value : x,
+                                        ),
                                       )
                                     }
                                   />
@@ -973,13 +992,13 @@ export default function CreateTemplate() {
                     {/* HEADER */}
                     {comp.type === "HEADER" && (
                       <div>
-                        <label className="text-xs text-gray-600">
+                        <label className="text-xs text-gray-300">
                           Header type
                         </label>
                         <select
                           value={headerType}
                           onChange={(e) => onHeaderTypeChange(e.target.value)}
-                          className="mt-1 block w-48 border p-2 rounded"
+                          className="mt-1 block w-48 border border-[#2a2a2a] bg-[#0f0f0f] text-gray-100 p-2 rounded"
                         >
                           <option value="NONE">None</option>
                           <option value="TEXT">Text</option>
@@ -990,12 +1009,12 @@ export default function CreateTemplate() {
 
                         {headerType === "TEXT" && (
                           <div className="mt-3">
-                            <label className="text-xs text-gray-600">
+                            <label className="text-xs text-gray-300">
                               Header text
                             </label>
                             <input
                               type="text"
-                              className="w-full border p-2 rounded mt-1"
+                              className="w-full border border-[#2a2a2a] bg-[#0f0f0f] text-gray-100 p-2 rounded mt-1"
                               value={headerText}
                               onChange={(e) => {
                                 setHeaderText(e.target.value);
@@ -1004,8 +1023,8 @@ export default function CreateTemplate() {
                                   prev.map((c) =>
                                     c.id === comp.id
                                       ? { ...c, text: e.target.value }
-                                      : c
-                                  )
+                                      : c,
+                                  ),
                                 );
                               }}
                               placeholder="Short header text (no variables recommended)"
@@ -1014,13 +1033,13 @@ export default function CreateTemplate() {
                         )}
 
                         {["IMAGE", "VIDEO", "DOCUMENT"].includes(
-                          headerType
+                          headerType,
                         ) && (
                           <div className="mt-3">
                             <div className="text-sm font-medium">
                               Upload {headerType.toLowerCase()}
                             </div>
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-gray-400">
                               This will create a temporary session and upload
                               the binary to obtain a header handle (used only
                               for this template creation).
@@ -1034,8 +1053,8 @@ export default function CreateTemplate() {
                                   headerType === "IMAGE"
                                     ? "image/*"
                                     : headerType === "VIDEO"
-                                    ? "video/*"
-                                    : undefined
+                                      ? "video/*"
+                                      : undefined
                                 }
                                 onChange={onHeaderFileSelected}
                                 className="text-sm"
@@ -1071,12 +1090,12 @@ export default function CreateTemplate() {
                     {/* FOOTER */}
                     {comp.type === "FOOTER" && (
                       <div>
-                        <label className="text-xs text-gray-600">
+                        <label className="text-xs text-gray-300">
                           Footer text (optional)
                         </label>
                         <input
                           type="text"
-                          className="mt-1 block w-full border p-2 rounded"
+                          className="mt-1 block w-full border border-[#2a2a2a] bg-[#0f0f0f] text-gray-100 p-2 rounded"
                           value={footerText}
                           onChange={(e) => {
                             setFooterText(e.target.value);
@@ -1084,8 +1103,8 @@ export default function CreateTemplate() {
                               prev.map((c) =>
                                 c.id === comp.id
                                   ? { ...c, text: e.target.value }
-                                  : c
-                              )
+                                  : c,
+                              ),
                             );
                           }}
                           placeholder="Small footer text (optional)"
@@ -1099,21 +1118,21 @@ export default function CreateTemplate() {
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            className="px-2 py-1 bg-gray-100 rounded text-sm"
+                            className="px-2 py-1 bg-[#1f1f1f] border border-[#2a2a2a] rounded text-sm text-gray-200"
                             onClick={() => addQuickReply("")}
                           >
                             Add Quick Reply
                           </button>
                           <button
                             type="button"
-                            className="px-2 py-1 bg-gray-100 rounded text-sm"
+                            className="px-2 py-1 bg-[#1f1f1f] border border-[#2a2a2a] rounded text-sm text-gray-200"
                             onClick={addUrlButton}
                           >
                             Add URL Button
                           </button>
                           <button
                             type="button"
-                            className="px-2 py-1 bg-gray-100 rounded text-sm"
+                            className="px-2 py-1 bg-[#1f1f1f] border border-[#2a2a2a] rounded text-sm text-gray-200"
                             onClick={addPhoneButton}
                           >
                             Add Phone Button
@@ -1139,7 +1158,7 @@ export default function CreateTemplate() {
                               <div className="mt-2 space-y-2">
                                 <input
                                   type="text"
-                                  className="w-full border p-2 rounded"
+                                  className="w-full border border-[#2a2a2a] bg-[#0f0f0f] text-gray-100 p-2 rounded"
                                   placeholder="Button text"
                                   value={b.text}
                                   onChange={(e) =>
@@ -1152,7 +1171,7 @@ export default function CreateTemplate() {
                                 {b.type === "URL" && (
                                   <input
                                     type="text"
-                                    className="w-full border p-2 rounded"
+                                    className="w-full border border-[#2a2a2a] bg-[#0f0f0f] text-gray-100 p-2 rounded"
                                     placeholder="https://..."
                                     value={b.url || ""}
                                     onChange={(e) =>
@@ -1166,7 +1185,7 @@ export default function CreateTemplate() {
                                 {b.type === "PHONE_NUMBER" && (
                                   <input
                                     type="text"
-                                    className="w-full border p-2 rounded"
+                                    className="w-full border border-[#2a2a2a] bg-[#0f0f0f] text-gray-100 p-2 rounded"
                                     placeholder="+919000000000"
                                     value={b.phone || ""}
                                     onChange={(e) =>
@@ -1195,7 +1214,7 @@ export default function CreateTemplate() {
           </div>
 
           {/* Submit area */}
-          <div className="bg-white p-4 rounded shadow">
+          <div className="bg-[#111111] border border-[#2a2a2a] p-4 rounded shadow">
             {Object.keys(formErrors).length > 0 && (
               <div className="mb-3 text-sm text-red-600">
                 Please fix errors above before submitting.
@@ -1220,7 +1239,7 @@ export default function CreateTemplate() {
 
               <button
                 type="button"
-                className="px-4 py-2 bg-gray-100 rounded"
+                className="px-4 py-2 bg-[#1f1f1f] text-gray-200 border border-[#2a2a2a] rounded"
                 onClick={() => {
                   // reset
                   setTemplateNameRaw("");
@@ -1248,7 +1267,7 @@ export default function CreateTemplate() {
               </button>
             </div>
 
-            <div className="text-xs text-gray-500 mt-3">
+            <div className="text-xs text-gray-400 mt-3">
               After creation the template will be submitted to Meta for
               approval. You can check status on the Templates list.
             </div>
@@ -1257,22 +1276,22 @@ export default function CreateTemplate() {
 
         {/* Right: Live Preview */}
         <div>
-          <div className="bg-white p-4 rounded shadow">
+          <div className="bg-[#111111] border border-[#2a2a2a] p-4 rounded shadow">
             <h3 className="font-semibold mb-3">Live Preview</h3>
 
             <div className="bg-[url('/wa-bg.png')] bg-cover bg-center rounded-xl p-4">
-              <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+              <div className="bg-[#0f0f0f] rounded-xl shadow-sm overflow-hidden border border-[#2a2a2a]">
                 {/* Header */}
-                <div className="w-full bg-gray-50 p-3">{previewHeader()}</div>
+                <div className="w-full bg-[#161616] p-3">{previewHeader()}</div>
 
                 {/* Body */}
-                <div className="p-4 whitespace-pre-wrap leading-relaxed text-gray-800 min-h-[120px]">
+                <div className="p-4 whitespace-pre-wrap leading-relaxed text-gray-100 min-h-[120px]">
                   {previewBodyRendered()}
                 </div>
 
                 {/* Footer (small) */}
                 {footerText && (
-                  <div className="px-4 pb-2 text-sm text-gray-500 border-t">
+                  <div className="px-4 pb-2 text-sm text-gray-400 border-t border-[#2a2a2a]">
                     {footerText}
                   </div>
                 )}
@@ -1283,7 +1302,7 @@ export default function CreateTemplate() {
                     {buttonItems.map((btn) => (
                       <button
                         key={btn.id}
-                        className="w-full text-left p-3 hover:bg-gray-50"
+                        className="w-full text-left p-3 hover:bg-[#1a1a1a]"
                       >
                         {btn.type === "QUICK_REPLY" && (
                           <span>➜ {btn.text || "Quick Reply"}</span>
@@ -1307,7 +1326,7 @@ export default function CreateTemplate() {
             </div>
 
             {/* Preview details */}
-            <div className="mt-3 text-xs text-gray-500">
+            <div className="mt-3 text-xs text-gray-400">
               <div>
                 <strong>Template name:</strong>{" "}
                 {templateName || (
@@ -1324,7 +1343,7 @@ export default function CreateTemplate() {
           </div>
 
           {/* Help / Validation summary */}
-          <div className="bg-white p-4 rounded shadow mt-4 text-sm text-gray-600">
+          <div className="bg-[#111111] border border-[#2a2a2a] p-4 rounded shadow mt-4 text-sm text-gray-300">
             <h4 className="font-medium mb-2">Validation</h4>
             <ul className="list-disc pl-5 space-y-1">
               <li>
@@ -1350,3 +1369,4 @@ export default function CreateTemplate() {
     </div>
   );
 }
+

@@ -102,13 +102,13 @@ const FlightStatus = () => {
   }, [eventId, userId]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
+    <div className="max-w-7xl mx-auto px-4 py-6 text-gray-100">
       {/* Header */}
       <div className="mb-6 space-y-4 ">
-        <h1 className=" text-2xl md:text-4xl text-center font-bold text-gray-900">
+        <h1 className=" text-2xl md:text-4xl text-center font-bold text-gray-100">
           Flight Status Tracking
         </h1>
-        <p className="text-sm text-center text-gray-500 mt-1">
+        <p className="text-sm text-center text-gray-400 mt-1">
           Track arrival flights for all event participants
         </p>
       </div>
@@ -117,7 +117,7 @@ const FlightStatus = () => {
       <div className="mb-4 flex items-start justify-between">
         <button
           onClick={() => navigate(`/dashboard/${eventId}`)}
-          className="px-3 py-1.5 text-sm rounded-lg border text-gray-600 hover:bg-gray-50"
+          className="px-3 py-1.5 text-sm rounded-lg border border-[#2a2a2a] text-gray-300 hover:bg-[#1a1a1a]"
         >
           ← Back to Event
         </button>
@@ -138,55 +138,55 @@ const FlightStatus = () => {
 
       {/* Content */}
       {loading ? (
-        <div className="flex justify-center py-10 text-gray-500">
+        <div className="flex justify-center py-10 text-gray-400">
           Loading flight data...
         </div>
       ) : flights.length === 0 ? (
-        <div className="flex justify-center py-10 text-gray-500">
+        <div className="flex justify-center py-10 text-gray-400">
           No flight data available for this event.
         </div>
       ) : (
-        <div className="overflow-x-auto bg-white rounded-xl shadow border">
+        <div className="overflow-x-auto bg-[#111111] rounded-xl shadow border border-[#2a2a2a]">
           <table className="min-w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-[#161616] border-b border-[#2a2a2a]">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                <th className="px-4 py-3 text-left font-semibold text-gray-300">
                   Name
                 </th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                <th className="px-4 py-3 text-left font-semibold text-gray-300">
                   Phone Number
                 </th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                <th className="px-4 py-3 text-left font-semibold text-gray-300">
                   Flight
                 </th>
-                <th className="px-4 py-2 text-left font-semibold text-gray-700 ">
+                <th className="px-4 py-2 text-left font-semibold text-gray-300 ">
                   From → To
                 </th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                <th className="px-4 py-3 text-left font-semibold text-gray-300">
                   Status
                 </th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                <th className="px-4 py-3 text-left font-semibold text-gray-300">
                   Arrival
                 </th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                <th className="px-4 py-3 text-left font-semibold text-gray-300">
                   Delay
                 </th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                <th className="px-4 py-3 text-left font-semibold text-gray-300">
                   Terminal
                 </th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                <th className="px-4 py-3 text-left font-semibold text-gray-300">
                   Last Updated
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody className="divide-y divide-[#2a2a2a]">
               {flights.map((f) => (
                 <tr key={f.participant_id}>
-                  <td className="px-4 py-3 font-medium text-gray-900">
+                  <td className="px-4 py-3 font-medium text-gray-100">
                     {f.full_name || "—"}
                   </td>
 
-                  <td className="px-4 py-3 font-medium text-gray-900">
+                  <td className="px-4 py-3 font-medium text-gray-100">
                     {f.phone_number || "—"}
                   </td>
 
@@ -197,7 +197,7 @@ const FlightStatus = () => {
                       {f.departure_airport_name || "—"} (
                       {f.departure_airport_iata})
                     </div>
-                    <div className="text-gray-500">
+                    <div className="text-gray-400">
                       → {f.arrival_airport_name || "—"} (
                       {f.arrival_airport_iata})
                     </div>
@@ -225,7 +225,7 @@ const FlightStatus = () => {
 
                   <td className="px-4 py-3">{f.arrival_terminal || "—"}</td>
 
-                  <td className="px-4 py-3 text-gray-500">
+                  <td className="px-4 py-3 text-gray-400">
                     {f.last_api_checked_at
                       ? new Date(f.last_api_checked_at).toLocaleString("en-IN")
                       : "—"}
@@ -241,3 +241,4 @@ const FlightStatus = () => {
 };
 
 export default FlightStatus;
+

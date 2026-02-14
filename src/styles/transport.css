@@ -1205,3 +1205,259 @@
     justify-content: center;
   }
 }
+
+/* Dark theme overrides */
+.transport-container {
+  background: transparent;
+}
+
+.back-btn {
+  background: #111111;
+  border-color: #2a2a2a;
+  color: #d1d5db;
+}
+
+.back-btn:hover {
+  background: #161616;
+  border-color: #3a3a3a;
+  color: #ffffff;
+}
+
+.transport-title,
+.card-title,
+.vehicle-card h4,
+.stat-value,
+.group-title h3,
+.passenger-name,
+.uw-title,
+.uw-gap-item__name {
+  color: #ffffff;
+}
+
+.transport-subtitle,
+.card-description,
+.vehicle-details,
+.stat-label,
+.group-number,
+.timeline-item,
+.passenger-phone,
+.passenger-time,
+.driver-instructions p,
+.uw-subtitle,
+.uw-gap-item__detail,
+.uw-progress-label,
+.uw-hints__label,
+.uw-hint-sep {
+  color: #d1d5db;
+}
+
+.card,
+.stat-card,
+.export-menu,
+.group-timeline,
+.group-stats,
+.passenger-details summary,
+.passenger-item,
+.driver-instructions,
+.unassigned-warning {
+  background: #111111;
+  border-color: #2a2a2a;
+}
+
+.vehicle-form,
+.vehicle-card,
+.group-card,
+.uw-gap-item {
+  background: #161616;
+  border-color: #2a2a2a;
+}
+
+.card-header,
+.vehicle-form,
+.uw-topbar,
+.uw-gaps {
+  border-color: #2a2a2a;
+}
+
+.btn-secondary {
+  background: #161616;
+  color: #d1d5db;
+  border-color: #2a2a2a;
+}
+
+.btn-secondary:hover {
+  background: #1f1f1f;
+  border-color: #3a3a3a;
+  color: #ffffff;
+}
+
+.btn-danger-outline {
+  background: #161616;
+  border-color: #7f1d1d;
+  color: #fca5a5;
+}
+
+.btn-danger-outline:hover {
+  background: #2a1111;
+  border-color: #b91c1c;
+  color: #fecaca;
+}
+
+.export-menu-item {
+  color: #d1d5db;
+}
+
+.export-menu-item:hover {
+  background: #1a1a1a;
+}
+
+.btn-icon {
+  color: #9ca3af;
+}
+
+.btn-icon:hover {
+  background: #1f1f1f;
+  color: #ffffff;
+}
+
+.form-group label {
+  color: #e5e7eb;
+}
+
+.label-hint {
+  color: #9ca3af;
+}
+
+.form-group input,
+.form-group select {
+  background: #0f0f0f;
+  border-color: #2a2a2a;
+  color: #ffffff;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: #4b5563;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
+}
+
+.vehicle-card:hover {
+  background: #1a1a1a;
+  border-color: #3a3a3a;
+}
+
+.vehicle-icon {
+  background: #0f0f0f;
+  border-color: #2a2a2a;
+  color: #f3f4f6;
+}
+
+.vehicle-type {
+  background: #1f2937;
+  color: #d1d5db;
+}
+
+.empty-state {
+  color: #9ca3af;
+}
+
+.empty-state h3 {
+  color: #e5e7eb;
+}
+
+.group-card {
+  border-color: #2a2a2a;
+}
+
+.badge-location {
+  background: #1e293b;
+  color: #93c5fd;
+}
+
+.badge-passengers {
+  background: #1f2937;
+  color: #86efac;
+}
+
+.timeline-item svg {
+  color: #9ca3af;
+}
+
+.passenger-details summary:hover {
+  background: #161616;
+}
+
+.passenger-number {
+  background: #1f2937;
+  color: #d1d5db;
+}
+
+.wait-badge {
+  background: #064e3b;
+  color: #a7f3d0;
+}
+
+.wait-long {
+  background: #78350f;
+  color: #fde68a;
+}
+
+.driver-instructions strong {
+  color: #e5e7eb;
+}
+
+.demand-tile {
+  background: #111111;
+  border-color: #2a2a2a;
+}
+
+.demand-passengers {
+  border-top-color: #2a2a2a;
+}
+
+.alert-error {
+  background: #2a1111;
+  border-color: #7f1d1d;
+  color: #fecaca;
+}
+
+.uw-icon {
+  background: #1a1a1a;
+  border-color: #2a2a2a;
+  color: #f3f4f6;
+}
+
+.uw-progress-bar {
+  background: #2a2a2a;
+}
+
+.uw-progress-fill {
+  background: #f3f4f6;
+}
+
+.uw-gap-item__left {
+  color: #d1d5db;
+}
+
+.uw-gap-item__left svg {
+  color: #9ca3af;
+}
+
+.uw-gap-item__detail strong {
+  color: #f3f4f6;
+}
+
+.uw-gap-item__btn {
+  background: #f3f4f6;
+  color: #111111;
+}
+
+.uw-gap-item__btn:hover {
+  background: #ffffff;
+}
+
+.uw-hint-tag {
+  background: #1a1a1a;
+  border-color: #2a2a2a;
+  color: #d1d5db;
+}
