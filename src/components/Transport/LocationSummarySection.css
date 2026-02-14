@@ -330,3 +330,75 @@
     justify-content: center;
   }
 }
+
+/* Dark theme overrides */
+.lss-heading,
+.lss-stat__num,
+.lss-card__title,
+.lss-passenger-name {
+  color: #ffffff;
+}
+
+.lss-subheading,
+.lss-stat__label,
+.lss-card__time-range,
+.lss-passenger-arrival,
+.lss-expand-btn {
+  color: #d1d5db;
+}
+
+.lss-header__stats,
+.lss-card,
+.lss-skeleton-card,
+.lss-error {
+  background: #111111;
+  border-color: #2a2a2a;
+}
+
+.lss-card:hover {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.lss-card__icon-wrap {
+  background: #1a1a1a;
+  border-color: #2a2a2a;
+  color: #e5e7eb;
+}
+
+.lss-card__badge {
+  background: #f3f4f6;
+}
+
+.lss-badge__count {
+  color: #111111;
+}
+
+.lss-badge__label {
+  color: #6b7280;
+}
+
+.lss-stat-divider,
+.lss-divider {
+  background: #2a2a2a;
+}
+
+.lss-avatar {
+  background: #1f2937;
+  border-color: #374151;
+  color: #f3f4f6;
+}
+
+.lss-expand-btn:hover {
+  color: #ffffff;
+}
+
+.lss-skeleton {
+  background: linear-gradient(90deg, #1a1a1a 25%, #242424 50%, #1a1a1a 75%);
+  background-size: 200% 100%;
+}
+
+.lss-error {
+  color: #fecaca;
+  background: #2a1111;
+  border-color: #7f1d1d;
+}

@@ -25,21 +25,21 @@ export default function CreateKnowledgeBase() {
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-semibold text-gray-800 mb-6">
+    <div className="p-6 max-w-3xl mx-auto text-gray-100">
+      <h1 className="text-2xl font-semibold text-gray-100 mb-6">
         Create Knowledge Base
       </h1>
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white p-6 rounded-xl shadow-sm space-y-5"
+        className="bg-[#111111] border border-[#2a2a2a] p-6 rounded-xl shadow-sm space-y-5"
       >
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-300 mb-1">
             Knowledge Base Name
           </label>
           <input
-            className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            className="w-full border border-[#2a2a2a] bg-[#0f0f0f] text-gray-100 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Wedding FAQs"
@@ -48,12 +48,12 @@ export default function CreateKnowledgeBase() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-300 mb-1">
             Content
           </label>
           <textarea
             rows={10}
-            className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            className="w-full border border-[#2a2a2a] bg-[#0f0f0f] text-gray-100 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="Enter all event-related information here..."
@@ -65,7 +65,7 @@ export default function CreateKnowledgeBase() {
           <button
             type="button"
             onClick={() => navigate("/knowledge-bases")}
-            className="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50"
+            className="px-4 py-2 border border-[#2a2a2a] rounded-lg text-gray-300 hover:bg-[#1a1a1a]"
           >
             Cancel
           </button>
@@ -82,3 +82,4 @@ export default function CreateKnowledgeBase() {
     </div>
   );
 }
+

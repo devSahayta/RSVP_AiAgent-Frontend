@@ -18,10 +18,10 @@ export default function KnowledgeBases() {
   }, [userId]);
 
   return (
-    <div className="p-6">
+    <div className="p-6 text-gray-100">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-gray-800">
+        <h1 className="text-2xl font-semibold text-gray-100">
           Knowledge Bases
         </h1>
 
@@ -35,9 +35,9 @@ export default function KnowledgeBases() {
 
       {/* Content */}
       {loading ? (
-        <p className="text-gray-500">Loading...</p>
+        <p className="text-gray-400">Loading...</p>
       ) : knowledgeBases.length === 0 ? (
-        <div className="text-gray-500 bg-gray-50 p-6 rounded-lg">
+        <div className="text-gray-400 bg-[#111111] border border-[#2a2a2a] p-6 rounded-lg">
           No knowledge bases created yet.
         </div>
       ) : (
@@ -46,9 +46,9 @@ export default function KnowledgeBases() {
             <div
               key={kb.id}
               onClick={() => navigate(`/knowledge-bases/${kb.id}`)}
-              className="cursor-pointer border rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition"
+              className="cursor-pointer border border-[#2a2a2a] rounded-xl p-4 bg-[#111111] shadow-sm hover:shadow-md hover:bg-[#161616] transition"
             >
-              <h3 className="text-lg font-medium text-gray-800 mb-1">
+              <h3 className="text-lg font-medium text-gray-100 mb-1">
                 {kb.name}
               </h3>
 
@@ -56,7 +56,7 @@ export default function KnowledgeBases() {
                 Created At: {kb.created_at.slice(0, 10)}
               </p>
 
-              <div className="mt-3 text-sm text-indigo-600">View content →</div>
+              <div className="mt-3 text-sm text-indigo-300">View content →</div>
             </div>
           ))}
         </div>
@@ -64,3 +64,4 @@ export default function KnowledgeBases() {
     </div>
   );
 }
+

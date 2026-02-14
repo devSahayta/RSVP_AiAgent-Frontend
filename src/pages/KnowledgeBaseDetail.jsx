@@ -13,22 +13,22 @@
 //   }, [id]);
 
 //   if (!kb) {
-//     return <div className="p-6 text-gray-500">Loading...</div>;
+//     return <div className="p-6 text-gray-400">Loading...</div>;
 //   }
 
 //   return (
-//     <div className="p-6 max-w-4xl mx-auto">
+//     <div className="p-6 max-w-4xl mx-auto text-gray-100">
 //       <h1 className="text-2xl font-semibold text-gray-800 mb-4">{kb.name}</h1>
 
-//       <div className="bg-white rounded-xl shadow-sm p-5">
-//         <h3 className="text-sm font-medium text-gray-500 mb-2">
+//       <div className="bg-[#111111] border border-[#2a2a2a] rounded-xl shadow-sm p-5">
+//         <h3 className="text-sm font-medium text-gray-400 mb-2">
 //           Knowledge Content
 //         </h3>
 
 //         {kb.knowledge_entries.map((entry, index) => (
 //           <pre
 //             key={index}
-//             className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed"
+//             className="text-sm text-gray-100 whitespace-pre-wrap leading-relaxed"
 //           >
 //             {entry.content}
 //           </pre>
@@ -89,26 +89,26 @@ export default function KnowledgeBaseDetail() {
   };
 
   if (!kb) {
-    return <div className="p-6 text-gray-500">Loading...</div>;
+    return <div className="p-6 text-gray-400">Loading...</div>;
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6 max-w-4xl mx-auto text-gray-100">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <button
           onClick={() => navigate("/knowledge-bases")}
-          className="px-3 py-1.5 text-sm rounded-lg border text-gray-600 hover:bg-gray-50"
+          className="px-3 py-1.5 text-sm rounded-lg border border-[#2a2a2a] text-gray-300 hover:bg-[#1a1a1a]"
         >
           ← Back
         </button>
 
-        <h1 className="text-2xl font-semibold text-gray-800">{kb.name}</h1>
+        <h1 className="text-2xl font-semibold text-gray-100">{kb.name}</h1>
 
         <button
           onClick={handleDelete}
           disabled={deleting}
-          className="px-4 py-2 text-sm rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50"
+          className="px-4 py-2 text-sm rounded-lg border border-red-700/50 text-red-300 hover:bg-[#2a1111] disabled:opacity-50"
         >
           {deleting ? "Deleting..." : "Delete"}
         </button>
@@ -116,21 +116,21 @@ export default function KnowledgeBaseDetail() {
 
       {/* Error */}
       {error && (
-        <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+        <div className="mb-4 p-3 bg-[#2a1111] text-red-300 border border-[#7f1d1d] rounded-lg text-sm">
           {error}
         </div>
       )}
 
       {/* Content */}
-      <div className="bg-white rounded-xl shadow-sm p-5">
-        <h3 className="text-sm font-medium text-gray-500 mb-2">
+      <div className="bg-[#111111] border border-[#2a2a2a] rounded-xl shadow-sm p-5">
+        <h3 className="text-sm font-medium text-gray-400 mb-2">
           Knowledge Content
         </h3>
 
         {kb.knowledge_entries.map((entry, index) => (
           <pre
             key={index}
-            className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed"
+            className="text-sm text-gray-100 whitespace-pre-wrap leading-relaxed"
           >
             {entry.content}
           </pre>
@@ -139,3 +139,4 @@ export default function KnowledgeBaseDetail() {
     </div>
   );
 }
+
