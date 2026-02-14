@@ -84,7 +84,9 @@
   text-decoration: none;
   color: #374151;
   font-size: 15px;
-  transition: background 0.25s, color 0.25s;
+  transition:
+    background 0.25s,
+    color 0.25s;
   border-left: 3px solid transparent;
 }
 
@@ -121,4 +123,38 @@
   .sidebar-overlay {
     display: block; /* Overlay should show on desktop/tablet too */
   }
+}
+
+/* Dark theme overrides */
+.sidebar-drawer {
+  background: #0f0f0f;
+  border-right-color: #2a2a2a;
+  color: #ffffff;
+}
+
+.sidebar-header {
+  border-bottom-color: #2a2a2a;
+}
+
+.sidebar-close {
+  color: #d1d5db;
+}
+
+.sidebar-close:hover {
+  color: #ffffff;
+}
+
+.sidebar-link {
+  color: #d1d5db;
+}
+
+.sidebar-link:hover {
+  background: #1a1a1a;
+  color: #ffffff;
+}
+
+.sidebar-link.active {
+  background: #1f2937;
+  color: #93c5fd;
+  border-left-color: #60a5fa;
 }

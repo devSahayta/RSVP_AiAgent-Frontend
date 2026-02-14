@@ -233,7 +233,7 @@ const NavBar = ({ onToggleSidebar, isSidebarOpen }) => {
 
   const { credits, loading, refetchCredits } = useUserCredits(
     user?.id,
-    isAuthenticated
+    isAuthenticated,
   );
 
   const getCreditBadgeClass = () => {
@@ -260,7 +260,7 @@ const NavBar = ({ onToggleSidebar, isSidebarOpen }) => {
 
         <div className="nav-logo" aria-hidden>
           <Calendar className="nav-logo-icon" />
-          <span>RSVP AI</span>
+          <span>Sutrak</span>
         </div>
       </div>
 
@@ -270,7 +270,7 @@ const NavBar = ({ onToggleSidebar, isSidebarOpen }) => {
           <div className="credits-inline" title="Your credits">
             <Coins size={16} />
             <span className={getCreditBadgeClass()}>
-              {loading ? "..." : credits ?? 0}
+              {loading ? "..." : (credits ?? 0)}
             </span>
             <button
               className="refresh-small"
@@ -305,7 +305,7 @@ const NavBar = ({ onToggleSidebar, isSidebarOpen }) => {
                   </div>
                   <div className="right">
                     <span className={getCreditBadgeClass()}>
-                      {loading ? "..." : credits ?? 0}
+                      {loading ? "..." : (credits ?? 0)}
                     </span>
                     <button
                       onClick={refetchCredits}

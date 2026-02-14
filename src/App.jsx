@@ -34,6 +34,7 @@ import KnowledgeBaseDetail from "./pages/KnowledgeBaseDetail";
 import { Toaster } from "react-hot-toast";
 import TransportPlanning from './components/TransportPlanning';
 import FlightStatus from "./pages/FlightStatus";
+import ContactPage from "./components/landing/sections/ContactPage";
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, isLoading } = useKindeAuth();
@@ -83,9 +84,11 @@ function AppContent() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // ✅ KEY CHANGE: Hide default NavBar on landing page AND document upload
-  const hideNavBar = 
-    location.pathname === "/" || 
-    location.pathname.startsWith("/document-upload");
+ const hideNavBar = 
+  location.pathname === "/" || 
+  location.pathname === "/contact" ||   // ✅ ADD THIS
+  location.pathname.startsWith("/document-upload");
+
 
   // Sync user on first login
   useEffect(() => {
@@ -126,7 +129,6 @@ function AppContent() {
         <Routes>
           {/* ✅ Landing page has its own LandingNavbar component */}
           <Route path="/" element={<LandingPage />} />
-
           <Route
             path="/events"
             element={
@@ -135,6 +137,8 @@ function AppContent() {
               </PrivateRoute>
             }
           />
+
+          <Route path="/contact" element={<ContactPage />} />
 
           <Route
             path="/createEvent"

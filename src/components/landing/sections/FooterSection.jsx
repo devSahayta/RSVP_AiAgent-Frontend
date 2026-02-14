@@ -68,22 +68,22 @@ function FooterSection() {
           { className: "text-sm text-muted-foreground" },
           "© 2026 Sutrak. All rights reserved."
         ),
-        React.createElement(
-          "div",
-          { className: "flex items-center gap-6" },
-          ["Twitter", "LinkedIn", "GitHub"].map((s) =>
-            React.createElement(
-              "a",
-              {
-                key: s,
-                href: "#",
-                className:
-                  "text-sm text-muted-foreground hover:text-foreground transition-colors",
-              },
-              s
-            )
-          )
-        )
+        // React.createElement(
+        //   "div",
+        //   { className: "flex items-center gap-6" },
+        //   ["Twitter", "LinkedIn", "GitHub"].map((s) =>
+        //     React.createElement(
+        //       "a",
+        //       {
+        //         key: s,
+        //         href: "#",
+        //         className:
+        //           "text-sm text-muted-foreground hover:text-foreground transition-colors",
+        //       },
+        //       s
+        //     )
+        //   )
+        // )
       )
     )
   );

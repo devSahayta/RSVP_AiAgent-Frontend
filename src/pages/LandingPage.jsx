@@ -13,6 +13,7 @@ import EarlyAccessSection from "../components/landing/sections/EarlyAccessSectio
 import FinalCTASection from "../components/landing/sections/FinalCTASection";
 import FooterSection from "../components/landing/sections/FooterSection";
 
+
 export default function LandingPage() {
   return (
     <div className="bg-black text-white">

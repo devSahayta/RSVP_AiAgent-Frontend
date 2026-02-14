@@ -485,3 +485,36 @@
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
+
+/* Dark theme overrides */
+.table-container,
+.search-input,
+.status-filter {
+  background: #111111;
+  border-color: #2a2a2a;
+  color: #ffffff;
+}
+
+.rsvp-table th {
+  background: #1a1a1a;
+  color: #e5e7eb;
+  border-bottom-color: #2a2a2a;
+}
+
+.rsvp-table td,
+.table-stats {
+  border-color: #2a2a2a;
+  color: #d1d5db;
+}
+
+.rsvp-table tbody tr:hover,
+.pagination-btn:hover:not(:disabled) {
+  background: #1a1a1a;
+}
+
+.pagination-btn,
+.page-number {
+  background: #111111;
+  color: #ffffff;
+  border-color: #2a2a2a;
+}

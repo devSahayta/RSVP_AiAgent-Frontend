@@ -421,6 +421,44 @@
   font-weight: 600;
 }
 
+/* Dark theme overrides */
+.wa-container,
+.wa-chat-window {
+  background: #0a0a0a;
+}
+
+.wa-chatlist,
+.wa-chat-header,
+.wa-input-area,
+.wa-message-bubble.received,
+.wa-chat-doc,
+.event-select-box {
+  background: #111111;
+  color: #ffffff;
+  border-color: #2a2a2a;
+}
+
+.wa-chatlist-header,
+.wa-chatlist-item,
+.wa-input-area input {
+  background: #111111;
+  color: #ffffff;
+  border-color: #2a2a2a;
+}
+
+.wa-chatlist-item:hover,
+.wa-message-bubble.sent {
+  background: #1a1a1a;
+}
+
+.wa-chat-name,
+.wa-header-name,
+.wa-chat-message,
+.wa-last-seen,
+.wa-chat-time {
+  color: #d1d5db;
+}
+
 /* ================================
    RESPONSIVE – WhatsApp Style Mobile Layout (Improved)
 ================================= */

@@ -31,7 +31,6 @@
   border-color: #4f46e5; /* matches your theme (blue/purple accent) */
 }
 
-
 .form-label {
   display: flex;
   align-items: center;
@@ -171,4 +170,37 @@
   .form-input {
     font-size: 16px; /* Prevents zoom on iOS */
   }
+}
+
+/* Dark theme overrides */
+.event-form {
+  background: #111111;
+  border-color: #2a2a2a;
+}
+
+.form-label,
+.upload-note,
+.file-info {
+  color: #d1d5db !important;
+}
+
+.form-group select,
+.form-input,
+.file-info,
+input::placeholder {
+  background: #1a1a1a !important;
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+  border-color: #2a2a2a !important;
+}
+
+.template-download-btn {
+  background: #1a1a1a;
+  color: #ffffff;
+  border-color: #2a2a2a;
+}
+
+.template-download-btn:hover {
+  background: #222222;
+  border-color: #3a3a3a;
 }

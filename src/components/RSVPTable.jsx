@@ -549,8 +549,9 @@ const RSVPTable = ({ eventId: propEventId }) => {
         .pagination-btn {
           padding: 8px 14px;
           border-radius: 8px;
-          border: 1px solid #ddd;
-          background: #fff;
+          border: 1px solid #2a2a2a;
+          background: #111111;
+          color: #ffffff;
           font-size: 14px;
           cursor: pointer;
           transition: 0.2s;
@@ -560,7 +561,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
           cursor: not-allowed;
         }
         .pagination-btn:hover:not(:disabled) {
-          background: #f5f5f5;
+          background: #1a1a1a;
         }
         .pagination-numbers {
           display: flex;
@@ -571,8 +572,9 @@ const RSVPTable = ({ eventId: propEventId }) => {
         .page-number {
           padding: 8px 12px;
           border-radius: 6px;
-          border: 1px solid #ddd;
-          background: #fff;
+          border: 1px solid #2a2a2a;
+          background: #111111;
+          color: #ffffff;
           font-size: 14px;
           cursor: pointer;
         }
@@ -866,7 +868,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
         >
           <div
             style={{
-              backgroundColor: "white",
+              backgroundColor: "#111111",
               borderRadius: "12px",
               padding: "24px",
               maxWidth: "400px",
@@ -879,7 +881,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
               style={{
                 fontSize: "18px",
                 fontWeight: "600",
-                color: "#000",
+                color: "#ffffff",
                 marginBottom: "12px",
               }}
             >
@@ -915,9 +917,9 @@ const RSVPTable = ({ eventId: propEventId }) => {
                   padding: "10px 16px",
                   fontSize: "14px",
                   fontWeight: "600",
-                  color: "#374151",
-                  backgroundColor: "white",
-                  border: "1px solid #e5e7eb",
+                  color: "#d1d5db",
+                  backgroundColor: "#111111",
+                  border: "1px solid #2a2a2a",
                   borderRadius: "8px",
                   cursor: isRetrying ? "not-allowed" : "pointer",
                   opacity: isRetrying ? 0.5 : 1,
@@ -925,14 +927,14 @@ const RSVPTable = ({ eventId: propEventId }) => {
                 }}
                 onMouseEnter={(e) => {
                   if (!isRetrying) {
-                    e.target.style.backgroundColor = "#f9fafb";
-                    e.target.style.borderColor = "#d1d5db";
+                    e.target.style.backgroundColor = "#1a1a1a";
+                    e.target.style.borderColor = "#3a3a3a";
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isRetrying) {
-                    e.target.style.backgroundColor = "white";
-                    e.target.style.borderColor = "#e5e7eb";
+                    e.target.style.backgroundColor = "#111111";
+                    e.target.style.borderColor = "#2a2a2a";
                   }
                 }}
               >

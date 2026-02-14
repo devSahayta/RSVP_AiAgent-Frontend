@@ -92,7 +92,7 @@ const HeroSection = () => {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-          <Button size="lg" className="hero-btn opacity-0 bg-gradient-to-r from-secondary to-accent text-primary-foreground hover:opacity-90 transition-opacity px-8 text-base">
+          <Button onlclick=""size="lg" className="hero-btn opacity-0 bg-gradient-to-r from-secondary to-accent text-primary-foreground hover:opacity-90 transition-opacity px-8 text-base">
             Book a Demo <ArrowRight className="ml-1 w-4 h-4" />
           </Button>
           <Button size="lg" variant="outline" className="hero-btn opacity-0 border-border/50 text-foreground hover:bg-muted/50 px-8 text-base">
