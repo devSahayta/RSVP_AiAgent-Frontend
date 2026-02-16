@@ -1,4 +1,4 @@
-// src/App.jsx
+// src/App.jsx - UPDATED VERSION
 import React, { useEffect, useState } from "react";
 import {
   BrowserRouter as Router,
@@ -9,8 +9,7 @@ import {
 } from "react-router-dom";
 
 import NavBar from "./components/NavBar";
-import Sidebar from "./components/Sidebar"; // sliding drawer
-
+import Sidebar from "./components/Sidebar";
 import CreateEvent from "./pages/CreateEvent";
 import Dashboard from "./pages/Dashboard";
 import LandingPage from "./pages/LandingPage";
@@ -22,7 +21,6 @@ import ChatPage from "./pages/ChatPage";
 import TemplateList from "./pages/TemplateList";
 import CreateTemplate from "./pages/CreateTemplate";
 import SendTemplate from "./pages/SendTemplate";
-// import MediaList from "./pages/MediaList";
 import WAccountPage from "./pages/WAccountPage";
 
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
@@ -30,14 +28,13 @@ import { addUserToBackend } from "./api/userApi";
 
 import "./styles/global.css";
 import { fetchWhatsappAccount } from "./api/waccount";
-import useAuthUser from "./hooks/useAuthUser";
 import KnowledgeBases from "./pages/KnowledgeBases";
 import CreateKnowledgeBase from "./pages/CreateKnowledgeBase";
 import KnowledgeBaseDetail from "./pages/KnowledgeBaseDetail";
 import { Toaster } from "react-hot-toast";
-import TransportPlanning from "./components/TransportPlanning";
+import TransportPlanning from './components/TransportPlanning';
 import FlightStatus from "./pages/FlightStatus";
-import FloatingLines from "./components/background/FloatingLines";
+import ContactPage from "./components/landing/sections/ContactPage";
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, isLoading } = useKindeAuth();
@@ -56,8 +53,6 @@ function WhatsappAccountRoute({ children }) {
     const loadWhatsappAccount = async () => {
       try {
         const res = await fetchWhatsappAccount(user.id);
-
-        // if account exists
         if (res?.data?.data?.wa_id) {
           setHasAccount(true);
         } else {
@@ -86,14 +81,14 @@ function AppContent() {
   const { user, isAuthenticated, isLoading } = useKindeAuth();
   const location = useLocation();
 
-  // Sidebar open/close state managed here
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Hide NavBar on document upload
-  const hideNavBar = location.pathname.startsWith("/document-upload");
+  // ✅ KEY CHANGE: Hide default NavBar on landing page AND document upload
+ const hideNavBar = 
+  location.pathname === "/" || 
+  location.pathname === "/contact" ||   // ✅ ADD THIS
+  location.pathname.startsWith("/document-upload");
 
-  // Don't render sidebar on landing page "/"
-  const hideSidebarPath = location.pathname === "/";
 
   // Sync user on first login
   useEffect(() => {
@@ -102,7 +97,7 @@ function AppContent() {
     }
   }, [isAuthenticated, user]);
 
-  // Close sidebar on route change (so X works predictably)
+  // Close sidebar on route change
   useEffect(() => {
     setIsSidebarOpen(false);
   }, [location.pathname]);
@@ -111,159 +106,140 @@ function AppContent() {
 
   return (
     <div className="app-root">
-      <div className="app-background-layer" aria-hidden>
-        <FloatingLines
-          enabledWaves={["top", "middle", "bottom"]}
-          lineCount={[10, 14, 10]}
-          lineDistance={[18, 12, 18]}
-          animationSpeed={0.7}
-          interactive={false}
-          parallax={false}
-          mixBlendMode="screen"
+      {/* ✅ Default NavBar - Hidden on landing page */}
+      {!hideNavBar && (
+        <NavBar
+          onToggleSidebar={() => setIsSidebarOpen((s) => !s)}
+          isSidebarOpen={isSidebarOpen}
         />
-      </div>
+      )}
 
-      <div className="app-foreground-layer">
-        {/* Navbar: pass toggle and state. NavBar itself decides whether hamburger is shown based on auth */}
-        {!hideNavBar && (
-          <NavBar
-            onToggleSidebar={() => setIsSidebarOpen((s) => !s)}
-            isSidebarOpen={isSidebarOpen}
-          />
-        )}
+      {/* Sidebar */}
+      {isAuthenticated && !hideNavBar && (
+        <Sidebar
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+        />
+      )}
 
-        {/* Sidebar overlay/drawer - only when authenticated and not on landing/doc-upload */}
-        {isAuthenticated && !hideNavBar && (
-          <Sidebar
-            isOpen={isSidebarOpen}
-            onClose={() => setIsSidebarOpen(false)}
-          />
-        )}
-
-        {/* Main content area */}
-        <main
-          className={hideNavBar ? "content no-navbar" : "content with-navbar"}
-        >
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-
-            <Route
-              path="/events"
-              element={
-                <PrivateRoute>
-                  <EventsPage />
-                </PrivateRoute>
-              }
-            />
-
-            <Route
-              path="/createEvent"
-              element={
-                <PrivateRoute>
-                  <CreateEvent />
-                </PrivateRoute>
-              }
-            />
-
-            <Route
-              path="/dashboard/:eventId"
-              element={
-                <PrivateRoute>
-                  <Dashboard />
-                </PrivateRoute>
-              }
-            />
-
-            <Route
-              path="/call-batch/:eventId"
-              element={
-                <PrivateRoute>
-                  <CallBatchPage />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/chatbot"
-              element={
-                <PrivateRoute>
-                  <ChatPage />
-                </PrivateRoute>
-              }
-            />
-
-            <Route path="/whatsapp-account" element={<WAccountPage />} />
-
-            <Route
-              path="/templates"
-              element={
-                <PrivateRoute>
-                  <WhatsappAccountRoute>
-                    <TemplateList />
-                  </WhatsappAccountRoute>
-                </PrivateRoute>
-              }
-            />
-
-            <Route
-              path="/template/create"
-              element={
-                <PrivateRoute>
-                  <WhatsappAccountRoute>
-                    <CreateTemplate />
-                  </WhatsappAccountRoute>
-                </PrivateRoute>
-              }
-            />
-
-            <Route
-              path="/templates/send/:templateId"
-              element={
-                <PrivateRoute>
-                  <WhatsappAccountRoute>
-                    <SendTemplate />
-                  </WhatsappAccountRoute>
-                </PrivateRoute>
-              }
-            />
-
-            {/* <Route
-            path="/templates/media"
+      {/* Main content */}
+      <main
+        className={hideNavBar ? "content no-navbar" : "content with-navbar"}
+      >
+        <Routes>
+          {/* ✅ Landing page has its own LandingNavbar component */}
+          <Route path="/" element={<LandingPage />} />
+          <Route
+            path="/events"
             element={
               <PrivateRoute>
-                <MediaList />
+                <EventsPage />
               </PrivateRoute>
             }
-          /> */}
+          />
 
-            <Route
-              path="/document-upload/:participantId"
-              element={<DocumentUpload />}
-            />
-            <Route
-              path="/document-viewer/:participantId"
-              element={<DocumentViewer />}
-            />
+          <Route path="/contact" element={<ContactPage />} />
 
-            <Route path="/knowledge-bases" element={<KnowledgeBases />} />
-            <Route
-              path="/knowledge-bases/create"
-              element={<CreateKnowledgeBase />}
-            />
-            <Route
-              path="/knowledge-bases/:id"
-              element={<KnowledgeBaseDetail />}
-            />
+          <Route
+            path="/createEvent"
+            element={
+              <PrivateRoute>
+                <CreateEvent />
+              </PrivateRoute>
+            }
+          />
 
-            <Route path="/flight-status/:eventId" element={<FlightStatus />} />
-            <Route
-              path="/transport-planning/:eventId"
-              element={<TransportPlanning />}
-            />
+          <Route
+            path="/dashboard/:eventId"
+            element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
 
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-      </div>
+          <Route
+            path="/call-batch/:eventId"
+            element={
+              <PrivateRoute>
+                <CallBatchPage />
+              </PrivateRoute>
+            }
+          />
+          
+          <Route
+            path="/chatbot"
+            element={
+              <PrivateRoute>
+                <ChatPage />
+              </PrivateRoute>
+            }
+          />
+
+          <Route path="/whatsapp-account" element={<WAccountPage />} />
+
+          <Route
+            path="/templates"
+            element={
+              <PrivateRoute>
+                <WhatsappAccountRoute>
+                  <TemplateList />
+                </WhatsappAccountRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/template/create"
+            element={
+              <PrivateRoute>
+                <WhatsappAccountRoute>
+                  <CreateTemplate />
+                </WhatsappAccountRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/templates/send/:templateId"
+            element={
+              <PrivateRoute>
+                <WhatsappAccountRoute>
+                  <SendTemplate />
+                </WhatsappAccountRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/document-upload/:participantId"
+            element={<DocumentUpload />}
+          />
+          
+          <Route
+            path="/document-viewer/:participantId"
+            element={<DocumentViewer />}
+          />
+
+          <Route path="/knowledge-bases" element={<KnowledgeBases />} />
+          
+          <Route
+            path="/knowledge-bases/create"
+            element={<CreateKnowledgeBase />}
+          />
+          
+          <Route
+            path="/knowledge-bases/:id"
+            element={<KnowledgeBaseDetail />}
+          />
+
+          <Route path="/transport-planning/:eventId" element={<TransportPlanning />} />
+          
+          <Route path="/flight-status/:eventId" element={<FlightStatus />} />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
     </div>
   );
 }
@@ -271,7 +247,6 @@ function AppContent() {
 export default function App() {
   return (
     <Router>
-      {/* Global toaster */}
       <Toaster
         position="top-right"
         reverseOrder={false}
