@@ -20,7 +20,6 @@ export default function CreateKnowledgeBase() {
       name,
       content,
     });
-
     navigate("/knowledge-bases");
   };
 

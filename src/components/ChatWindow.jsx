@@ -427,8 +427,6 @@ export default function ChatWindow({ chatId, userInfo }) {
         ? "AI"
         : "User";
 
-  // sender_type?.toLowerCase() === "admin" ? "Admin" : "User";
-
   /* ================= DATE SEPARATORS ================= */
 
   const startOfDay = (d) =>
