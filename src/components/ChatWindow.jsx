@@ -419,7 +419,7 @@ export default function ChatWindow({ chatId, userInfo }) {
   const isSentByAdmin = (sender_type) => sender_type?.toLowerCase() === "admin";
 
   const getSenderLabel = (sender_type) =>
-    sender_type?.toLowerCase() === "admin" ? "Admin" : "User";
+    sender_type?.toLowerCase() === "admin" ? "Admin" : "User" ;
 
   /* ================= DATE SEPARATORS ================= */
 
