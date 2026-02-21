@@ -418,8 +418,14 @@ export default function ChatWindow({ chatId, userInfo }) {
 
   const isSentByAdmin = (sender_type) => sender_type?.toLowerCase() === "admin";
 
+  const isSentByAI = (sender_type) => sender_type?.toLowerCase() === "ai";
+
   const getSenderLabel = (sender_type) =>
-    sender_type?.toLowerCase() === "admin" ? "Admin" : "User" ;
+    sender_type?.toLowerCase() === "admin"
+      ? "Admin"
+      : sender_type?.toLowerCase() === "ai"
+        ? "AI"
+        : "User";
 
   /* ================= DATE SEPARATORS ================= */
 
@@ -554,7 +560,8 @@ export default function ChatWindow({ chatId, userInfo }) {
       {/* MESSAGES */}
       <div className="wa-messages">
         {messages.map((msg, index) => {
-          const sent = isSentByAdmin(msg.sender_type);
+          const sent =
+            isSentByAdmin(msg.sender_type) || isSentByAI(msg.sender_type);
           const currentDate = parseTs(msg.created_at);
           const prevMsg = messages[index - 1];
           const prevDate = prevMsg ? parseTs(prevMsg.created_at) : null;
