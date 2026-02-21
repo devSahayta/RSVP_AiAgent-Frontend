@@ -37,6 +37,7 @@ import FlightStatus from "./pages/FlightStatus";
 import ContactPage from "./components/landing/sections/ContactPage";
 import ListAgents from "./pages/agents/ListAgents";
 import SingleAgent from "./pages/agents/SingleAgent";
+import CreateAgent from "./pages/CreateAgent";
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, isLoading } = useKindeAuth();
@@ -234,6 +235,13 @@ function AppContent() {
             element={<KnowledgeBaseDetail />}
           />
 
+          <Route path="/flight-status/:eventId" element={<FlightStatus />} />
+
+          <Route path="/agents" element={<ListAgents />} />
+          <Route path="/agents/:agentId" element={<SingleAgent />} />
+          {/* <Route path="/agents/create" element={<CreateAgent />} />
+          <Route path="/agents/:agentId/test" element={<TestAgent />} /> */}
+
           <Route
             path="/transport-planning/:eventId"
             element={<TransportPlanning />}
@@ -241,10 +249,7 @@ function AppContent() {
 
           <Route path="/flight-status/:eventId" element={<FlightStatus />} />
 
-          <Route path="/agents" element={<ListAgents />} />
-          <Route path="/agents/:agentId" element={<SingleAgent />} />
-          {/* <Route path="/agents/create" element={<CreateAgent />} />
-          <Route path="/agents/:agentId/test" element={<TestAgent />} /> */}
+          <Route path="/agents/create" element={<CreateAgent />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

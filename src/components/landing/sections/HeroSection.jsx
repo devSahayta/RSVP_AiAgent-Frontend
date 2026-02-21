@@ -88,7 +88,7 @@ const navigate = useNavigate();
 
  <h1 className="hero-headline text-foreground text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight leading-[1.1] mb-6 opacity-0">
 
-          From RSVP to Airport Pickup —{" "}
+          From RSVP to Airport Pickup  {""}
           <span className="gradient-text">Fully Automated</span>
         </h1>
 
