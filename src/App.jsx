@@ -32,9 +32,11 @@ import KnowledgeBases from "./pages/KnowledgeBases";
 import CreateKnowledgeBase from "./pages/CreateKnowledgeBase";
 import KnowledgeBaseDetail from "./pages/KnowledgeBaseDetail";
 import { Toaster } from "react-hot-toast";
-import TransportPlanning from './components/TransportPlanning';
+import TransportPlanning from "./components/TransportPlanning";
 import FlightStatus from "./pages/FlightStatus";
 import ContactPage from "./components/landing/sections/ContactPage";
+import ListAgents from "./pages/agents/ListAgents";
+import SingleAgent from "./pages/agents/SingleAgent";
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, isLoading } = useKindeAuth();
@@ -84,11 +86,10 @@ function AppContent() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // ✅ KEY CHANGE: Hide default NavBar on landing page AND document upload
- const hideNavBar = 
-  location.pathname === "/" || 
-  location.pathname === "/contact" ||   // ✅ ADD THIS
-  location.pathname.startsWith("/document-upload");
-
+  const hideNavBar =
+    location.pathname === "/" ||
+    location.pathname === "/contact" || // ✅ ADD THIS
+    location.pathname.startsWith("/document-upload");
 
   // Sync user on first login
   useEffect(() => {
@@ -166,7 +167,7 @@ function AppContent() {
               </PrivateRoute>
             }
           />
-          
+
           <Route
             path="/chatbot"
             element={
@@ -215,27 +216,35 @@ function AppContent() {
             path="/document-upload/:participantId"
             element={<DocumentUpload />}
           />
-          
+
           <Route
             path="/document-viewer/:participantId"
             element={<DocumentViewer />}
           />
 
           <Route path="/knowledge-bases" element={<KnowledgeBases />} />
-          
+
           <Route
             path="/knowledge-bases/create"
             element={<CreateKnowledgeBase />}
           />
-          
+
           <Route
             path="/knowledge-bases/:id"
             element={<KnowledgeBaseDetail />}
           />
 
-          <Route path="/transport-planning/:eventId" element={<TransportPlanning />} />
-          
+          <Route
+            path="/transport-planning/:eventId"
+            element={<TransportPlanning />}
+          />
+
           <Route path="/flight-status/:eventId" element={<FlightStatus />} />
+
+          <Route path="/agents" element={<ListAgents />} />
+          <Route path="/agents/:agentId" element={<SingleAgent />} />
+          {/* <Route path="/agents/create" element={<CreateAgent />} />
+          <Route path="/agents/:agentId/test" element={<TestAgent />} /> */}
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

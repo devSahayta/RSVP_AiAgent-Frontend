@@ -53,8 +53,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     },
 
     {
-      name: "Knowledge Base",
-      path: "/knowledge-bases",
+      name: "Agents",
+      path: "/agents",
       icon: <Library size={18} />,
     },
   ];
