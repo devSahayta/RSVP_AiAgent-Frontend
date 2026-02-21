@@ -35,6 +35,7 @@ import { Toaster } from "react-hot-toast";
 import TransportPlanning from './components/TransportPlanning';
 import FlightStatus from "./pages/FlightStatus";
 import ContactPage from "./components/landing/sections/ContactPage";
+import CreateAgent from "./pages/CreateAgent";
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, isLoading } = useKindeAuth();
@@ -233,9 +234,13 @@ function AppContent() {
             element={<KnowledgeBaseDetail />}
           />
 
+
+
           <Route path="/transport-planning/:eventId" element={<TransportPlanning />} />
           
           <Route path="/flight-status/:eventId" element={<FlightStatus />} />
+
+          <Route path="/agents/create" element={<CreateAgent />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
