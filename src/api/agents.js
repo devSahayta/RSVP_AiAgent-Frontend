@@ -8,3 +8,7 @@ export const fetchUserAgents = (userId) =>
 // Get agents details
 export const fetchAgentById = (agentId) =>
   api.get(`/api/agent-system/${agentId}`);
+
+// Delete agent
+export const deleteAgentById = (agentId) =>
+  api.delete(`/api/agent-system/${agentId}`);

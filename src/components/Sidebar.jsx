@@ -7,7 +7,7 @@ import {
   MessageSquare,
   FileText,
   LayersIcon,
-  Library,
+  Bot,
 } from "lucide-react";
 import "../styles/sidebar.css";
 
@@ -55,7 +55,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     {
       name: "Agents",
       path: "/agents",
-      icon: <Library size={18} />,
+      icon: <Bot size={18} />,
     },
   ];
 
