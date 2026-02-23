@@ -10,8 +10,8 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { fetchKnowledgeBases } from "../api/knowledgeBases";
 import "../styles/form.css";
+import { fetchUserAgents } from "../api/agents";
 
 const EventForm = ({ user }) => {
   // const [formData, setFormData] = useState({
@@ -23,26 +23,27 @@ const EventForm = ({ user }) => {
   const [formData, setFormData] = useState({
     eventName: "",
     eventDate: "",
-    eventType: "wedding",
-    knowledgeBaseId: "",
+    agents: "",
     dataset: null,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
   const [message, setMessage] = useState("");
-  const [knowledgeBases, setKnowledgeBases] = useState([]);
+  const [agents, setAgents] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!user?.id) return;
 
-    fetchKnowledgeBases(user.id)
-      .then((res) => setKnowledgeBases(res.data))
-      .catch((err) => console.error("Failed to load KBs", err));
+    fetchUserAgents(user.id)
+      .then((res) => setAgents(res.data.data))
+      .catch((err) => console.error("Failed to load Agents", err));
   }, [user]);
 
-  console.log({ formData });
+  // console.log({ formData });
+
+  // console.log({ agents });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -77,8 +78,7 @@ const EventForm = ({ user }) => {
       payload.append("user_id", user.id);
       payload.append("event_name", formData.eventName);
       payload.append("event_date", formData.eventDate);
-      payload.append("event_type", formData.eventType);
-      payload.append("knowledge_base_id", formData.knowledgeBaseId);
+      payload.append("agent_id", formData.agents);
 
       if (formData.dataset) {
         payload.append("dataset", formData.dataset);
@@ -89,7 +89,7 @@ const EventForm = ({ user }) => {
         {
           method: "POST",
           body: payload,
-        }
+        },
       );
 
       if (!response.ok) throw new Error("Failed to create event");
@@ -168,31 +168,19 @@ const EventForm = ({ user }) => {
         </div>
 
         <div className="form-group">
-          <label className="form-label">Event Type</label>
+          <label className="form-label">Agent</label>
           <select
-            name="eventType"
-            value={formData.eventType}
-            onChange={handleInputChange}
-            className="form-input"
-          >
-            <option value="wedding">Wedding</option>
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Knowledge Base</label>
-          <select
-            name="knowledgeBaseId"
-            value={formData.knowledgeBaseId}
+            name="agents"
+            value={formData.agents}
             onChange={handleInputChange}
             required
             className="form-input"
           >
-            <option value="">Select Knowledge Base</option>
+            <option value="">Select Agent</option>
 
-            {knowledgeBases.map((kb) => (
-              <option key={kb.id} value={kb.id}>
-                {kb.name}
+            {agents?.map((ag) => (
+              <option key={ag.agent_id} value={ag.agent_id}>
+                {ag.agent_name}
               </option>
             ))}
           </select>

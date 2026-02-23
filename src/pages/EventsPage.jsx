@@ -5,11 +5,18 @@ import { Calendar, Users, ArrowRight, MoreVertical } from "lucide-react";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import "../styles/pages.css";
 import "../styles/events.css";
+import {
+  dismissToast,
+  showError,
+  showLoading,
+  showSuccess,
+} from "../utils/toast";
 
 const EventsPage = () => {
   const [events, setEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [openMenu, setOpenMenu] = useState(null);
+  const [isDeletingEvent, setIsDeletingEvent] = useState(false);
 
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading: authLoading } = useKindeAuth();
@@ -23,7 +30,7 @@ const EventsPage = () => {
   const fetchEvents = async (userId) => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/events?user_id=${userId}`
+        `${import.meta.env.VITE_BACKEND_URL}/api/events?user_id=${userId}`,
       );
 
       if (!response.ok) throw new Error("Failed to fetch events");
@@ -42,33 +49,39 @@ const EventsPage = () => {
   // -------------------------------------------------------
   const deleteEvent = async (eventId) => {
     const confirmDelete = window.confirm(
-      "Are you sure you want to delete this event and all related data?"
+      "Are you sure you want to delete this event and all related data?",
     );
 
     if (!confirmDelete) return;
 
     try {
+      setIsDeletingEvent(true);
+      const toastId = showLoading("Deleting Event...");
+
       const response = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}`,
         {
           method: "DELETE",
-        }
+        },
       );
 
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.error || "Failed to delete event");
+        showError(data.error || "Failed to delete event");
         return;
       }
 
       // Remove event from UI
       setEvents(events.filter((event) => event.event_id !== eventId));
 
-      alert("Event deleted successfully");
+      dismissToast(toastId);
+      showSuccess("Event deleted successfully");
     } catch (error) {
       console.error("Delete error:", error);
-      alert("Something went wrong while deleting the event.");
+      showError("Something went wrong while deleting the event.");
+    } finally {
+      setIsDeletingEvent(false);
     }
   };
   // -------------------------------------------------------
@@ -139,7 +152,7 @@ const EventsPage = () => {
                     className="event-menu-icon"
                     onClick={() =>
                       setOpenMenu(
-                        openMenu === event.event_id ? null : event.event_id
+                        openMenu === event.event_id ? null : event.event_id,
                       )
                     }
                   />
@@ -154,7 +167,7 @@ const EventsPage = () => {
                           deleteEvent(event.event_id); // ⬅️ connected to backend
                         }}
                       >
-                        Delete
+                        {isDeletingEvent ? "Deleting" : "Delete"}
                       </div>
                     </div>
                   )}

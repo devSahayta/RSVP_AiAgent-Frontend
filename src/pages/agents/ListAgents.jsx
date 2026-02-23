@@ -23,6 +23,7 @@ const ListAgents = () => {
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
+  const [deleteWarning, setDeleteWarning] = useState(null);
 
   useEffect(() => {
     if (!userId) return;
@@ -50,12 +51,33 @@ const ListAgents = () => {
 
     try {
       setDeletingId(agentId);
-      await deleteAgentById(agentId);
-      setAgents((prev) => prev.filter((item) => item.agent_id !== agentId));
-      toast.success("Agent deleted");
+      setDeleteWarning(null);
+
+      const res = await deleteAgentById(agentId);
+      const payload = res?.data;
+
+      if (payload?.success) {
+        setAgents((prev) => prev.filter((item) => item.agent_id !== agentId));
+        toast.success(payload?.message || "Agent deleted");
+        return;
+      }
+
+      if (payload?.warning) {
+        setDeleteWarning(payload);
+        toast.error(payload?.message || "Agent is linked to event(s).");
+        return;
+      }
+
+      toast.error(
+        payload?.error || payload?.message || "Failed to delete agent",
+      );
     } catch (error) {
       console.error("Failed to delete agent", error);
-      toast.error("Failed to delete agent");
+      toast.error(
+        error?.response?.data?.error ||
+          error?.response?.data?.message ||
+          "Failed to delete agent",
+      );
     } finally {
       setDeletingId(null);
     }
@@ -103,6 +125,63 @@ const ListAgents = () => {
           </button>
         </motion.div>
 
+        {deleteWarning?.warning && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-100"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold">
+                  {deleteWarning.message || "Agent cannot be deleted."}
+                </p>
+                <p className="mt-1 text-xs text-amber-200/90">
+                  Agent: {deleteWarning?.data?.agent_name || "Unknown"} | Linked
+                  events: {deleteWarning?.data?.linked_events_count || 0}
+                </p>
+                {/* <p className="mt-1 text-xs font-semibold text-red-400/90">
+                  Tip: Delete linked event(s) first, then try deleting this
+                  agent again.
+                </p> */}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => navigate("/events")}
+                  className="rounded-lg border border-amber-300/30 px-3 py-1.5 text-xs text-amber-100 transition hover:bg-amber-300/10"
+                >
+                  Open Events
+                </button>
+                <button
+                  onClick={() => setDeleteWarning(null)}
+                  className="rounded-lg border border-amber-300/30 px-3 py-1.5 text-xs text-amber-100 transition hover:bg-amber-300/10"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+
+            {Array.isArray(deleteWarning?.data?.linked_events) &&
+              deleteWarning.data.linked_events.length > 0 && (
+                <div className=" mt-3 text-sm ">
+                  <p>Linked Events</p>
+                  <ul className="mt-1 ml-5 list-disc space-y-1 text-amber-100/95">
+                    {deleteWarning.data.linked_events.map((evt) => (
+                      <li key={evt.event_id}>{evt.event_name}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+            <div className=" mt-6 ">
+              <p className="mt-1 text-xs font-semibold text-red-400/90">
+                Tip: Delete linked event(s) first, then try deleting this agent
+                again.
+              </p>
+            </div>
+          </motion.div>
+        )}
+
         {agents.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -133,11 +212,14 @@ const ListAgents = () => {
                   initial={{ opacity: 0, y: 24 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="group rounded-2xl border border-[#1F1F2E] bg-gradient-to-br from-[#12121A] via-[#14141C] to-[#12121A] p-6 shadow-xl transition hover:border-blue-500/40 hover:shadow-blue-500/10"
+                  onClick={() => navigate(`/agents/${agent.agent_id}`)}
+                  className="group cursor-pointer rounded-2xl border border-[#1F1F2E] bg-gradient-to-br from-[#12121A] via-[#14141C] to-[#12121A] p-6 shadow-xl transition hover:border-blue-500/40 hover:shadow-blue-500/10"
                 >
                   <div className="mb-4 flex items-start justify-between gap-4">
                     <div>
-                      <h2 className="text-xl font-semibold">{agent.agent_name}</h2>
+                      <h2 className="text-xl font-semibold">
+                        {agent.agent_name}
+                      </h2>
                       <p className="mt-1 line-clamp-2 text-sm text-gray-400">
                         {agent.agent_description || "No description"}
                       </p>
@@ -199,7 +281,10 @@ const ListAgents = () => {
 
                   <div className="flex items-center justify-between gap-2">
                     <button
-                      onClick={() => navigate(`/agents/${agent.agent_id}`)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/agents/${agent.agent_id}`);
+                      }}
                       className="text-sm text-blue-300 transition hover:text-blue-200"
                     >
                       View Details
@@ -207,16 +292,24 @@ const ListAgents = () => {
 
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => handleDelete(agent.agent_id, agent.agent_name)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(agent.agent_id, agent.agent_name);
+                        }}
                         disabled={deletingId === agent.agent_id}
                         className="flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-sm text-red-300 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <Trash2 size={14} />
-                        {deletingId === agent.agent_id ? "Deleting..." : "Delete"}
+                        {deletingId === agent.agent_id
+                          ? "Deleting..."
+                          : "Delete"}
                       </button>
 
                       <button
-                        onClick={() => navigate(`/agents/${agent.agent_id}/test`)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/agents/${agent.agent_id}/test`);
+                        }}
                         className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-1.5 text-sm transition hover:opacity-90"
                       >
                         <TestTube size={14} />
