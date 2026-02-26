@@ -38,6 +38,9 @@ import ContactPage from "./components/landing/sections/ContactPage";
 import ListAgents from "./pages/agents/ListAgents";
 import SingleAgent from "./pages/agents/SingleAgent";
 import CreateAgent from "./pages/CreateAgent";
+import TestAgent from "./pages/agents/test/TestAgent";
+import TestHistory from "./pages/agents/test/TestHistory";
+import TestResult from "./pages/agents/test/TestResult";
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, isLoading } = useKindeAuth();
@@ -239,8 +242,15 @@ function AppContent() {
 
           <Route path="/agents" element={<ListAgents />} />
           <Route path="/agents/:agentId" element={<SingleAgent />} />
-          {/* <Route path="/agents/create" element={<CreateAgent />} />
-          <Route path="/agents/:agentId/test" element={<TestAgent />} /> */}
+          <Route path="/agents/create" element={<CreateAgent />} />
+
+          {/* Test Agents */}
+          <Route path="/agents/:agent_id/test" element={<TestAgent />} />
+          <Route path="/agents/test-history" element={<TestHistory />} />
+          <Route
+            path="/agents/test-history/:session_id"
+            element={<TestResult />}
+          />
 
           <Route
             path="/transport-planning/:eventId"
@@ -248,8 +258,6 @@ function AppContent() {
           />
 
           <Route path="/flight-status/:eventId" element={<FlightStatus />} />
-
-          <Route path="/agents/create" element={<CreateAgent />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
