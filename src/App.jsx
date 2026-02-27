@@ -40,7 +40,6 @@ import SingleAgent from "./pages/agents/SingleAgent";
 import CreateAgent from "./pages/CreateAgent";
 import TestAgent from "./pages/agents/test/TestAgent";
 import TestHistory from "./pages/agents/test/TestHistory";
-import TestResult from "./pages/agents/test/TestResult";
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, isLoading } = useKindeAuth();
@@ -247,10 +246,6 @@ function AppContent() {
           {/* Test Agents */}
           <Route path="/agents/:agent_id/test" element={<TestAgent />} />
           <Route path="/agents/test-history" element={<TestHistory />} />
-          <Route
-            path="/agents/test-history/:session_id"
-            element={<TestResult />}
-          />
 
           <Route
             path="/transport-planning/:eventId"
