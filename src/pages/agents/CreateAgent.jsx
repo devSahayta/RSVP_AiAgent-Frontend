@@ -410,22 +410,44 @@ const CreateAgent = () => {
                                 )}
 
                                 {config.features && (
-                                  <div className="bg-gradient-to-r from-emerald-500/5 to-transparent p-5 rounded-xl border border-emerald-500/10">
-                                    <h4 className="font-bold mb-3 text-white">Features Included</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                      {Object.entries(config.features).map(([key, value]) => (
-                                        value && (
-                                          <div key={key} className="flex items-center gap-2 text-sm text-gray-300">
-                                            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                                            <span className="capitalize">
-                                              {key.replace(/_/g, " ")}
-                                            </span>
-                                          </div>
-                                        )
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
+  <div className="bg-gradient-to-r from-emerald-500/5 to-transparent p-5 rounded-xl border border-emerald-500/10 space-y-5">
+    <h4 className="font-bold mb-3 text-white">Features Included</h4>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {Object.entries(config.features).map(([key, value]) => (
+        value && (
+          <div key={key} className="flex items-center gap-2 text-sm text-gray-300">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            <span className="capitalize">
+              {key.replace(/_/g, " ")}
+            </span>
+          </div>
+        )
+      ))}
+    </div>
+
+    {/* 🖼️ Template Preview Image (NEW) */}
+    {template.preview_image_url && (
+      <div className="mt-4 pt-4 border-t border-[#2A2A3E]">
+        <p className="text-sm text-gray-400 mb-3 font-medium">
+          Template Preview
+        </p>
+
+        <div className="relative group rounded-xl overflow-hidden border border-[#1F1F2E] bg-[#0A0A0F]">
+          <img
+            src={template.preview_image_url}
+            alt={`${template.name} preview`}
+            className="w-full h-auto object-cover transition-all duration-500 group-hover:scale-[1.02]"
+            loading="lazy"
+          />
+
+          {/* subtle overlay like Vercel */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-60 pointer-events-none"></div>
+        </div>
+      </div>
+    )}
+  </div>
+)}
                               </div>
                             )}
                           </div>
