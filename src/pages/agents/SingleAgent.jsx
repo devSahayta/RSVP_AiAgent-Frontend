@@ -119,9 +119,15 @@ const SingleAgent = () => {
         <div className="grid gap-8 lg:grid-cols-3">
           <div className="space-y-8 lg:col-span-2">
             <Card title="Template Overview" icon={<Bot size={18} />}>
-              <p className="text-lg font-medium">{template?.name || "Unknown Template"}</p>
-              <p className="mt-2 text-sm text-gray-400">{template?.description}</p>
-            </Card>
+  <p className="text-lg font-medium">
+    {template?.name || "Unknown Template"}
+  </p>
+  <p className="mt-2 text-sm text-gray-400">
+    {template?.description}
+  </p>
+</Card>
+
+            
 
             <Card title="Agent Capabilities" icon={<Settings size={18} />}>
               <div className="grid gap-3 md:grid-cols-2">
@@ -191,6 +197,33 @@ const SingleAgent = () => {
                 ))}
               </ul>
             </Card>
+            
+            {template?.preview_image_url && (
+  <Card title="Template Preview" icon={<Sparkles size={18} />}>
+    <div className="space-y-3">
+      <p className="text-sm text-gray-400">
+        Visual preview of how this agent template behaves during conversations and flow.
+      </p>
+
+      <div className="relative overflow-hidden rounded-2xl border border-[#1F1F2E] bg-[#0A0A0F] group">
+        <img
+          src={template.preview_image_url}
+          alt={`${template?.name} preview`}
+          className="w-full h-auto object-cover transition-all duration-500 group-hover:scale-[1.02]"
+          loading="lazy"
+        />
+
+        {/* Premium gradient overlay (matches your dark theme) */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-70"></div>
+      </div>
+
+      <p className="text-xs text-gray-500">
+        Template: {template?.name}
+      </p>
+    </div>
+  </Card>
+)}
+
           </div>
 
           <div className="space-y-8">

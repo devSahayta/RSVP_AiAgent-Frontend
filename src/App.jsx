@@ -37,7 +37,7 @@ import FlightStatus from "./pages/FlightStatus";
 import ContactPage from "./components/landing/sections/ContactPage";
 import ListAgents from "./pages/agents/ListAgents";
 import SingleAgent from "./pages/agents/SingleAgent";
-import CreateAgent from "./pages/CreateAgent";
+import CreateAgent from "./pages/agents/CreateAgent";
 import TestAgent from "./pages/agents/test/TestAgent";
 import TestHistory from "./pages/agents/test/TestHistory";
 
