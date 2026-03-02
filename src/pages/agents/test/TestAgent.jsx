@@ -108,7 +108,7 @@ const TestAgent = () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             user_id: userId,
-            test_phone_number: phoneNumber,
+            to_number: phoneNumber,
           }),
         }
       );
@@ -539,11 +539,11 @@ const TestAgent = () => {
                     type="tel"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="+91 98765 43210"
+                    placeholder="91 98765 43210"
                     className="w-full px-4 py-3 bg-[#111113] border border-[#1F1F23] rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 outline-none transition-all placeholder:text-gray-600"
                   />
                   <p className="text-xs text-gray-500 mt-2 text-left">
-                    Include country code (e.g., +91 for India)
+                    Include country code (e.g., 91 for India)
                   </p>
                 </div>
 
