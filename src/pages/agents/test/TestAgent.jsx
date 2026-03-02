@@ -14,7 +14,7 @@ import {
   Bot,
   User,
   Circle,
-  History, // 👈 ADD THIS
+  History
 } from "lucide-react";
 import useAuthUser from "../../../hooks/useAuthUser";
 
@@ -36,6 +36,7 @@ const TestAgent = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [conversationState, setConversationState] = useState(null); // ✅ Track state
   const messagesEndRef = useRef(null);
 
   // Fetch agent details
@@ -152,6 +153,7 @@ const TestAgent = () => {
           body: JSON.stringify({
             user_id: userId,
             message: userMessage.content,
+            conversation_state: conversationState, // ✅ Send current state
           }),
         }
       );
@@ -165,14 +167,20 @@ const TestAgent = () => {
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, botMessage]);
+        
+        // ✅ Save updated state for next message
+        setConversationState(data.conversation_state);
+        
+        console.log("📍 Current state:", data.metadata?.current_state);
+        console.log("✅ RSVP:", data.metadata?.rsvp_status, "Guests:", data.metadata?.guest_count);
       } else {
         toast.error("Failed to get response");
-        setMessages((prev) => prev.slice(0, -1)); // Remove user message
+        setMessages((prev) => prev.slice(0, -1));
       }
     } catch (error) {
       console.error("Chat error:", error);
       toast.error("Failed to send message");
-      setMessages((prev) => prev.slice(0, -1)); // Remove user message
+      setMessages((prev) => prev.slice(0, -1));
     } finally {
       setChatLoading(false);
     }
@@ -198,7 +206,7 @@ const TestAgent = () => {
       {/* Header */}
       <div className="border-b border-[#1F1F23] bg-[#0B0B0C]/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate(-1)}
@@ -213,8 +221,7 @@ const TestAgent = () => {
             </div>
 
             {/* Mode Toggle */}
-            {/* Right Actions */}
-<div className="flex items-center gap-4">
+          <div className="flex items-center gap-4">
 
   {/* Test History Button */}
 <motion.button
@@ -311,13 +318,20 @@ const TestAgent = () => {
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
                       <Bot className="w-5 h-5 text-white" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <h3 className="font-semibold">{agent?.agent_name}</h3>
                       <div className="flex items-center gap-2 text-xs text-gray-400">
                         <Circle className="w-2 h-2 fill-green-500 text-green-500" />
                         <span>Online • Test Mode</span>
                       </div>
                     </div>
+                  </div>
+                  
+                  {/* Test Mode Disclaimer */}
+                  <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                    <p className="text-xs text-blue-300 leading-relaxed">
+                      🧪 <span className="font-semibold">Test Mode Active:</span> Document uploads (ID proof & travel docs) are disabled. You can test the RSVP flow and ask questions about the event!
+                    </p>
                   </div>
                 </div>
 
@@ -525,11 +539,11 @@ const TestAgent = () => {
                     type="tel"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="91 98765 43210"
+                    placeholder="+91 98765 43210"
                     className="w-full px-4 py-3 bg-[#111113] border border-[#1F1F23] rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 outline-none transition-all placeholder:text-gray-600"
                   />
                   <p className="text-xs text-gray-500 mt-2 text-left">
-                    Include country code (e.g., 91 for India)
+                    Include country code (e.g., +91 for India)
                   </p>
                 </div>
 

@@ -41,6 +41,7 @@ import CreateAgent from "./pages/agents/CreateAgent";
 import TestAgent from "./pages/agents/test/TestAgent";
 import TestHistory from "./pages/agents/test/TestHistory";
 import TestResult from "./pages/agents/test/TestResult";
+import Welcome from "./pages/HomeDashboard.jsx"
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, isLoading } = useKindeAuth();
@@ -134,6 +135,7 @@ function AppContent() {
         <Routes>
           {/* ✅ Landing page has its own LandingNavbar component */}
           <Route path="/" element={<LandingPage />} />
+          <Route path="/welcome" element={<Welcome />} />
           <Route
             path="/events"
             element={
