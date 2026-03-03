@@ -14,7 +14,7 @@ import {
   Bot,
   User,
   Circle,
-  History, // 👈 ADD THIS
+  History
 } from "lucide-react";
 import useAuthUser from "../../../hooks/useAuthUser";
 
@@ -36,6 +36,7 @@ const TestAgent = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [conversationState, setConversationState] = useState(null); // ✅ Track state
   const messagesEndRef = useRef(null);
 
   // Fetch agent details
@@ -54,8 +55,7 @@ const TestAgent = () => {
       setMessages([
         {
           role: "assistant",
-          content:
-            "Hi! 👋 I'm your wedding assistant. How can I help you today?",
+          content: "Hi! 👋 I'm your wedding assistant. How can I help you today?",
           timestamp: new Date(),
         },
       ]);
@@ -65,7 +65,7 @@ const TestAgent = () => {
   const fetchAgent = async () => {
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/agent-system/${agent_id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/agent-system/${agent_id}`
       );
       const data = await res.json();
 
@@ -110,7 +110,7 @@ const TestAgent = () => {
             user_id: userId,
             to_number: phoneNumber,
           }),
-        },
+        }
       );
 
       const data = await res.json();
@@ -153,8 +153,9 @@ const TestAgent = () => {
           body: JSON.stringify({
             user_id: userId,
             message: userMessage.content,
+            conversation_state: conversationState, // ✅ Send current state
           }),
-        },
+        }
       );
 
       const data = await res.json();
@@ -166,14 +167,20 @@ const TestAgent = () => {
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, botMessage]);
+        
+        // ✅ Save updated state for next message
+        setConversationState(data.conversation_state);
+        
+        console.log("📍 Current state:", data.metadata?.current_state);
+        console.log("✅ RSVP:", data.metadata?.rsvp_status, "Guests:", data.metadata?.guest_count);
       } else {
         toast.error("Failed to get response");
-        setMessages((prev) => prev.slice(0, -1)); // Remove user message
+        setMessages((prev) => prev.slice(0, -1));
       }
     } catch (error) {
       console.error("Chat error:", error);
       toast.error("Failed to send message");
-      setMessages((prev) => prev.slice(0, -1)); // Remove user message
+      setMessages((prev) => prev.slice(0, -1));
     } finally {
       setChatLoading(false);
     }
@@ -199,7 +206,7 @@ const TestAgent = () => {
       {/* Header */}
       <div className="border-b border-[#1F1F23] bg-[#0B0B0C]/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate(-1)}
@@ -214,14 +221,14 @@ const TestAgent = () => {
             </div>
 
             {/* Mode Toggle */}
-            {/* Right Actions */}
-            <div className="flex items-center gap-4">
-              {/* Test History Button */}
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => navigate("/agents/test-history")}
-                className="
+          <div className="flex items-center gap-4">
+
+  {/* Test History Button */}
+<motion.button
+  whileHover={{ scale: 1.03 }}
+  whileTap={{ scale: 0.97 }}
+  onClick={() => navigate("/agents/test-history")}
+  className="
     relative group
     flex items-center justify-center gap-2
     px-3 sm:px-4 py-2
@@ -232,15 +239,15 @@ const TestAgent = () => {
     transition-all
     text-sm font-medium
   "
-              >
-                <History className="w-4 h-4 text-purple-400" />
+>
+  <History className="w-4 h-4 text-purple-400" />
 
-                {/* Hide text on mobile */}
-                <span className="hidden sm:inline">Test History</span>
+  {/* Hide text on mobile */}
+  <span className="hidden sm:inline">Test History</span>
 
-                {/* Tooltip (mobile + hover fallback) */}
-                <span
-                  className="
+  {/* Tooltip (mobile + hover fallback) */}
+  <span
+    className="
       absolute -bottom-9 left-1/2 -translate-x-1/2
       whitespace-nowrap
       bg-[#1A1A1E] text-xs text-gray-300
@@ -250,16 +257,16 @@ const TestAgent = () => {
       pointer-events-none
       sm:hidden
     "
-                >
-                  Test History
-                </span>
-              </motion.button>
+  >
+    Test History
+  </span>
+</motion.button>
 
-              {/* Mode Toggle */}
-              <div className="flex items-center gap-2 bg-[#111113] p-1 rounded-xl border border-[#1F1F23]">
-                <button
-                  onClick={() => setMode("chat")}
-                  className={`
+  {/* Mode Toggle */}
+  <div className="flex items-center gap-2 bg-[#111113] p-1 rounded-xl border border-[#1F1F23]">
+    <button
+      onClick={() => setMode("chat")}
+      className={`
         px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2
         ${
           mode === "chat"
@@ -267,13 +274,13 @@ const TestAgent = () => {
             : "text-gray-400 hover:text-white"
         }
       `}
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  Chat Test
-                </button>
-                <button
-                  onClick={() => setMode("voice")}
-                  className={`
+    >
+      <MessageSquare className="w-4 h-4" />
+      Chat Test
+    </button>
+    <button
+      onClick={() => setMode("voice")}
+      className={`
         px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2
         ${
           mode === "voice"
@@ -281,12 +288,12 @@ const TestAgent = () => {
             : "text-gray-400 hover:text-white"
         }
       `}
-                >
-                  <Phone className="w-4 h-4" />
-                  Voice Test
-                </button>
-              </div>
-            </div>
+    >
+      <Phone className="w-4 h-4" />
+      Voice Test
+    </button>
+  </div>
+</div>
           </div>
         </div>
       </div>
@@ -311,13 +318,20 @@ const TestAgent = () => {
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
                       <Bot className="w-5 h-5 text-white" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <h3 className="font-semibold">{agent?.agent_name}</h3>
                       <div className="flex items-center gap-2 text-xs text-gray-400">
                         <Circle className="w-2 h-2 fill-green-500 text-green-500" />
                         <span>Online • Test Mode</span>
                       </div>
                     </div>
+                  </div>
+                  
+                  {/* Test Mode Disclaimer */}
+                  <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                    <p className="text-xs text-blue-300 leading-relaxed">
+                      🧪 <span className="font-semibold">Test Mode Active:</span> Document uploads (ID proof & travel docs) are disabled. You can test the RSVP flow and ask questions about the event!
+                    </p>
                   </div>
                 </div>
 
@@ -330,9 +344,7 @@ const TestAgent = () => {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.2 }}
                       className={`flex gap-3 ${
-                        message.role === "user"
-                          ? "flex-row-reverse"
-                          : "flex-row"
+                        message.role === "user" ? "flex-row-reverse" : "flex-row"
                       }`}
                     >
                       {/* Avatar */}
@@ -501,11 +513,7 @@ const TestAgent = () => {
                   {/* Middle ring */}
                   <motion.div
                     animate={{ rotate: 360 }}
-                    transition={{
-                      repeat: Infinity,
-                      duration: 3,
-                      ease: "linear",
-                    }}
+                    transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
                     className="absolute inset-8 border-2 border-blue-500/30 rounded-full"
                   />
 
@@ -519,8 +527,7 @@ const TestAgent = () => {
                   Voice Agent Test
                 </h2>
                 <p className="text-gray-400 mb-8">
-                  Enter your phone number to receive a test call from the AI
-                  agent
+                  Enter your phone number to receive a test call from the AI agent
                 </p>
 
                 {/* Phone Input */}
@@ -553,8 +560,8 @@ const TestAgent = () => {
                           callStatus === "success"
                             ? "bg-emerald-500/5 border-emerald-500/30"
                             : callStatus === "error"
-                              ? "bg-red-500/5 border-red-500/30"
-                              : "bg-blue-500/5 border-blue-500/30"
+                            ? "bg-red-500/5 border-red-500/30"
+                            : "bg-blue-500/5 border-blue-500/30"
                         }
                       `}
                     >
@@ -563,9 +570,7 @@ const TestAgent = () => {
                       ) : callStatus === "calling" ? (
                         <Loader2 className="w-5 h-5 text-blue-500 animate-spin flex-shrink-0 mt-0.5" />
                       ) : (
-                        <div className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5">
-                          ⚠️
-                        </div>
+                        <div className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5">⚠️</div>
                       )}
                       <div className="text-left">
                         <p
@@ -573,22 +578,22 @@ const TestAgent = () => {
                             callStatus === "success"
                               ? "text-emerald-400"
                               : callStatus === "error"
-                                ? "text-red-400"
-                                : "text-blue-400"
+                              ? "text-red-400"
+                              : "text-blue-400"
                           }`}
                         >
                           {callStatus === "success"
                             ? "Call Initiated!"
                             : callStatus === "calling"
-                              ? "Initiating Call..."
-                              : "Call Failed"}
+                            ? "Initiating Call..."
+                            : "Call Failed"}
                         </p>
                         <p className="text-xs text-gray-400 mt-1">
                           {callStatus === "success"
                             ? "You should receive a call shortly. Please answer to test the voice agent."
                             : callStatus === "calling"
-                              ? "Please wait while we connect you..."
-                              : "Failed to initiate the test call. Please try again."}
+                            ? "Please wait while we connect you..."
+                            : "Failed to initiate the test call. Please try again."}
                         </p>
                       </div>
                     </motion.div>
@@ -628,8 +633,7 @@ const TestAgent = () => {
                     <li className="flex items-start gap-3">
                       <span className="text-blue-400 mt-1">2.</span>
                       <span>
-                        The voice agent will greet you and start the
-                        conversation
+                        The voice agent will greet you and start the conversation
                       </span>
                     </li>
                     <li className="flex items-start gap-3">
@@ -640,7 +644,9 @@ const TestAgent = () => {
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="text-blue-400 mt-1">4.</span>
-                      <span>The call will be recorded for your review</span>
+                      <span>
+                        The call will be recorded for your review
+                      </span>
                     </li>
                   </ul>
                 </div>
