@@ -144,22 +144,28 @@ const TestHistory = () => {
     }
 
     if (Array.isArray(parsed)) {
-      return parsed.filter(
-        (item) =>
-          item &&
-          typeof item === "object" &&
-          typeof item.message === "string" &&
-          item.message.trim() &&
-          (item.role === "user" ||
-            item.role === "assistant" ||
-            item.role === "agent"),
-      ).map((item) => ({
-        ...item,
-        role: item.role === "agent" ? "assistant" : item.role,
-      }));
+      return parsed
+        .filter(
+          (item) =>
+            item &&
+            typeof item === "object" &&
+            typeof item.message === "string" &&
+            item.message.trim() &&
+            (item.role === "user" ||
+              item.role === "assistant" ||
+              item.role === "agent"),
+        )
+        .map((item) => ({
+          ...item,
+          role: item.role === "agent" ? "assistant" : item.role,
+        }));
     }
 
-    if (parsed && typeof parsed === "object" && Array.isArray(parsed.messages)) {
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      Array.isArray(parsed.messages)
+    ) {
       return parsed.messages
         .filter(
           (item) =>
@@ -610,12 +616,30 @@ const TestHistory = () => {
                 );
               })()}
 
-              <div className="mt-20 border-t-2 border-[#1F1F2E] pt-5">
-                <h6 className=" text-sm text-red-500 font-semibold ">Note:</h6>
-                <p className="text-sm text-gray-300 mb-3">
-                  After creating an event, you will get all data in dashboard.
-                  This image is a screenshot of that dashboard.
+              <div className="mt-20 border-t-2 border-[#1F1F2E] pt-6">
+                <h6 className="text-sm text-yellow-400 font-semibold mb-2">
+                  ⚠️ You're Viewing a Test Session
+                </h6>
+
+                <p className="text-sm text-gray-300 mb-3 leading-relaxed">
+                  This session was conducted in{" "}
+                  <span className="text-blue-400 font-medium">Test Mode</span>.
+                  Event-level data and advanced features are not recorded here.
                 </p>
+
+                <ul className="text-sm text-gray-400 space-y-2 list-disc pl-5 mb-4">
+                  <li>RSVP status will not be saved</li>
+                  <li>Number of guests attending will not be calculated</li>
+                  <li>Guest notes will not be stored</li>
+                  <li>ID Proof collection is disabled</li>
+                  <li>Travel details collection is disabled</li>
+                </ul>
+
+                <p className="text-sm text-gray-300 mb-3">
+                  After creating a real event, all RSVP analytics and guest data
+                  will be available inside your dashboard.
+                </p>
+
                 <div className="overflow-hidden rounded-xl border border-[#252536] bg-[#14141C]">
                   <img
                     src={DASHBOARD_PREVIEW_IMAGE}
@@ -624,6 +648,11 @@ const TestHistory = () => {
                     loading="lazy"
                   />
                 </div>
+
+                <p className="text-xs text-gray-500 mt-3">
+                  Create an event to activate full RSVP tracking and guest data
+                  collection.
+                </p>
               </div>
             </motion.div>
           </motion.div>

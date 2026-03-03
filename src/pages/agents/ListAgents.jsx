@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
 import {
   Phone,
   MessageSquare,
@@ -15,6 +14,7 @@ import {
 
 import { deleteAgentById, fetchUserAgents } from "../../api/agents";
 import useAuthUser from "../../hooks/useAuthUser";
+import { showError, showLoading, showSuccess } from "../../utils/toast";
 
 const ListAgents = () => {
   const { userId } = useAuthUser();
@@ -49,6 +49,8 @@ const ListAgents = () => {
 
     if (!shouldDelete) return;
 
+    const toastId = showLoading("Deleting template...");
+
     try {
       setDeletingId(agentId);
       setDeleteWarning(null);
@@ -58,22 +60,24 @@ const ListAgents = () => {
 
       if (payload?.success) {
         setAgents((prev) => prev.filter((item) => item.agent_id !== agentId));
-        toast.success(payload?.message || "Agent deleted");
+        dismissToast(toastId);
+        showSuccess(payload?.message || "Agent deleted");
         return;
       }
 
       if (payload?.warning) {
         setDeleteWarning(payload);
-        toast.error(payload?.message || "Agent is linked to event(s).");
+        dismissToast(toastId);
+        showError(payload?.message || "Agent is linked to event(s).");
         return;
       }
 
-      toast.error(
-        payload?.error || payload?.message || "Failed to delete agent",
-      );
+      dismissToast(toastId);
+      showError(payload?.error || payload?.message || "Failed to delete agent");
     } catch (error) {
       console.error("Failed to delete agent", error);
-      toast.error(
+      dismissToast(toastId);
+      showError(
         error?.response?.data?.error ||
           error?.response?.data?.message ||
           "Failed to delete agent",

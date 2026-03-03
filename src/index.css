@@ -1,9 +1,14 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Manrope:wght@200..800&family=Playfair:ital,opsz,wght@0,5..1200,300..900;1,5..1200,300..900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
+    --font-primary:
+      "Manrope", "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     --background: 0 0% 2%;
     --foreground: 0 0% 93%;
 
@@ -53,6 +58,11 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: var(--font-primary);
+  }
+
+  #root {
+    font-family: var(--font-primary);
   }
 
   html {
@@ -90,14 +100,23 @@
   }
 
   .gradient-border::before {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     border-radius: inherit;
     padding: 1px;
-    background: linear-gradient(135deg, hsl(188 78% 53%), hsl(263 70% 67%), hsl(188 78% 53%));
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    background: linear-gradient(
+      135deg,
+      hsl(188 78% 53%),
+      hsl(263 70% 67%),
+      hsl(188 78% 53%)
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;
@@ -106,7 +125,9 @@
   .section-reveal {
     opacity: 0;
     transform: translateY(30px);
-    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+    transition:
+      opacity 0.8s ease-out,
+      transform 0.8s ease-out;
   }
 
   .section-reveal.visible {
@@ -120,42 +141,42 @@
       linear-gradient(90deg, hsl(220 20% 14% / 0.5) 1px, transparent 1px);
     background-size: 60px 60px;
   }
-/* Global dark overrides for Tailwind utility usage across the app */
-:root {
-  color-scheme: dark;
-}
+  /* Global dark overrides for Tailwind utility usage across the app */
+  :root {
+    color-scheme: dark;
+  }
 
-.bg-white,
-.bg-gray-50,
-.bg-gray-100 {
-  background-color: #111111 !important;
-}
+  .bg-white,
+  .bg-gray-50,
+  .bg-gray-100 {
+    background-color: #111111 !important;
+  }
 
-.bg-gray-200 {
-  background-color: #1f1f1f !important;
-}
+  .bg-gray-200 {
+    background-color: #1f1f1f !important;
+  }
 
-.text-black,
-.text-gray-900,
-.text-gray-800,
-.text-gray-700 {
-  color: #ffffff !important;
-}
+  .text-black,
+  .text-gray-900,
+  .text-gray-800,
+  .text-gray-700 {
+    color: #ffffff !important;
+  }
 
-.text-gray-600,
-.text-gray-500,
-.text-gray-400 {
-  color: #d1d5db !important;
-}
+  .text-gray-600,
+  .text-gray-500,
+  .text-gray-400 {
+    color: #d1d5db !important;
+  }
 
-.border,
-.border-gray-100,
-.border-gray-200,
-.border-gray-300 {
-  border-color: #2a2a2a !important;
-}
+  .border,
+  .border-gray-100,
+  .border-gray-200,
+  .border-gray-300 {
+    border-color: #2a2a2a !important;
+  }
 
-/* .hover\:bg-gray-50:hover,
+  /* .hover\:bg-gray-50:hover,
 .hover\:bg-gray-100:hover {
   background-color: #1f1f1f !important;
 } */
