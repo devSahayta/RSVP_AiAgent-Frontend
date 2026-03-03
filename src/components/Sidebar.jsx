@@ -40,6 +40,11 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: "Events", path: "/events", icon: <Calendar size={18} /> },
     { name: "Create Event", path: "/createEvent", icon: <Plus size={18} /> },
     {
+      name: "Agents",
+      path: "/agents",
+      icon: <Bot size={18} />,
+    },
+    {
       name: "Chatbot Conversations",
       path: "/chatbot",
       icon: <MessageSquare size={18} />,
@@ -50,12 +55,6 @@ const Sidebar = ({ isOpen, onClose }) => {
       name: "Create Template",
       path: "/template/create",
       icon: <FileText size={18} />,
-    },
-
-    {
-      name: "Agents",
-      path: "/agents",
-      icon: <Bot size={18} />,
     },
   ];
 
