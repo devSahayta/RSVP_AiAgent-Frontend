@@ -244,6 +244,8 @@
     color 0.2s;
 }
 
+
+
 .dropdown-item .refresh-btn:hover {
   transform: scale(1.1);
   color: var(--text-primary);
@@ -503,4 +505,90 @@
 .dropdown-link:hover {
   background: var(--bg-tertiary);
   color: var(--text-primary);
+}
+
+
+/* Credit change pulse animation */
+.credit-change-animation {
+  animation: creditPulse 0.6s ease-in-out;
+}
+
+@keyframes creditPulse {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.15);
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Credit badge with smooth number transition */
+.credit-badge {
+  transition: all 0.3s ease;
+  display: inline-block;
+}
+
+/* Toast animation */
+.credit-toast {
+  transition: all 0.3s ease;
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.credit-toast.show {
+  animation: slideInRight 0.3s ease-out;
+}
+
+.credit-toast.hide {
+  animation: slideOutRight 0.3s ease-in;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* Enhance credit badge colors with glow effect */
+.credit-badge.red {
+  background: linear-gradient(135deg, #EF4444, #DC2626);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.credit-badge.yellow {
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.credit-badge.green {
+  background: linear-gradient(135deg, #10B981, #059669);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.credit-badge.gray {
+  background: linear-gradient(135deg, #6B7280, #4B5563);
+  box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3);
 }

@@ -215,94 +215,86 @@ if (hasConversations) {
     }
   };
 
-  const handleStartCallBatch = async () => {
-    if (!event || !event.participants?.length) return;
-    
-    // ✅ Check if user is available
-    if (!user || !user.id) {
-      console.error("❌ User not authenticated");
-      alert("Please log in to start calls");
+ const handleStartCallBatch = async () => {
+  if (!event || !event.participants?.length) return;
+  
+  if (!user || !user.id) {
+    console.error("❌ User not authenticated");
+    alert("Please log in to start calls");
+    return;
+  }
+
+  console.log("🚀 Starting batch call for user:", user.id);
+
+  setCallInProgress(true);
+  setCallResult(null);
+
+  try {
+    const res = await fetch(
+      `${import.meta.env.VITE_BACKEND_URL}/api/events/${event.id}/call-batch`, 
+      { method: 'POST' }
+    );
+
+    const data = await res.json();
+
+    // ✅ Handle 402 Insufficient Credits
+    if (res.status === 402) {
+      alert(`Insufficient Credits!\n\nRequired: ${data.estimated_credits} credits\nCurrent: ${data.current_balance} credits\nShortfall: ${data.shortfall} credits`);
+      setCallInProgress(false);
       return;
     }
 
-    console.log("🚀 Starting batch call for user:", user.id);
-
-    setCallInProgress(true);
-    setCallResult(null);
-
-    try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/events/${event.id}/call-batch`, {
-        method: 'POST',
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setCallResult({
-          success: false,
-          message: data.error || 'Failed to start batch call',
-          participantCount: 0
-        });
-        setCallInProgress(false);
-        return;
-      }
-
-      if (res.ok) {
-        // ✅ Extract batch_id from response
-      const returnedBatchId = data.batch_id || data.batch?.id || event.batch_id;
-        
-        console.log("📦 Batch ID:", returnedBatchId);
-        
-        if (returnedBatchId) {
-          setBatchId(returnedBatchId);
-        }
-
-        setCallResult({
-          success: true,
-          message: `Batch call started successfully. Calls are in progress...`,
-          participantCount: event.participants.length
-        });
-
-        setShowPopup(true);
-        
-        setTimeout(() => {
-          setShowPopup(false);
-          navigate(`/dashboard/${event.id}`, { 
-            state: { 
-              message: 'Calls in progress. Credits will be deducted automatically when calls complete.' 
-            }
-          });
-        }, 3000);
-
-        // ✅ Start polling with ElevenLabs API after 2 minutes
-        setTimeout(() => {
-          const finalBatchId = returnedBatchId || event.batch_id;
-          
-          if (!finalBatchId) {
-            console.error("❌ No batch_id available for polling");
-            alert("Error: Could not start credit monitoring. Please contact support.");
-            return;
-          }
-          
-          console.log("⏳ Starting ElevenLabs API polling...");
-          console.log("📦 Using batch_id:", finalBatchId);
-          console.log("👤 Using user_id:", user.id);
-          
-          pollBatchStatusWithElevenLabs(user.id, finalBatchId);
-        }, 180000); // 2 minutes delay
-      }
-
-    } catch (error) {
-      console.error('Error starting batch call:', error);
+    if (!res.ok) {
       setCallResult({
         success: false,
-        message: 'Failed to start batch call. Please try again.',
+        message: data.error || 'Failed to start batch call',
         participantCount: 0
       });
-    } finally {
       setCallInProgress(false);
+      return;
     }
-  };
+
+    if (res.ok) {
+      const returnedBatchId = data.batch_id || data.batch?.id || event.batch_id;
+      
+      console.log("📦 Batch ID:", returnedBatchId);
+      
+      if (returnedBatchId) {
+        setBatchId(returnedBatchId);
+      }
+
+      setCallResult({
+        success: true,
+        message: `Batch call started successfully. Calls are in progress...`,
+        participantCount: event.participants.length
+      });
+
+      setShowPopup(true);
+      
+      // ✅ Just navigate - cron handles credit deduction automatically
+      setTimeout(() => {
+        setShowPopup(false);
+        navigate(`/dashboard/${event.id}`, { 
+          state: { 
+            message: 'Calls in progress. Credits will be deducted automatically when calls complete.' 
+          }
+        });
+      }, 3000);
+
+      // ❌ REMOVED: Frontend polling - cron handles this now!
+    }
+
+  } catch (error) {
+    console.error('Error starting batch call:', error);
+    setCallResult({
+      success: false,
+      message: 'Failed to start batch call. Please try again.',
+      participantCount: 0
+    });
+  } finally {
+    setCallInProgress(false);
+  }
+};
 
   // // ✅ Redirect to dashboard when conversations exist
   // useEffect(() => {
