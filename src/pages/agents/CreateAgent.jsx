@@ -15,14 +15,242 @@ import {
   Loader2,
   Zap,
   Target,
+  Layers,
+  Wand2,
+  Plus,
+  Trash2,
+  GripVertical,
+  ToggleLeft,
+  Hash,
+  List,
+  Type,
 } from "lucide-react";
 
+// ─── Smart Field Type Config ──────────────────────────────────────────────────
+const FIELD_TYPES = [
+  {
+    value: "yes_no",
+    label: "Yes / No",
+    icon: ToggleLeft,
+    description: "Collect a yes or no answer",
+  },
+  {
+    value: "number",
+    label: "Number",
+    icon: Hash,
+    description: "Collect a numeric value",
+  },
+  // { value: "text", label: "Text", icon: Type, description: "Collect a free-text answer" },
+  {
+    value: "choice",
+    label: "Multiple Choice",
+    icon: List,
+    description: "Collect one of several options",
+  },
+];
+
+const defaultSmartField = () => ({
+  _id: Math.random().toString(36).slice(2),
+  field_key: "",
+  field_label: "",
+  field_type: "yes_no",
+  ai_question: "",
+  options: [],
+  is_required: true,
+  display_order: 0,
+});
+
+// ─── SmartFieldRow Component ──────────────────────────────────────────────────
+const SmartFieldRow = ({ field, index, onChange, onRemove, isOnly }) => {
+  const [optionInput, setOptionInput] = useState("");
+
+  const update = (key, value) =>
+    onChange(field._id, { ...field, [key]: value });
+
+  const addOption = () => {
+    const trimmed = optionInput.trim();
+    if (!trimmed) return;
+    update("options", [...(field.options || []), trimmed]);
+    setOptionInput("");
+  };
+
+  const removeOption = (i) =>
+    update(
+      "options",
+      field.options.filter((_, idx) => idx !== i),
+    );
+
+  const TypeIcon =
+    FIELD_TYPES.find((t) => t.value === field.field_type)?.icon || Type;
+
+  return (
+    <div className="group relative rounded-2xl border border-[#1F1F2E] bg-gradient-to-br from-[#0E0E14] to-[#12121A] p-5 transition-all hover:border-blue-500/30">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/20 text-blue-400 text-sm font-bold">
+            {index + 1}
+          </div>
+          <span className="text-sm font-semibold text-gray-300">
+            Smart Field
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            <span className="text-xs text-gray-400">Required</span>
+            <div
+              onClick={() => update("is_required", !field.is_required)}
+              className={`relative h-5 w-9 rounded-full transition-colors ${field.is_required ? "bg-blue-500" : "bg-[#2A2A3E]"}`}
+            >
+              <div
+                className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${field.is_required ? "translate-x-4" : "translate-x-0.5"}`}
+              />
+            </div>
+          </label>
+          {!isOnly && (
+            <button
+              onClick={() => onRemove(field._id)}
+              className="rounded-lg p-1.5 text-gray-600 transition hover:bg-red-500/10 hover:text-red-400"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Field Label */}
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold text-gray-400">
+            Field Label <span className="text-red-400">*</span>
+          </label>
+          <input
+            type="text"
+            value={field.field_label}
+            onChange={(e) => {
+              const label = e.target.value;
+              const key = label
+                .toLowerCase()
+                .replace(/\s+/g, "_")
+                .replace(/[^a-z0-9_]/g, "");
+              update("field_label", label);
+              onChange(field._id, {
+                ...field,
+                field_label: label,
+                field_key: key,
+              });
+            }}
+            placeholder="e.g., Attendance, Guest Count"
+            className="w-full rounded-xl border border-[#2A2A3E] bg-[#0A0A0F] px-4 py-3 text-sm text-white placeholder:text-gray-600 outline-none transition focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30"
+          />
+        </div>
+
+        {/* Field Type */}
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold text-gray-400">
+            Field Type <span className="text-red-400">*</span>
+          </label>
+          <div className="relative">
+            <TypeIcon
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+              size={15}
+            />
+            <select
+              value={field.field_type}
+              onChange={(e) => update("field_type", e.target.value)}
+              className="w-full appearance-none rounded-xl border border-[#2A2A3E] bg-[#0A0A0F] py-3 pl-9 pr-4 text-sm text-white outline-none transition focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30"
+            >
+              {FIELD_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* AI Question — full width */}
+        <div className="md:col-span-2">
+          <label className="mb-1.5 block text-xs font-semibold text-gray-400">
+            AI Question (what the agent will ask){" "}
+            <span className="text-red-400">*</span>
+          </label>
+          <input
+            type="text"
+            value={field.ai_question}
+            onChange={(e) => update("ai_question", e.target.value)}
+            placeholder="e.g., Will you be attending the event?"
+            className="w-full rounded-xl border border-[#2A2A3E] bg-[#0A0A0F] px-4 py-3 text-sm text-white placeholder:text-gray-600 outline-none transition focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30"
+          />
+        </div>
+
+        {/* Options — only for choice type */}
+        {field.field_type === "choice" && (
+          <div className="md:col-span-2">
+            <label className="mb-1.5 block text-xs font-semibold text-gray-400">
+              Options <span className="text-red-400">*</span>
+            </label>
+            <div className="mb-2 flex flex-wrap gap-2">
+              {(field.options || []).map((opt, i) => (
+                <span
+                  key={i}
+                  className="flex items-center gap-1.5 rounded-lg bg-blue-500/15 px-3 py-1 text-sm text-blue-300"
+                >
+                  {opt}
+                  <button
+                    onClick={() => removeOption(i)}
+                    className="text-blue-400 hover:text-red-400"
+                  >
+                    <Trash2 size={11} />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={optionInput}
+                onChange={(e) => setOptionInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addOption()}
+                placeholder="Type option and press Enter"
+                className="flex-1 rounded-xl border border-[#2A2A3E] bg-[#0A0A0F] px-4 py-2.5 text-sm text-white placeholder:text-gray-600 outline-none transition focus:border-blue-500/60"
+              />
+              <button
+                onClick={addOption}
+                className="rounded-xl bg-blue-500/20 px-4 py-2.5 text-sm text-blue-300 transition hover:bg-blue-500/30"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Auto-generated field_key preview */}
+        {field.field_key && (
+          <div className="md:col-span-2">
+            <p className="text-xs text-gray-600">
+              Field key:{" "}
+              <code className="rounded bg-[#1A1A2A] px-1.5 py-0.5 text-xs text-gray-400">
+                {field.field_key}
+              </code>
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Main CreateAgent Component ───────────────────────────────────────────────
 const CreateAgent = () => {
   const navigate = useNavigate();
   const { user } = useKindeAuth();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+
+  // "classic" | "smart_fields"
+  const [fieldMode, setFieldMode] = useState(null);
 
   const [formData, setFormData] = useState({
     agentName: "",
@@ -32,6 +260,10 @@ const CreateAgent = () => {
     knowledgeBaseContent: "",
     groomName: "",
     brideName: "",
+    // Smart fields mode
+    eventTitle: "",
+    firstMessage: "",
+    smartFields: [defaultSmartField()],
   });
 
   const [templates, setTemplates] = useState([]);
@@ -44,14 +276,10 @@ const CreateAgent = () => {
         `${import.meta.env.VITE_BACKEND_URL}/api/agent-system/templates`,
       );
       const data = await res.json();
-
       if (data.success) {
         setTemplates(data.data);
         if (data.data.length > 0) {
-          setFormData((prev) => ({
-            ...prev,
-            selectedTemplate: data.data[0],
-          }));
+          setFormData((prev) => ({ ...prev, selectedTemplate: data.data[0] }));
         }
       }
     } catch (error) {
@@ -66,22 +294,100 @@ const CreateAgent = () => {
     fetchTemplates();
   }, []);
 
+  // ─── Smart field helpers ───────────────────────────────────────────────────
+  const addSmartField = () => {
+    setFormData((prev) => ({
+      ...prev,
+      smartFields: [
+        ...prev.smartFields,
+        { ...defaultSmartField(), display_order: prev.smartFields.length },
+      ],
+    }));
+  };
+
+  const updateSmartField = (id, updated) => {
+    setFormData((prev) => ({
+      ...prev,
+      smartFields: prev.smartFields.map((f) => (f._id === id ? updated : f)),
+    }));
+  };
+
+  const removeSmartField = (id) => {
+    setFormData((prev) => ({
+      ...prev,
+      smartFields: prev.smartFields
+        .filter((f) => f._id !== id)
+        .map((f, i) => ({ ...f, display_order: i })),
+    }));
+  };
+
+  // ─── Step navigation ───────────────────────────────────────────────────────
+  // Classic: Step 1 (mode) → 2 (basic) → 3 (template) → 4 (kb) → 5 (review)
+  // Smart:   Step 1 (mode) → 2 (basic) → 3 (smart fields) → 4 (kb) → 5 (review)
+
+  const stepsClassic = [
+    { number: 1, title: "Agent Mode", icon: Layers },
+    { number: 2, title: "Basic Info", icon: Target },
+    { number: 3, title: "Template", icon: Sparkles },
+    { number: 4, title: "Knowledge Base", icon: Brain },
+    { number: 5, title: "Review", icon: CheckCircle2 },
+  ];
+
+  const stepsSmart = [
+    { number: 1, title: "Agent Mode", icon: Layers },
+    { number: 2, title: "Basic Info", icon: Target },
+    { number: 3, title: "Smart Fields", icon: Wand2 },
+    { number: 4, title: "Knowledge Base", icon: Brain },
+    { number: 5, title: "Review", icon: CheckCircle2 },
+  ];
+
+  const steps = fieldMode === "smart_fields" ? stepsSmart : stepsClassic;
+
   const handleNext = () => {
+    // Step 1: mode selection
     if (currentStep === 1) {
+      if (!fieldMode) {
+        toast.error("Please choose an agent mode to continue");
+        return;
+      }
+    }
+
+    // Step 2: basic info
+    if (currentStep === 2) {
       if (!formData.agentName.trim()) {
         toast.error("Please enter an agent name");
         return;
       }
     }
 
-    if (currentStep === 2) {
+    // Step 3 (classic): template
+    if (currentStep === 3 && fieldMode === "classic") {
       if (!formData.selectedTemplate) {
         toast.error("Please select a template");
         return;
       }
     }
 
-    if (currentStep === 3) {
+    // Step 3 (smart_fields): smart fields
+    if (currentStep === 3 && fieldMode === "smart_fields") {
+      if (!formData.eventTitle.trim()) {
+        toast.error("Please enter an event title");
+        return;
+      }
+      const invalid = formData.smartFields.find(
+        (f) =>
+          !f.field_label.trim() ||
+          !f.ai_question.trim() ||
+          (f.field_type === "choice" && (!f.options || f.options.length < 2)),
+      );
+      if (invalid) {
+        toast.error("Please fill in all required smart field details");
+        return;
+      }
+    }
+
+    // Step 4: KB
+    if (currentStep === 4) {
       if (
         !formData.knowledgeBaseName.trim() ||
         !formData.knowledgeBaseContent.trim()
@@ -89,8 +395,8 @@ const CreateAgent = () => {
         toast.error("Please fill in both knowledge base fields");
         return;
       }
-
       if (
+        fieldMode === "classic" &&
         formData.selectedTemplate?.category === "wedding" &&
         (!formData.groomName.trim() || !formData.brideName.trim())
       ) {
@@ -99,72 +405,118 @@ const CreateAgent = () => {
       }
     }
 
-    if (currentStep < 4) {
-      setCurrentStep(currentStep + 1);
-    }
+    if (currentStep < 5) setCurrentStep(currentStep + 1);
   };
 
   const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+    if (currentStep > 1) setCurrentStep(currentStep - 1);
+  };
+
+  // ─── Classic create ────────────────────────────────────────────────────────
+  const handleCreateClassic = async () => {
+    const kbRes = await fetch(
+      `${import.meta.env.VITE_BACKEND_URL}/api/knowledge-bases`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: user.id,
+          name: formData.knowledgeBaseName,
+          content: formData.knowledgeBaseContent,
+          field_mode: "classic",
+        }),
+      },
+    );
+    const kbData = await kbRes.json();
+    if (!kbData.success)
+      throw new Error(kbData.error || "Failed to create knowledge base");
+
+    let eventTitle = null;
+    if (formData.selectedTemplate?.category === "wedding") {
+      eventTitle = `Wedding of ${formData.groomName} and ${formData.brideName}`;
     }
+
+    const agentRes = await fetch(
+      `${import.meta.env.VITE_BACKEND_URL}/api/agent-system/create`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: user.id,
+          template_id: formData.selectedTemplate.template_id,
+          agent_name: formData.agentName,
+          agent_description: formData.agentDescription,
+          knowledge_base_id: kbData.data.id,
+          event_title: eventTitle,
+          field_mode: "classic",
+        }),
+      },
+    );
+    const agentData = await agentRes.json();
+    if (!agentData.success)
+      throw new Error(agentData.error || "Failed to create agent");
+    return agentData;
+  };
+
+  // ─── Smart fields create ───────────────────────────────────────────────────
+  const handleCreateSmartFields = async () => {
+    const kbRes = await fetch(
+      `${import.meta.env.VITE_BACKEND_URL}/api/knowledge-bases`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: user.id,
+          name: formData.knowledgeBaseName,
+          content: formData.knowledgeBaseContent,
+          field_mode: "smart_fields",
+        }),
+      },
+    );
+    const kbData = await kbRes.json();
+    if (!kbData.success)
+      throw new Error(kbData.error || "Failed to create knowledge base");
+
+    // Clean smart_fields — remove _id helper
+    const cleanFields = formData.smartFields.map(({ _id, ...rest }, i) => ({
+      ...rest,
+      display_order: i,
+    }));
+
+    const agentRes = await fetch(
+      `${import.meta.env.VITE_BACKEND_URL}/api/agent-system/create`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: user.id,
+          agent_name: formData.agentName,
+          agent_description: formData.agentDescription,
+          knowledge_base_id: kbData.data.id,
+          event_title: formData.eventTitle,
+          first_message:
+            formData.firstMessage ||
+            "Hello {{guest_name}}! I'm calling on behalf of {{event_name}}. I'm here to confirm your RSVP and I'm also happy to answer any questions you have about the event. Is now a good time?",
+          field_mode: "smart_fields",
+          smart_fields: cleanFields,
+        }),
+      },
+    );
+    const agentData = await agentRes.json();
+    if (!agentData.success)
+      throw new Error(agentData.error || "Failed to create agent");
+    return agentData;
   };
 
   const handleCreateAgent = async () => {
     try {
       setLoading(true);
-
-      const kbRes = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/knowledge-bases`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            user_id: user.id,
-            name: formData.knowledgeBaseName,
-            content: formData.knowledgeBaseContent,
-          }),
-        },
-      );
-
-      const kbData = await kbRes.json();
-
-      if (!kbData.success) {
-        throw new Error(kbData.error || "Failed to create knowledge base");
-      }
-
-      const knowledgeBaseId = kbData.data.id;
-
-      let eventTitle = null;
-
-      if (formData.selectedTemplate?.category === "wedding") {
-        eventTitle = `Wedding of ${formData.groomName} and ${formData.brideName}`;
-      }
-
-      const agentRes = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/agent-system/create`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            user_id: user.id,
-            template_id: formData.selectedTemplate.template_id,
-            agent_name: formData.agentName,
-            agent_description: formData.agentDescription,
-            knowledge_base_id: knowledgeBaseId,
-            event_title: eventTitle,
-          }),
-        },
-      );
-
-      const agentData = await agentRes.json();
-
-      if (!agentData.success) {
-        throw new Error(agentData.error || "Failed to create agent");
-      }
-
+      const result =
+        fieldMode === "classic"
+          ? await handleCreateClassic()
+          : await handleCreateSmartFields();
       toast.success("Agent created successfully!");
-      navigate(`/agents/${agentData.data.agent_id}`);
+      navigate(`/agents/${result.data.agent_id}`);
     } catch (error) {
       console.error("Error creating agent:", error);
       toast.error(error.message || "Failed to create agent");
@@ -173,35 +525,29 @@ const CreateAgent = () => {
     }
   };
 
-  const steps = [
-    { number: 1, title: "Basic Info", icon: Target },
-    { number: 2, title: "Select Template", icon: Sparkles },
-    { number: 3, title: "Knowledge Base", icon: Brain },
-    { number: 4, title: "Review & Create", icon: CheckCircle2 },
-  ];
-
+  // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0A0A0B] via-[#0B0B0C] to-[#0A0A0B] text-white p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-16 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500/10 to-teal-500/10 border border-blue-500/20 rounded-full mb-6 backdrop-blur-sm">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="mb-12 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500/10 to-teal-500/10 border border-blue-500/20 rounded-full mb-6">
             <Zap className="w-4 h-4 text-blue-400" />
             <span className="text-sm font-medium text-blue-300">
               AI Agent Builder
             </span>
           </div>
-
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-br from-white via-blue-50 to-blue-100 bg-clip-text text-transparent leading-tight">
+          <h1 className="text-3xl md:text-4xl font-bold mb-3 bg-gradient-to-br from-white via-blue-50 to-blue-100 bg-clip-text text-transparent">
             Create Your AI Agent
           </h1>
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto leading-relaxed">
-            Build your intelligent assistant in 4 simple steps. Powered by
-            advanced AI technology.
+          <p className="text-gray-400 max-w-xl mx-auto">
+            Build your intelligent RSVP assistant in a few simple steps.
           </p>
         </div>
 
-        <div className="mb-16">
-          <div className="relative flex items-center justify-between max-w-4xl mx-auto">
+        {/* Step progress */}
+        <div className="mb-10 overflow-x-auto">
+          <div className="relative flex items-center justify-between min-w-[400px]">
             {steps.map((step, index) => {
               const Icon = step.icon;
               const isActive = currentStep === step.number;
@@ -212,30 +558,23 @@ const CreateAgent = () => {
                   <div className="flex flex-col items-center flex-1 relative z-10">
                     <div
                       className={`
-                        w-14 h-14 rounded-2xl flex items-center justify-center
-                        transition-all duration-500 mb-3 relative
-                        ${isCompleted ? "bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/30 scale-100" : ""}
-                        ${isActive ? "bg-gradient-to-br from-blue-500 to-blue-600 scale-110 shadow-xl shadow-blue-500/50 animate-pulse-slow" : ""}
-                        ${!isActive && !isCompleted ? "bg-gradient-to-br from-[#16161A] to-[#1A1A1E] border-2 border-[#26262E]" : ""}
+                        w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 mb-2
+                        ${isCompleted ? "bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/25" : ""}
+                        ${isActive ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/40 scale-110" : ""}
+                        ${!isActive && !isCompleted ? "bg-[#16161A] border border-[#26262E]" : ""}
                       `}
                     >
                       {isCompleted ? (
-                        <Check className="w-6 h-6 text-white" strokeWidth={3} />
+                        <Check className="w-5 h-5 text-white" strokeWidth={3} />
                       ) : (
                         <Icon
-                          className={`w-6 h-6 ${isActive ? "text-white" : "text-gray-600"}`}
+                          className={`w-5 h-5 ${isActive ? "text-white" : "text-gray-600"}`}
                         />
                       )}
-
-                      {isActive && (
-                        <div className="absolute inset-0 rounded-2xl bg-blue-500/30 animate-ping-slow"></div>
-                      )}
                     </div>
-
                     <span
-                      className={`
-                        text-sm font-semibold text-center transition-all duration-300
-                        ${isActive ? "text-white scale-105" : ""}
+                      className={`text-xs font-semibold text-center transition-all hidden sm:block
+                        ${isActive ? "text-white" : ""}
                         ${isCompleted ? "text-emerald-400" : ""}
                         ${!isActive && !isCompleted ? "text-gray-600" : ""}
                       `}
@@ -243,21 +582,15 @@ const CreateAgent = () => {
                       {step.title}
                     </span>
                   </div>
-
                   {index < steps.length - 1 && (
-                    <div className="flex-1 h-1 mx-4 -mt-12 relative">
-                      <div className="h-full bg-[#1A1A1E] rounded-full overflow-hidden">
-                        <div
-                          className={`
-                            h-full transition-all duration-700 ease-out rounded-full
-                            ${
-                              currentStep > step.number
-                                ? "w-full bg-gradient-to-r from-emerald-500 to-teal-500"
-                                : "w-0 bg-gradient-to-r from-blue-500 to-blue-600"
-                            }
-                          `}
-                        />
-                      </div>
+                    <div className="flex-1 h-0.5 mx-2 -mt-6 bg-[#1A1A1E] rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-500 rounded-full ${
+                          currentStep > step.number
+                            ? "w-full bg-gradient-to-r from-emerald-500 to-teal-500"
+                            : "w-0"
+                        }`}
+                      />
                     </div>
                   )}
                 </div>
@@ -266,604 +599,707 @@ const CreateAgent = () => {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#12121A] via-[#14141C] to-[#12121A] rounded-3xl p-8 md:p-12 border border-[#1F1F2E] min-h-[550px] shadow-2xl backdrop-blur-sm relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-teal-500/5 pointer-events-none"></div>
+        {/* Card */}
+        <div className="bg-gradient-to-br from-[#12121A] via-[#14141C] to-[#12121A] rounded-2xl p-6 md:p-10 border border-[#1F1F2E] shadow-2xl">
+          {/* ── STEP 1: Mode Selection ── */}
+          {currentStep === 1 && (
+            <div className="space-y-8">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-3">
+                  <Layers className="w-4 h-4 text-blue-400" />
+                  <span className="text-xs font-medium text-blue-300">
+                    Step 1 of {steps.length}
+                  </span>
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  Choose Agent Mode
+                </h2>
+                <p className="text-gray-400">
+                  Classic mode uses a pre-built template. Custom mode lets you
+                  define exactly what information the agent collects.
+                </p>
+              </div>
 
-          <div className="relative z-10">
-            {currentStep === 1 && (
-              <div className="space-y-8 animate-slideIn">
-                <div className="space-y-3">
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-2">
-                    <FileText className="w-4 h-4 text-blue-400" />
-                    <span className="text-xs font-medium text-blue-300">
-                      Step 1 of 4
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* Classic */}
+                <button
+                  onClick={() => setFieldMode("classic")}
+                  className={`group relative rounded-2xl border-2 p-6 text-left transition-all duration-200
+                    ${
+                      fieldMode === "classic"
+                        ? "border-blue-500/60 bg-blue-500/10 shadow-lg shadow-blue-500/10"
+                        : "border-[#1F1F2E] bg-[#0E0E14] hover:border-blue-500/30"
+                    }`}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/20">
+                      <Layers className="w-6 h-6 text-blue-400" />
+                    </div>
+                    <div
+                      className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all
+                        ${fieldMode === "classic" ? "border-blue-500 bg-blue-500" : "border-[#3A3A4E]"}`}
+                    >
+                      {fieldMode === "classic" && (
+                        <Check
+                          className="w-3.5 h-3.5 text-white"
+                          strokeWidth={3}
+                        />
+                      )}
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-2">
+                    Classic Template
+                  </h3>
+                  <p className="text-sm text-gray-400 leading-relaxed mb-4">
+                    Choose from pre-built wedding, corporate, or event RSVP
+                    templates with ready-made flows.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      "Wedding RSVP",
+                      "Corporate Events",
+                      "Pre-built Flows",
+                    ].map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-lg bg-[#1A1A2A] px-2.5 py-1 text-xs text-gray-400 border border-[#2A2A3E]"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </button>
+
+                {/* Smart Fields */}
+                <button
+                  onClick={() => setFieldMode("smart_fields")}
+                  className={`group relative rounded-2xl border-2 p-6 text-left transition-all duration-200
+                    ${
+                      fieldMode === "smart_fields"
+                        ? "border-teal-500/60 bg-teal-500/10 shadow-lg shadow-teal-500/10"
+                        : "border-[#1F1F2E] bg-[#0E0E14] hover:border-teal-500/30"
+                    }`}
+                >
+                  <div className="absolute top-4 right-4 rounded-full bg-gradient-to-r from-teal-500/20 to-blue-500/20 border border-teal-500/30 px-2.5 py-0.5">
+                    <span className="text-xs font-semibold text-teal-300">
+                      New
                     </span>
                   </div>
-                  <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                    Let's start with the basics
-                  </h2>
-                  <p className="text-gray-400 text-lg leading-relaxed">
-                    Give your AI agent a memorable name and describe its purpose
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500/20 to-teal-600/10 border border-teal-500/20">
+                      <Wand2 className="w-6 h-6 text-teal-400" />
+                    </div>
+                    <div
+                      className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all mt-7
+                        ${fieldMode === "smart_fields" ? "border-teal-500 bg-teal-500" : "border-[#3A3A4E]"}`}
+                    >
+                      {fieldMode === "smart_fields" && (
+                        <Check
+                          className="w-3.5 h-3.5 text-white"
+                          strokeWidth={3}
+                        />
+                      )}
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-2">
+                    Custom Smart Fields
+                  </h3>
+                  <p className="text-sm text-gray-400 leading-relaxed mb-4">
+                    Define exactly which questions your agent asks and how it
+                    collects them — full control.
                   </p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      "Custom Questions",
+                      "Any Event Type",
+                      "Flexible Fields",
+                    ].map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-lg bg-[#1A1A2A] px-2.5 py-1 text-xs text-gray-400 border border-[#2A2A3E]"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </button>
+              </div>
+
+              {fieldMode && (
+                <div
+                  className={`rounded-xl border p-4 text-sm ${
+                    fieldMode === "classic"
+                      ? "border-blue-500/20 bg-blue-500/5 text-blue-200"
+                      : "border-teal-500/20 bg-teal-500/5 text-teal-200"
+                  }`}
+                >
+                  {fieldMode === "classic"
+                    ? "✓ You'll choose a pre-built template and the agent will use its built-in question flow."
+                    : "✓ You'll define your own fields — the AI will ask questions based on exactly what you specify."}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── STEP 2: Basic Info ── */}
+          {currentStep === 2 && (
+            <div className="space-y-7">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-3">
+                  <Target className="w-4 h-4 text-blue-400" />
+                  <span className="text-xs font-medium text-blue-300">
+                    Step 2 of {steps.length}
+                  </span>
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  Basic Information
+                </h2>
+                <p className="text-gray-400">
+                  Give your AI agent a name and a brief description.
+                </p>
+              </div>
+
+              <div className="space-y-5">
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-gray-300">
+                    Agent Name <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.agentName}
+                    onChange={(e) =>
+                      setFormData({ ...formData, agentName: e.target.value })
+                    }
+                    placeholder="e.g., Sharma Wedding Agent, Annual Gala RSVP..."
+                    className="w-full rounded-xl border border-[#2A2A3E] bg-[#0A0A0F] px-5 py-4 text-white placeholder:text-gray-600 outline-none transition focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30"
+                  />
                 </div>
 
-                <div className="space-y-6 mt-8">
-                  <div className="group">
-                    <label className="block text-sm font-semibold mb-3 text-gray-300">
-                      Agent Name <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.agentName}
-                      onChange={(e) =>
-                        setFormData({ ...formData, agentName: e.target.value })
-                      }
-                      placeholder="e.g., Wedding RSVP Bot, Event Assistant..."
-                      className="w-full px-5 py-4 bg-[#0A0A0F] border border-white/5 rounded-xl focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/60 outline-none transition-all placeholder:text-gray-500 hover:border-white/10 text-white"
-                    />
-                  </div>
-
-                  <div className="group">
-                    <label className="block text-sm font-semibold mb-3 text-gray-300">
-                      Description{" "}
-                      <span className="text-gray-500 font-normal">
-                        (Optional)
-                      </span>
-                    </label>
-                    <textarea
-                      value={formData.agentDescription}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          agentDescription: e.target.value,
-                        })
-                      }
-                      placeholder="Briefly describe what this agent will help with..."
-                      rows={5}
-                      className="w-full px-5 py-4 bg-[#0A0A0F] border-2 border-[#1F1F2E] rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all resize-none placeholder:text-gray-600 hover:border-[#2A2A3E] group-hover:border-[#2A2A3E] text-white leading-relaxed"
-                    />
-                  </div>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-gray-300">
+                    Description{" "}
+                    <span className="text-gray-500 font-normal">
+                      (optional)
+                    </span>
+                  </label>
+                  <textarea
+                    value={formData.agentDescription}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        agentDescription: e.target.value,
+                      })
+                    }
+                    placeholder="Briefly describe what this agent will help with..."
+                    rows={4}
+                    className="w-full rounded-xl border border-[#2A2A3E] bg-[#0A0A0F] px-5 py-4 text-white placeholder:text-gray-600 outline-none transition resize-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30"
+                  />
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {currentStep === 2 && (
-              <div className="space-y-8 animate-slideIn">
-                <div className="space-y-3">
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-2">
-                    <Sparkles className="w-4 h-4 text-blue-400" />
-                    <span className="text-xs font-medium text-blue-300">
-                      Step 2 of 4
-                    </span>
-                  </div>
-                  <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                    Choose your agent template
-                  </h2>
-                  <p className="text-gray-400 text-lg leading-relaxed">
-                    Select a pre-configured template optimized for your use case
-                  </p>
+          {/* ── STEP 3 (Classic): Template ── */}
+          {currentStep === 3 && fieldMode === "classic" && (
+            <div className="space-y-7">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-3">
+                  <Sparkles className="w-4 h-4 text-blue-400" />
+                  <span className="text-xs font-medium text-blue-300">
+                    Step 3 of {steps.length}
+                  </span>
                 </div>
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  Choose a Template
+                </h2>
+                <p className="text-gray-400">
+                  Select a pre-configured template optimized for your use case.
+                </p>
+              </div>
 
-                {loadingTemplates ? (
-                  <div className="flex flex-col items-center justify-center py-20">
-                    <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-4" />
-                    <p className="text-gray-400">Loading templates...</p>
-                  </div>
-                ) : (
-                  <div className="grid gap-5 mt-8">
-                    {templates.map((template) => {
-                      const config =
-                        typeof template.config === "string"
-                          ? JSON.parse(template.config)
-                          : template.config;
+              {loadingTemplates ? (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <Loader2 className="w-9 h-9 animate-spin text-blue-500 mb-4" />
+                  <p className="text-gray-400">Loading templates...</p>
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {templates.map((template) => {
+                    const config =
+                      typeof template.config === "string"
+                        ? JSON.parse(template.config)
+                        : template.config;
+                    const isSelected =
+                      formData.selectedTemplate?.template_id ===
+                      template.template_id;
 
-                      const isSelected =
-                        formData.selectedTemplate?.template_id ===
-                        template.template_id;
-
-                      return (
-                        <div
-                          key={template.template_id}
-                          onClick={() =>
-                            setFormData({
-                              ...formData,
-                              selectedTemplate: template,
-                            })
-                          }
-                          className={`
-                            group relative p-6 rounded-2xl border-2 cursor-pointer transition-all duration-300
-                            ${
-                              isSelected
-                                ? "border-blue-500/60 bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent shadow-xl shadow-blue-500/10 scale-[1.02]"
-                                : "border-[#1F1F2E] bg-gradient-to-br from-[#14141C] to-[#16161E] hover:border-blue-500/30 hover:shadow-lg hover:scale-[1.01]"
-                            }
-                          `}
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 via-transparent to-teal-500/0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-
-                          <div className="relative">
-                            <div className="flex items-start justify-between mb-5">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-3">
-                                  <h3 className="text-2xl font-bold text-white">
-                                    {template.name}
-                                  </h3>
-                                  {template.category && (
-                                    <span className="px-3 py-1 text-xs font-semibold bg-gradient-to-r from-teal-500/20 to-blue-500/20 text-teal-300 border border-teal-500/30 rounded-full">
-                                      {template.category}
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-gray-400 leading-relaxed">
-                                  {template.description}
-                                </p>
-                              </div>
-
-                              <div
-                                className={`
-                                  w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ml-4
-                                  ${
-                                    isSelected
-                                      ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/30 scale-110"
-                                      : "bg-[#1A1A1E] border-2 border-[#2A2A3E] group-hover:border-blue-500/30"
-                                  }
-                                `}
-                              >
-                                {isSelected && (
-                                  <Check
-                                    className="w-4 h-4 text-white"
-                                    strokeWidth={3}
-                                  />
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex flex-wrap gap-2 mb-5">
-                              {config.capabilities?.includes("voice") && (
-                                <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#1A1A1E] to-[#16161C] border border-[#2A2A3E] rounded-xl text-sm font-medium hover:border-blue-500/30 transition-all">
-                                  <Phone className="w-4 h-4 text-blue-400" />
-                                  <span>Voice Calls</span>
-                                </div>
-                              )}
-                              {config.capabilities?.includes("chat") && (
-                                <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#1A1A1E] to-[#16161C] border border-[#2A2A3E] rounded-xl text-sm font-medium hover:border-blue-500/30 transition-all">
-                                  <MessageSquare className="w-4 h-4 text-teal-400" />
-                                  <span>WhatsApp Chat</span>
-                                </div>
-                              )}
-                              {config.capabilities?.includes(
-                                "document_collection",
-                              ) && (
-                                <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#1A1A1E] to-[#16161C] border border-[#2A2A3E] rounded-xl text-sm font-medium hover:border-blue-500/30 transition-all">
-                                  <FileText className="w-4 h-4 text-emerald-400" />
-                                  <span>Document Collection</span>
-                                </div>
+                    return (
+                      <div
+                        key={template.template_id}
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            selectedTemplate: template,
+                          })
+                        }
+                        className={`relative cursor-pointer rounded-2xl border-2 p-5 transition-all duration-200
+                          ${
+                            isSelected
+                              ? "border-blue-500/60 bg-blue-500/8 shadow-lg shadow-blue-500/10"
+                              : "border-[#1F1F2E] bg-[#0E0E14] hover:border-blue-500/30"
+                          }`}
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <div className="flex items-center gap-3 mb-1">
+                              <h3 className="text-lg font-bold text-white">
+                                {template.name}
+                              </h3>
+                              {template.category && (
+                                <span className="px-2.5 py-0.5 text-xs font-semibold bg-teal-500/15 text-teal-300 border border-teal-500/25 rounded-full">
+                                  {template.category}
+                                </span>
                               )}
                             </div>
-
+                            <p className="text-sm text-gray-400">
+                              {template.description}
+                            </p>
+                          </div>
+                          <div
+                            className={`h-6 w-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ml-4 transition-all
+                              ${isSelected ? "border-blue-500 bg-blue-500" : "border-[#3A3A4E]"}`}
+                          >
                             {isSelected && (
-                              <div className="mt-6 pt-6 border-t border-[#2A2A3E] space-y-5 animate-slideIn">
-                                {config.how_it_works?.voice && (
-                                  <div className="bg-gradient-to-r from-blue-500/5 to-transparent p-5 rounded-xl border border-blue-500/10">
-                                    <h4 className="font-bold mb-3 flex items-center gap-2 text-white">
-                                      <Phone className="w-5 h-5 text-blue-400" />
-                                      How Voice Agent Works
-                                    </h4>
-                                    <ul className="space-y-2">
-                                      {config.how_it_works.voice.map(
-                                        (item, idx) => (
-                                          <li
-                                            key={idx}
-                                            className="flex items-start gap-3 text-sm text-gray-300"
-                                          >
-                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2 flex-shrink-0"></div>
-                                            <span className="leading-relaxed">
-                                              {item}
-                                            </span>
-                                          </li>
-                                        ),
-                                      )}
-                                    </ul>
-                                  </div>
-                                )}
-
-                                {config.how_it_works?.chat && (
-                                  <div className="bg-gradient-to-r from-teal-500/5 to-transparent p-5 rounded-xl border border-teal-500/10">
-                                    <h4 className="font-bold mb-3 flex items-center gap-2 text-white">
-                                      <MessageSquare className="w-5 h-5 text-teal-400" />
-                                      How Chat Agent Works
-                                    </h4>
-                                    <ul className="space-y-2">
-                                      {config.how_it_works.chat.map(
-                                        (item, idx) => (
-                                          <li
-                                            key={idx}
-                                            className="flex items-start gap-3 text-sm text-gray-300"
-                                          >
-                                            <div className="w-1.5 h-1.5 rounded-full bg-teal-400 mt-2 flex-shrink-0"></div>
-                                            <span className="leading-relaxed">
-                                              {item}
-                                            </span>
-                                          </li>
-                                        ),
-                                      )}
-                                    </ul>
-                                  </div>
-                                )}
-
-                                {config.features && (
-                                  <div className="bg-gradient-to-r from-emerald-500/5 to-transparent p-5 rounded-xl border border-emerald-500/10 space-y-5">
-                                    <h4 className="font-bold mb-3 text-white">
-                                      Features Included
-                                    </h4>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                      {Object.entries(config.features).map(
-                                        ([key, value]) =>
-                                          value && (
-                                            <div
-                                              key={key}
-                                              className="flex items-center gap-2 text-sm text-gray-300"
-                                            >
-                                              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                                              <span className="capitalize">
-                                                {key.replace(/_/g, " ")}
-                                              </span>
-                                            </div>
-                                          ),
-                                      )}
-                                    </div>
-
-                                    {/* 🖼️ Template Preview Image (NEW) */}
-                                    {template.preview_image_url && (
-                                      <div className="mt-4 pt-4 border-t border-[#2A2A3E]">
-                                        <p className="text-sm text-gray-400 mb-3 font-medium">
-                                          Template Preview
-                                        </p>
-
-                                        <div className="relative group rounded-xl overflow-hidden border border-[#1F1F2E] bg-[#0A0A0F]">
-                                          <img
-                                            src={template.preview_image_url}
-                                            alt={`${template.name} preview`}
-                                            className="w-full h-auto object-cover transition-all duration-500 group-hover:scale-[1.02]"
-                                            loading="lazy"
-                                          />
-
-                                          {/* subtle overlay like Vercel */}
-                                          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-60 pointer-events-none"></div>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
+                              <Check
+                                className="w-3.5 h-3.5 text-white"
+                                strokeWidth={3}
+                              />
                             )}
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
 
-            {currentStep === 3 && (
-              <div className="space-y-8 animate-slideIn">
-                <div className="space-y-3">
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-2">
-                    <Brain className="w-4 h-4 text-blue-400" />
-                    <span className="text-xs font-medium text-blue-300">
-                      Step 3 of 4
+                        <div className="flex flex-wrap gap-2">
+                          {config?.capabilities?.includes("voice") && (
+                            <div className="flex items-center gap-1.5 rounded-lg bg-[#1A1A2A] border border-[#2A2A3E] px-3 py-1 text-xs">
+                              <Phone className="w-3.5 h-3.5 text-blue-400" />
+                              <span className="text-gray-300">Voice</span>
+                            </div>
+                          )}
+                          {config?.capabilities?.includes("chat") && (
+                            <div className="flex items-center gap-1.5 rounded-lg bg-[#1A1A2A] border border-[#2A2A3E] px-3 py-1 text-xs">
+                              <MessageSquare className="w-3.5 h-3.5 text-teal-400" />
+                              <span className="text-gray-300">Chat</span>
+                            </div>
+                          )}
+                          {config?.capabilities?.includes(
+                            "document_collection",
+                          ) && (
+                            <div className="flex items-center gap-1.5 rounded-lg bg-[#1A1A2A] border border-[#2A2A3E] px-3 py-1 text-xs">
+                              <FileText className="w-3.5 h-3.5 text-emerald-400" />
+                              <span className="text-gray-300">Docs</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {isSelected && template.preview_image_url && (
+                          <div className="mt-4 pt-4 border-t border-[#1F1F2E]">
+                            <img
+                              src={template.preview_image_url}
+                              alt={`${template.name} preview`}
+                              className="w-full h-auto rounded-xl object-cover"
+                              loading="lazy"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── STEP 3 (Smart Fields) ── */}
+          {currentStep === 3 && fieldMode === "smart_fields" && (
+            <div className="space-y-7">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-teal-500/10 border border-teal-500/20 rounded-lg mb-3">
+                  <Wand2 className="w-4 h-4 text-teal-400" />
+                  <span className="text-xs font-medium text-teal-300">
+                    Step 3 of {steps.length}
+                  </span>
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  Define Smart Fields
+                </h2>
+                <p className="text-gray-400">
+                  Tell the agent exactly what to ask. Each field becomes one
+                  question in the conversation.
+                </p>
+              </div>
+
+              {/* Event config */}
+              <div className="grid gap-4 md:grid-cols-2 p-5 rounded-2xl border border-[#1F1F2E] bg-[#0E0E14]">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-400">
+                    Event Title <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.eventTitle}
+                    onChange={(e) =>
+                      setFormData({ ...formData, eventTitle: e.target.value })
+                    }
+                    placeholder="e.g., Sharma Wedding, Q3 Annual Gala"
+                    className="w-full rounded-xl border border-[#2A2A3E] bg-[#0A0A0F] px-4 py-3 text-sm text-white placeholder:text-gray-600 outline-none transition focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-400">
+                    Agent First Message{" "}
+                    <span className="text-gray-500 font-normal">
+                      (optional)
                     </span>
-                  </div>
-                  <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                    Add Knowledge Base
-                  </h2>
-                  <p className="text-gray-400 text-lg leading-relaxed">
-                    Provide information your agent will use to answer questions
-                    accurately
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.firstMessage}
+                    onChange={(e) =>
+                      setFormData({ ...formData, firstMessage: e.target.value })
+                    }
+                    placeholder="Hello {{guest_name}}! I'm calling on behalf of {{event_name}}. I'm here to confirm your RSVP and I'm also happy to answer any questions you have about the event. Is now a good time?"
+                    className="w-full rounded-xl border border-[#2A2A3E] bg-[#0A0A0F] px-4 py-3 text-sm text-white placeholder:text-gray-600 outline-none transition focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30"
+                  />
+                  <p className="mt-1.5 text-xs text-gray-600">
+                    Use{" "}
+                    <code className="text-teal-500/80">{`{{guest_name}}`}</code>{" "}
+                    and{" "}
+                    <code className="text-teal-500/80">{`{{event_name}}`}</code>{" "}
+                    as dynamic placeholders.
                   </p>
                 </div>
+              </div>
 
-                {formData.selectedTemplate?.category === "wedding" && (
-                  <div className="space-y-6 mt-6">
-                    <div className="bg-gradient-to-r from-pink-500/5 to-transparent p-5 rounded-xl border border-pink-500/10">
-                      <h4 className="text-white font-bold mb-4 text-lg">
-                        Wedding Details
-                      </h4>
+              {/* Fields list */}
+              <div className="space-y-4">
+                {formData.smartFields.map((field, index) => (
+                  <SmartFieldRow
+                    key={field._id}
+                    field={field}
+                    index={index}
+                    onChange={updateSmartField}
+                    onRemove={removeSmartField}
+                    isOnly={formData.smartFields.length === 1}
+                  />
+                ))}
+              </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div>
-                          <label className="block text-sm font-semibold mb-2 text-gray-300">
-                            Groom Name <span className="text-red-400">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.groomName}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                groomName: e.target.value,
-                              })
-                            }
-                            placeholder="e.g., Ajay"
-                            className="w-full px-5 py-4 bg-[#0A0A0F] border-2 border-[#1F1F2E] rounded-xl focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500 outline-none transition-all text-white"
-                          />
-                        </div>
+              <button
+                onClick={addSmartField}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#2A2A3E] py-4 text-sm font-medium text-gray-400 transition hover:border-teal-500/40 hover:text-teal-300 hover:bg-teal-500/5"
+              >
+                <Plus size={16} />
+                Add Another Field
+              </button>
 
-                        <div>
-                          <label className="block text-sm font-semibold mb-2 text-gray-300">
-                            Bride Name <span className="text-red-400">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.brideName}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                brideName: e.target.value,
-                              })
-                            }
-                            placeholder="e.g., Pooja"
-                            className="w-full px-5 py-4 bg-[#0A0A0F] border-2 border-[#1F1F2E] rounded-xl focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500 outline-none transition-all text-white"
-                          />
-                        </div>
-                      </div>
+              <div className="rounded-xl border border-teal-500/15 bg-teal-500/5 p-4 flex gap-3">
+                <Sparkles className="w-4 h-4 text-teal-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-gray-300 leading-relaxed">
+                  <span className="font-semibold text-white">
+                    How it works:
+                  </span>{" "}
+                  Each field you define becomes a question the AI voice agent
+                  will ask conversationally. Required fields are always asked;
+                  optional ones are skipped if the guest seems busy.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ── STEP 4: Knowledge Base ── */}
+          {currentStep === 4 && (
+            <div className="space-y-7">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-3">
+                  <Brain className="w-4 h-4 text-blue-400" />
+                  <span className="text-xs font-medium text-blue-300">
+                    Step 4 of {steps.length}
+                  </span>
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  Add Knowledge Base
+                </h2>
+                <p className="text-gray-400">
+                  Provide information your agent will reference when guests ask
+                  questions.
+                </p>
+              </div>
+
+              {/* Wedding-specific fields */}
+              {fieldMode === "classic" &&
+                formData.selectedTemplate?.category === "wedding" && (
+                  <div className="grid md:grid-cols-2 gap-4 p-5 rounded-2xl border border-pink-500/20 bg-pink-500/5">
+                    <div>
+                      <label className="mb-1.5 block text-sm font-semibold text-gray-300">
+                        Groom Name <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.groomName}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            groomName: e.target.value,
+                          })
+                        }
+                        placeholder="e.g., Ajay"
+                        className="w-full rounded-xl border border-[#2A2A3E] bg-[#0A0A0F] px-4 py-3 text-white placeholder:text-gray-600 outline-none transition focus:border-pink-500/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-semibold text-gray-300">
+                        Bride Name <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.brideName}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            brideName: e.target.value,
+                          })
+                        }
+                        placeholder="e.g., Pooja"
+                        className="w-full rounded-xl border border-[#2A2A3E] bg-[#0A0A0F] px-4 py-3 text-white placeholder:text-gray-600 outline-none transition focus:border-pink-500/50"
+                      />
                     </div>
                   </div>
                 )}
 
-                <div className="space-y-6 mt-8">
-                  <div className="group">
-                    <label className="block text-sm font-semibold mb-3 text-gray-300">
-                      Knowledge Base Name{" "}
-                      <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.knowledgeBaseName}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          knowledgeBaseName: e.target.value,
-                        })
-                      }
-                      placeholder="e.g., Wedding Event Details, Company Info..."
-                      className="w-full px-5 py-4 bg-[#0A0A0F] border-2 border-[#1F1F2E] rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all placeholder:text-gray-600 hover:border-[#2A2A3E] group-hover:border-[#2A2A3E] text-white"
-                    />
-                  </div>
-
-                  <div className="group">
-                    <label className="block text-sm font-semibold mb-3 text-gray-300">
-                      Knowledge Base Content{" "}
-                      <span className="text-red-400">*</span>
-                    </label>
-                    <textarea
-                      value={formData.knowledgeBaseContent}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          knowledgeBaseContent: e.target.value,
-                        })
-                      }
-                      placeholder={`Add event details, venue information, schedule, FAQs...\n\nExample:\nVenue: Grand Palace Hotel\nDate: December 20-21, 2025\nDress Code: Formal\n\nSchedule:\n- Day 1: Welcome Lunch at 1 PM\n- Day 1: Sangeet at 7 PM\n- Day 2: Wedding Ceremony at 6 PM`}
-                      rows={14}
-                      className="w-full px-5 py-4 bg-[#0A0A0F] border-2 border-[#1F1F2E] rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all resize-none font-mono text-sm placeholder:text-gray-600 hover:border-[#2A2A3E] group-hover:border-[#2A2A3E] text-white leading-relaxed"
-                    />
-                    <div className="mt-3 p-4 bg-blue-500/5 border border-blue-500/10 rounded-xl flex items-start gap-3">
-                      <Sparkles className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                      <p className="text-sm text-gray-300 leading-relaxed">
-                        <span className="font-semibold text-white">
-                          Pro Tip:
-                        </span>{" "}
-                        Include venue details, dates, schedule, dress codes,
-                        FAQs, and any other information guests might ask about.
-                        The more detailed, the better your agent will perform.
-                      </p>
-                    </div>
+              <div className="space-y-5">
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-gray-300">
+                    Knowledge Base Name <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.knowledgeBaseName}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        knowledgeBaseName: e.target.value,
+                      })
+                    }
+                    placeholder="e.g., Sharma Wedding Details, Company Event Info"
+                    className="w-full rounded-xl border border-[#2A2A3E] bg-[#0A0A0F] px-5 py-4 text-white placeholder:text-gray-600 outline-none transition focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-gray-300">
+                    Knowledge Base Content{" "}
+                    <span className="text-red-400">*</span>
+                  </label>
+                  <textarea
+                    value={formData.knowledgeBaseContent}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        knowledgeBaseContent: e.target.value,
+                      })
+                    }
+                    placeholder={`Add event details, venue info, schedule, FAQs...\n\nExample:\nVenue: Grand Palace Hotel\nDate: December 20-21, 2025\nDress Code: Formal\n\nSchedule:\n- Day 1: Welcome Lunch at 1 PM\n- Day 2: Wedding Ceremony at 6 PM`}
+                    rows={12}
+                    className="w-full rounded-xl border border-[#2A2A3E] bg-[#0A0A0F] px-5 py-4 text-white placeholder:text-gray-600 font-mono text-sm outline-none transition resize-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30"
+                  />
+                  <div className="mt-3 flex items-start gap-3 rounded-xl border border-blue-500/10 bg-blue-500/5 p-3.5">
+                    <Sparkles className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-gray-300 leading-relaxed">
+                      Include venue details, dates, schedule, dress codes, FAQs,
+                      and anything guests might ask. More detail = better
+                      performance.
+                    </p>
                   </div>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {currentStep === 4 && (
-              <div className="space-y-8 animate-slideIn">
-                <div className="space-y-3">
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg mb-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span className="text-xs font-medium text-emerald-300">
-                      Step 4 of 4
-                    </span>
+          {/* ── STEP 5: Review ── */}
+          {currentStep === 5 && (
+            <div className="space-y-7">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg mb-3">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span className="text-xs font-medium text-emerald-300">
+                    Step 5 of {steps.length} — Review
+                  </span>
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  Review & Create
+                </h2>
+                <p className="text-gray-400">
+                  Everything looks good? Hit create to launch your agent.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {/* Agent Info */}
+                <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-5">
+                  <h3 className="mb-4 flex items-center gap-2 font-bold text-white">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/25">
+                      <Target className="w-4 h-4 text-blue-400" />
+                    </div>
+                    Agent Info
+                  </h3>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Name</span>
+                      <span className="font-semibold text-white">
+                        {formData.agentName}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Mode</span>
+                      <span
+                        className={`font-semibold ${fieldMode === "classic" ? "text-blue-300" : "text-teal-300"}`}
+                      >
+                        {fieldMode === "classic"
+                          ? "Classic Template"
+                          : "Custom Smart Fields"}
+                      </span>
+                    </div>
+                    {formData.agentDescription && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Description</span>
+                        <span className="text-gray-300 max-w-xs text-right">
+                          {formData.agentDescription}
+                        </span>
+                      </div>
+                    )}
+                    {fieldMode === "classic" && formData.selectedTemplate && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Template</span>
+                        <span className="font-semibold text-white">
+                          {formData.selectedTemplate.name}
+                        </span>
+                      </div>
+                    )}
+                    {fieldMode === "smart_fields" && formData.eventTitle && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Event Title</span>
+                        <span className="font-semibold text-white">
+                          {formData.eventTitle}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                    Review your agent
-                  </h2>
-                  <p className="text-gray-400 text-lg leading-relaxed">
-                    Everything looks good? Click create to launch your AI agent
+                </div>
+
+                {/* Smart Fields Summary */}
+                {fieldMode === "smart_fields" && (
+                  <div className="rounded-2xl border border-teal-500/20 bg-teal-500/5 p-5">
+                    <h3 className="mb-4 flex items-center gap-2 font-bold text-white">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/25">
+                        <Wand2 className="w-4 h-4 text-teal-400" />
+                      </div>
+                      Smart Fields ({formData.smartFields.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {formData.smartFields.map((f, i) => (
+                        <div
+                          key={f._id}
+                          className="flex items-center gap-3 rounded-xl bg-[#0A0A10] px-4 py-2.5 text-sm"
+                        >
+                          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-teal-500/20 text-xs font-bold text-teal-400">
+                            {i + 1}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium text-white">
+                              {f.field_label || "Untitled"}
+                            </span>
+                            <span className="ml-2 text-xs text-gray-500">
+                              ({f.field_type})
+                            </span>
+                          </div>
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full ${f.is_required ? "bg-red-500/15 text-red-400" : "bg-gray-500/15 text-gray-400"}`}
+                          >
+                            {f.is_required ? "Required" : "Optional"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* KB summary */}
+                <div className="rounded-2xl border border-[#1F1F2E] bg-[#0E0E14] p-5">
+                  <h3 className="mb-4 flex items-center gap-2 font-bold text-white">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/20">
+                      <Brain className="w-4 h-4 text-purple-400" />
+                    </div>
+                    Knowledge Base
+                  </h3>
+                  <p className="text-sm text-white font-medium mb-2">
+                    {formData.knowledgeBaseName}
                   </p>
-                </div>
-
-                <div className="space-y-5 mt-8">
-                  <div className="p-6 bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent rounded-2xl border border-blue-500/20 backdrop-blur-sm">
-                    <h3 className="font-bold mb-5 flex items-center gap-3 text-lg text-white">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                        <Sparkles className="w-5 h-5 text-white" />
-                      </div>
-                      Agent Information
-                    </h3>
-                    <div className="space-y-4">
-                      <div className="flex items-start justify-between py-3 border-b border-blue-500/10">
-                        <span className="text-gray-400 font-medium">Name</span>
-                        <span className="font-semibold text-white text-right max-w-md">
-                          {formData.agentName}
-                        </span>
-                      </div>
-                      {formData.agentDescription && (
-                        <div className="flex items-start justify-between py-3 border-b border-blue-500/10">
-                          <span className="text-gray-400 font-medium">
-                            Description
-                          </span>
-                          <span className="font-medium text-gray-300 text-right max-w-md leading-relaxed">
-                            {formData.agentDescription}
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex items-start justify-between py-3">
-                        <span className="text-gray-400 font-medium">
-                          Template
-                        </span>
-                        <span className="font-semibold text-white">
-                          {formData.selectedTemplate?.name}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-6 bg-gradient-to-br from-teal-500/10 via-teal-500/5 to-transparent rounded-2xl border border-teal-500/20 backdrop-blur-sm">
-                    <h3 className="font-bold mb-5 flex items-center gap-3 text-lg text-white">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-lg shadow-teal-500/30">
-                        <Brain className="w-5 h-5 text-white" />
-                      </div>
-                      Knowledge Base
-                    </h3>
-                    <div className="space-y-4">
-                      <div className="flex items-start justify-between py-3 border-b border-teal-500/10">
-                        <span className="text-gray-400 font-medium">Name</span>
-                        <span className="font-semibold text-white">
-                          {formData.knowledgeBaseName}
-                        </span>
-                      </div>
-                      <div className="py-3">
-                        <span className="text-gray-400 font-medium block mb-3">
-                          Content Preview
-                        </span>
-                        <div className="bg-[#0A0A0F] p-5 rounded-xl border border-teal-500/20 max-h-48 overflow-y-auto custom-scrollbar">
-                          <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono leading-relaxed">
-                            {formData.knowledgeBaseContent.substring(0, 400)}
-                            {formData.knowledgeBaseContent.length > 400 &&
-                              "..."}
-                          </pre>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="max-h-32 overflow-y-auto rounded-lg bg-[#0A0A0F] border border-[#1A1A2A] p-3">
+                    <pre className="text-xs text-gray-400 whitespace-pre-wrap font-mono leading-relaxed">
+                      {formData.knowledgeBaseContent.substring(0, 300)}
+                      {formData.knowledgeBaseContent.length > 300 && "..."}
+                    </pre>
                   </div>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
-        <div className="mt-10 flex items-center justify-between">
+        {/* Navigation */}
+        <div className="mt-8 flex items-center justify-between">
           <button
             onClick={handleBack}
             disabled={currentStep === 1}
-            className={`
-              group flex items-center gap-3 px-6 py-4 rounded-xl font-semibold transition-all
+            className={`flex items-center gap-2 rounded-xl px-5 py-3 font-semibold transition-all text-sm
               ${
                 currentStep === 1
-                  ? "opacity-0 cursor-not-allowed pointer-events-none"
-                  : "bg-gradient-to-r from-[#1A1A1E] to-[#16161C] hover:from-[#1F1F2E] hover:to-[#1A1A1E] border-2 border-[#2A2A3E] hover:border-blue-500/30 text-white shadow-lg hover:shadow-xl hover:scale-105"
-              }
-            `}
+                  ? "invisible"
+                  : "border border-[#2A2A3E] bg-[#0E0E14] text-gray-300 hover:bg-[#161620] hover:border-[#3A3A4E]"
+              }`}
           >
-            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-            <span>Back</span>
+            <ArrowLeft className="w-4 h-4" />
+            Back
           </button>
 
-          {currentStep < 4 ? (
+          {currentStep < 5 ? (
             <button
               onClick={handleNext}
-              className="group flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 rounded-xl font-semibold transition-all shadow-xl shadow-blue-500/30 hover:shadow-blue-500/50 hover:scale-105"
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-700 px-7 py-3 font-semibold text-sm shadow-lg shadow-blue-500/25 transition hover:shadow-blue-500/40 hover:scale-[1.02]"
             >
-              <span>Next Step</span>
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              Next Step
+              <ArrowRight className="w-4 h-4" />
             </button>
           ) : (
             <button
               onClick={handleCreateAgent}
               disabled={loading}
-              className="group flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-600 hover:via-emerald-700 hover:to-teal-700 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-xl shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:scale-105"
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-7 py-3 font-semibold text-sm shadow-lg shadow-emerald-500/25 transition hover:shadow-emerald-500/40 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Creating Agent...</span>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Creating...
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span>Create Agent</span>
+                  <CheckCircle2 className="w-4 h-4" />
+                  Create Agent
                 </>
               )}
             </button>
           )}
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @keyframes pulse-slow {
-          0%,
-          100% {
-            opacity: 1;
-          }
-          50% {
-            opacity: 0.8;
-          }
-        }
-
-        @keyframes ping-slow {
-          0% {
-            transform: scale(1);
-            opacity: 1;
-          }
-          75%,
-          100% {
-            transform: scale(1.5);
-            opacity: 0;
-          }
-        }
-
-        .animate-slideIn {
-          animation: slideIn 0.5s ease-out;
-        }
-
-        .animate-pulse-slow {
-          animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-
-        .animate-ping-slow {
-          animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 8px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #0a0a0f;
-          border-radius: 4px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #2a2a3e;
-          border-radius: 4px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #3a3a4e;
-        }
-      `}</style>
     </div>
   );
 };

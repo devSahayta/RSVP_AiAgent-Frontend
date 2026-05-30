@@ -1,3 +1,4 @@
+//component/RSVPTable.jsx
 import React, { useState, useEffect } from "react";
 import { Document, Page } from "react-pdf";
 import {
@@ -19,7 +20,7 @@ import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { Download } from "lucide-react";
-import { Truck } from 'lucide-react';
+import { Truck } from "lucide-react";
 
 const RSVPTable = ({ eventId: propEventId }) => {
   const [rsvpData, setRsvpData] = useState([]);
@@ -56,13 +57,13 @@ const RSVPTable = ({ eventId: propEventId }) => {
           }/api/events/${eventId}/sync-batch-status`,
           {
             method: "POST",
-          }
+          },
         );
 
         if (res.ok) {
           const data = await res.json();
           console.log(
-            `✅ Auto-synced ${data.updated}/${data.total} participants`
+            `✅ Auto-synced ${data.updated}/${data.total} participants`,
           );
           await fetchRSVPData();
         } else {
@@ -92,7 +93,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
 
       // 1️⃣ Fetch RSVP data
       const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/rsvp-data`
+        `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/rsvp-data`,
       );
       const data = await res.json();
 
@@ -105,14 +106,14 @@ const RSVPTable = ({ eventId: propEventId }) => {
             const itineraryRes = await fetch(
               `${
                 import.meta.env.VITE_BACKEND_URL
-              }/api/travel-itinerary/${participantId}`
+              }/api/travel-itinerary/${participantId}`,
             );
             const itineraryData = await itineraryRes.json();
 
             const itinerary = itineraryData.itinerary?.find(
               (it) =>
                 it.attendee_name.toLowerCase() ===
-                participant.fullName.toLowerCase()
+                participant.fullName.toLowerCase(),
             );
 
             return {
@@ -127,11 +128,11 @@ const RSVPTable = ({ eventId: propEventId }) => {
           } catch (err) {
             console.error(
               `Error fetching itinerary for ${participant.fullName}:`,
-              err
+              err,
             );
             return participant;
           }
-        })
+        }),
       );
 
       setRsvpData(mergedData); // keep this same
@@ -165,7 +166,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
 
     if (statusFilter !== "all") {
       filtered = filtered.filter(
-        (item) => item.rsvpStatus?.toLowerCase() === statusFilter.toLowerCase()
+        (item) => item.rsvpStatus?.toLowerCase() === statusFilter.toLowerCase(),
       );
     }
 
@@ -248,7 +249,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const paginatedData = filteredData.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   const handlePageChange = (page) => {
@@ -272,7 +273,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
       !item.rsvpStatus ||
       item.rsvpStatus === null ||
       item.rsvpStatus === "NULL" ||
-      item.rsvpStatus.toLowerCase() === "pending"
+      item.rsvpStatus.toLowerCase() === "pending",
   );
 
   return (
@@ -302,73 +303,74 @@ const RSVPTable = ({ eventId: propEventId }) => {
         </select>
       </div>
 
-      <div style={{
-  display: "flex",
-  justifyContent: "flex-end",
-  marginBottom: "12px",
-  gap:"12px"
-}}>
-  <button
-    onClick={exportToExcel}
-    style={{
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      padding: "10px 16px",
-      borderRadius: "8px",
-      border: "1px solid #ddd",
-      background: "#000",
-      color: "#fff",
-      cursor: "pointer",
-      fontSize: "14px",
-      fontWeight: "600",
-    }}
-  >
-    <Download size={16} />
-    Export Excel
-  </button>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginBottom: "12px",
+          gap: "12px",
+        }}
+      >
+        <button
+          onClick={exportToExcel}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "10px 16px",
+            borderRadius: "8px",
+            border: "1px solid #ddd",
+            background: "#000",
+            color: "#fff",
+            cursor: "pointer",
+            fontSize: "14px",
+            fontWeight: "600",
+          }}
+        >
+          <Download size={16} />
+          Export Excel
+        </button>
 
-{/* NEW: Transport Planning Button */}
-  <button
-    onClick={() => navigate(`/transport-planning/${eventId}`)}
-    style={{
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      padding: "10px 16px",
-      borderRadius: "8px",
-      border: "1px solid #ddd",
-      background: "#000",
-      color: "#fff",
-      cursor: "pointer",
-      fontSize: "14px",
-      fontWeight: "600",
-    }}
-  >
-    <Truck size={16} />
-    Transport Planning
-  </button>
+        {/* NEW: Transport Planning Button */}
+        <button
+          onClick={() => navigate(`/transport-planning/${eventId}`)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "10px 16px",
+            borderRadius: "8px",
+            border: "1px solid #ddd",
+            background: "#000",
+            color: "#fff",
+            cursor: "pointer",
+            fontSize: "14px",
+            fontWeight: "600",
+          }}
+        >
+          <Truck size={16} />
+          Transport Planning
+        </button>
 
-  <button
+        <button
           onClick={() => navigate(`/flight-status/${eventId}`)}
           style={{
             display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      padding: "10px 16px",
-      borderRadius: "8px",
-      border: "1px solid #ddd",
-      background: "#000",
-      color: "#fff",
-      cursor: "pointer",
-      fontSize: "14px",
-      fontWeight: "600",
+            alignItems: "center",
+            gap: "8px",
+            padding: "10px 16px",
+            borderRadius: "8px",
+            border: "1px solid #ddd",
+            background: "#000",
+            color: "#fff",
+            cursor: "pointer",
+            fontSize: "14px",
+            fontWeight: "600",
           }}
         >
           ✈️ View Flight Status
         </button>
-
-</div>
+      </div>
       {/* <div
         style={{
           display: "flex",
@@ -718,11 +720,11 @@ const RSVPTable = ({ eventId: propEventId }) => {
           filteredData.every((item) => item.callStatus === "completed")
             ? "✅ All participants completed — retry not needed."
             : filteredData.length > 0
-            ? `⚠️ ${
-                filteredData.filter((item) => item.callStatus !== "completed")
-                  .length
-              } call(s) pending - Retry available`
-            : ""}
+              ? `⚠️ ${
+                  filteredData.filter((item) => item.callStatus !== "completed")
+                    .length
+                } call(s) pending - Retry available`
+              : ""}
         </p>
         <button
           className="retry-batch-btn"
@@ -733,7 +735,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
                 !item.rsvpStatus ||
                 item.rsvpStatus === null ||
                 item.rsvpStatus === "NULL" ||
-                item.rsvpStatus.toLowerCase() === "pending"
+                item.rsvpStatus.toLowerCase() === "pending",
             ).length === 0
           }
           style={{
@@ -748,7 +750,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
                   !item.rsvpStatus ||
                   item.rsvpStatus === null ||
                   item.rsvpStatus === "NULL" ||
-                  item.rsvpStatus.toLowerCase() === "pending"
+                  item.rsvpStatus.toLowerCase() === "pending",
               ).length === 0
                 ? "#9ca3af"
                 : "#000000",
@@ -761,7 +763,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
                   !item.rsvpStatus ||
                   item.rsvpStatus === null ||
                   item.rsvpStatus === "NULL" ||
-                  item.rsvpStatus.toLowerCase() === "pending"
+                  item.rsvpStatus.toLowerCase() === "pending",
               ).length === 0
                 ? "not-allowed"
                 : "pointer",
@@ -773,7 +775,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
                   !item.rsvpStatus ||
                   item.rsvpStatus === null ||
                   item.rsvpStatus === "NULL" ||
-                  item.rsvpStatus.toLowerCase() === "pending"
+                  item.rsvpStatus.toLowerCase() === "pending",
               ).length === 0
                 ? "none"
                 : "0 2px 8px rgba(0, 0, 0, 0.2)",
@@ -786,7 +788,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
                   !item.rsvpStatus ||
                   item.rsvpStatus === null ||
                   item.rsvpStatus === "NULL" ||
-                  item.rsvpStatus.toLowerCase() === "pending"
+                  item.rsvpStatus.toLowerCase() === "pending",
               ).length === 0
                 ? 0.6
                 : 1,
@@ -797,7 +799,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
                 !item.rsvpStatus ||
                 item.rsvpStatus === null ||
                 item.rsvpStatus === "NULL" ||
-                item.rsvpStatus.toLowerCase() === "pending"
+                item.rsvpStatus.toLowerCase() === "pending",
             );
 
             console.log("Pending:", pendingParticipants.length);
@@ -813,7 +815,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
                   Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({ event_id: eventId }),
-              }
+              },
             );
 
             setRetryStatus({
@@ -844,8 +846,8 @@ const RSVPTable = ({ eventId: propEventId }) => {
           {filteredData.length === 0
             ? ""
             : notResponded.length === 0
-            ? "✅ All participants have responded — messages not needed."
-            : `⚠️ ${notResponded.length} participant(s) haven't responded — Start available`}
+              ? "✅ All participants have responded — messages not needed."
+              : `⚠️ ${notResponded.length} participant(s) haven't responded — Start available`}
         </p>
       </div>
 
@@ -948,7 +950,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
                       `${
                         import.meta.env.VITE_BACKEND_URL
                       }/api/events/${eventId}/retry-batch`,
-                      { method: "POST" }
+                      { method: "POST" },
                     );
 
                     if (!response.ok)
