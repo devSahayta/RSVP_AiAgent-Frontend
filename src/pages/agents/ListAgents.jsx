@@ -10,11 +10,19 @@ import {
   Sparkles,
   Trash2,
   Bot,
+  Layers,
+  Wand2,
+  Calendar,
 } from "lucide-react";
 
 import { deleteAgentById, fetchUserAgents } from "../../api/agents";
 import useAuthUser from "../../hooks/useAuthUser";
-import { showError, showLoading, showSuccess } from "../../utils/toast";
+import {
+  showError,
+  showLoading,
+  showSuccess,
+  dismissToast,
+} from "../../utils/toast";
 
 const ListAgents = () => {
   const { userId } = useAuthUser();
@@ -24,10 +32,10 @@ const ListAgents = () => {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
   const [deleteWarning, setDeleteWarning] = useState(null);
+  const [filter, setFilter] = useState("all"); // all | classic | smart_fields
 
   useEffect(() => {
     if (!userId) return;
-
     const loadAgents = async () => {
       try {
         const res = await fetchUserAgents(userId);
@@ -38,7 +46,6 @@ const ListAgents = () => {
         setLoading(false);
       }
     };
-
     loadAgents();
   }, [userId]);
 
@@ -46,15 +53,12 @@ const ListAgents = () => {
     const shouldDelete = window.confirm(
       `Delete "${agentName}"? This action cannot be undone.`,
     );
-
     if (!shouldDelete) return;
 
-    const toastId = showLoading("Deleting template...");
-
+    const toastId = showLoading("Deleting agent...");
     try {
       setDeletingId(agentId);
       setDeleteWarning(null);
-
       const res = await deleteAgentById(agentId);
       const payload = res?.data;
 
@@ -64,14 +68,12 @@ const ListAgents = () => {
         showSuccess(payload?.message || "Agent deleted");
         return;
       }
-
       if (payload?.warning) {
         setDeleteWarning(payload);
         dismissToast(toastId);
         showError(payload?.message || "Agent is linked to event(s).");
         return;
       }
-
       dismissToast(toastId);
       showError(payload?.error || payload?.message || "Failed to delete agent");
     } catch (error) {
@@ -86,6 +88,18 @@ const ListAgents = () => {
       setDeletingId(null);
     }
   };
+
+  const filteredAgents = agents.filter((a) => {
+    if (filter === "all") return true;
+    return a.field_mode === filter;
+  });
+
+  const classicCount = agents.filter(
+    (a) => a.field_mode === "classic" || !a.field_mode,
+  ).length;
+  const smartCount = agents.filter(
+    (a) => a.field_mode === "smart_fields",
+  ).length;
 
   if (loading) {
     return (
@@ -104,10 +118,11 @@ const ListAgents = () => {
       <div className="pointer-events-none absolute -right-20 top-40 h-80 w-80 rounded-full bg-teal-500/10 blur-3xl" />
 
       <div className="mx-auto max-w-7xl">
+        {/* ── Header ── */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-10 flex flex-wrap items-start justify-between gap-4"
+          className="mb-8 flex flex-wrap items-start justify-between gap-4"
         >
           <div>
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-gradient-to-r from-blue-500/10 to-teal-500/10 px-4 py-2 text-sm text-blue-200">
@@ -129,6 +144,53 @@ const ListAgents = () => {
           </button>
         </motion.div>
 
+        {/* ── Filter tabs + summary ── */}
+        {agents.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="mb-8 flex flex-wrap items-center gap-3"
+          >
+            {/* Filter pills */}
+            {[
+              { key: "all", label: "All", count: agents.length },
+              { key: "classic", label: "Classic", count: classicCount },
+              { key: "smart_fields", label: "Smart Fields", count: smartCount },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setFilter(tab.key)}
+                className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition
+                  ${
+                    filter === tab.key
+                      ? tab.key === "smart_fields"
+                        ? "bg-teal-500/20 border border-teal-500/40 text-teal-300"
+                        : "bg-blue-500/20 border border-blue-500/40 text-blue-300"
+                      : "bg-[#0E0E14] border border-[#1F1F2E] text-gray-400 hover:border-[#2A2A3E]"
+                  }`}
+              >
+                {tab.key === "classic" && <Layers size={13} />}
+                {tab.key === "smart_fields" && <Wand2 size={13} />}
+                {tab.label}
+                <span
+                  className={`rounded-md px-1.5 py-0.5 text-xs font-bold
+                  ${
+                    filter === tab.key
+                      ? tab.key === "smart_fields"
+                        ? "bg-teal-500/30 text-teal-200"
+                        : "bg-blue-500/30 text-blue-200"
+                      : "bg-[#1A1A2A] text-gray-500"
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </motion.div>
+        )}
+
+        {/* ── Delete warning ── */}
         {deleteWarning?.warning && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
@@ -144,10 +206,6 @@ const ListAgents = () => {
                   Agent: {deleteWarning?.data?.agent_name || "Unknown"} | Linked
                   events: {deleteWarning?.data?.linked_events_count || 0}
                 </p>
-                {/* <p className="mt-1 text-xs font-semibold text-red-400/90">
-                  Tip: Delete linked event(s) first, then try deleting this
-                  agent again.
-                </p> */}
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -164,10 +222,9 @@ const ListAgents = () => {
                 </button>
               </div>
             </div>
-
             {Array.isArray(deleteWarning?.data?.linked_events) &&
               deleteWarning.data.linked_events.length > 0 && (
-                <div className=" mt-3 text-sm ">
+                <div className="mt-3 text-sm">
                   <p>Linked Events</p>
                   <ul className="mt-1 ml-5 list-disc space-y-1 text-amber-100/95">
                     {deleteWarning.data.linked_events.map((evt) => (
@@ -176,16 +233,14 @@ const ListAgents = () => {
                   </ul>
                 </div>
               )}
-
-            <div className=" mt-6 ">
-              <p className="mt-1 text-xs font-semibold text-red-400/90">
-                Tip: Delete linked event(s) first, then try deleting this agent
-                again.
-              </p>
-            </div>
+            <p className="mt-4 text-xs font-semibold text-red-400/90">
+              Tip: Delete linked event(s) first, then try deleting this agent
+              again.
+            </p>
           </motion.div>
         )}
 
+        {/* ── Empty state ── */}
         {agents.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -197,6 +252,21 @@ const ListAgents = () => {
             <p className="mt-1 text-sm text-gray-500">
               Create your first agent to get started.
             </p>
+            <button
+              onClick={() => navigate("/agents/create")}
+              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-5 py-2.5 text-sm font-medium transition hover:opacity-90"
+            >
+              <Plus size={16} />
+              Create Your First Agent
+            </button>
+          </motion.div>
+        ) : filteredAgents.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="rounded-2xl border border-[#1F1F2E] bg-[#0E0E14] p-10 text-center text-gray-500"
+          >
+            No {filter === "classic" ? "classic" : "smart fields"} agents found.
           </motion.div>
         ) : (
           <motion.div
@@ -204,125 +274,208 @@ const ListAgents = () => {
             animate="show"
             variants={{
               hidden: { opacity: 0 },
-              show: { opacity: 1, transition: { staggerChildren: 0.08 } },
+              show: { opacity: 1, transition: { staggerChildren: 0.06 } },
             }}
-            className="grid gap-6 md:grid-cols-2 xl:grid-cols-3"
+            className="grid gap-5 md:grid-cols-2 xl:grid-cols-3"
           >
             <AnimatePresence>
-              {agents.map((agent) => (
-                <motion.div
-                  key={agent.agent_id}
-                  layout
-                  initial={{ opacity: 0, y: 24 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  onClick={() => navigate(`/agents/${agent.agent_id}`)}
-                  className="group cursor-pointer rounded-2xl border border-[#1F1F2E] bg-gradient-to-br from-[#12121A] via-[#14141C] to-[#12121A] p-6 shadow-xl transition hover:border-blue-500/40 hover:shadow-blue-500/10"
-                >
-                  <div className="mb-4 flex items-start justify-between gap-4">
-                    <div>
-                      <h2 className="text-xl font-semibold">
-                        {agent.agent_name}
-                      </h2>
-                      <p className="mt-1 line-clamp-2 text-sm text-gray-400">
-                        {agent.agent_description || "No description"}
-                      </p>
-                    </div>
+              {filteredAgents.map((agent) => {
+                const isSmartFields = agent.field_mode === "smart_fields";
+                const smartFieldsCount = isSmartFields
+                  ? (Array.isArray(agent.smart_fields)
+                      ? agent.smart_fields
+                      : JSON.parse(agent.smart_fields || "[]")
+                    ).length
+                  : 0;
 
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs ${
-                        agent.status === "unassigned"
-                          ? "bg-yellow-500/20 text-yellow-400"
-                          : "bg-emerald-500/20 text-emerald-400"
+                return (
+                  <motion.div
+                    key={agent.agent_id}
+                    layout
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    onClick={() => navigate(`/agents/${agent.agent_id}`)}
+                    className={`group cursor-pointer rounded-2xl border bg-gradient-to-br from-[#12121A] via-[#14141C] to-[#12121A] p-5 shadow-xl transition
+                      ${
+                        isSmartFields
+                          ? "border-[#1A2A2A] hover:border-teal-500/30 hover:shadow-teal-500/5"
+                          : "border-[#1F1F2E] hover:border-blue-500/30 hover:shadow-blue-500/5"
                       }`}
-                    >
-                      {agent.status}
-                    </span>
-                  </div>
+                  >
+                    {/* ── Card header ── */}
+                    <div className="mb-4 flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0">
+                        {/* Mode icon */}
+                        <div
+                          className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl
+                          ${
+                            isSmartFields
+                              ? "bg-teal-500/15 border border-teal-500/20"
+                              : "bg-blue-500/15 border border-blue-500/20"
+                          }`}
+                        >
+                          {isSmartFields ? (
+                            <Wand2 size={16} className="text-teal-400" />
+                          ) : (
+                            <Layers size={16} className="text-blue-400" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <h2 className="truncate text-base font-semibold text-white">
+                            {agent.agent_name}
+                          </h2>
+                          <p className="mt-0.5 line-clamp-1 text-xs text-gray-500">
+                            {agent.agent_description || "No description"}
+                          </p>
+                        </div>
+                      </div>
 
-                  <div className="mb-5 space-y-2 text-sm text-gray-400">
-                    <p>
-                      Template:{" "}
-                      <span className="font-medium text-gray-200">
-                        {agent.agent_templates?.name || "Not linked"}
+                      {/* Status badge */}
+                      <span
+                        className={`flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium
+                        ${
+                          agent.status === "unassigned"
+                            ? "bg-yellow-500/15 text-yellow-400 border border-yellow-500/20"
+                            : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"
+                        }`}
+                      >
+                        {agent.status}
                       </span>
-                    </p>
-                    <p>
-                      Knowledge Base:{" "}
-                      <span className="font-medium text-gray-200">
-                        {agent.knowledge_bases?.name || "Not linked"}
-                      </span>
-                    </p>
-                  </div>
-
-                  <div className="mb-5 flex justify-between text-sm text-gray-300">
-                    <div className="flex items-center gap-2">
-                      <Phone size={15} />
-                      {agent.total_calls}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <MessageSquare size={15} />
-                      {agent.total_chats}
+
+                    {/* ── Mode + event info ── */}
+                    <div className="mb-4 space-y-2">
+                      {/* Mode pill */}
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold border
+                          ${
+                            isSmartFields
+                              ? "bg-teal-500/10 text-teal-300 border-teal-500/20"
+                              : "bg-blue-500/10 text-blue-300 border-blue-500/20"
+                          }`}
+                        >
+                          {isSmartFields ? (
+                            <Wand2 size={10} />
+                          ) : (
+                            <Layers size={10} />
+                          )}
+                          {isSmartFields
+                            ? "Custom Smart Fields"
+                            : "Classic Template"}
+                        </span>
+                        {isSmartFields && smartFieldsCount > 0 && (
+                          <span className="rounded-lg bg-[#1A1A2A] border border-[#2A2A3E] px-2 py-0.5 text-xs text-gray-400">
+                            {smartFieldsCount} field
+                            {smartFieldsCount !== 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Template / event title */}
+                      <div className="text-xs text-gray-500 space-y-1">
+                        {isSmartFields ? (
+                          agent.event_title && (
+                            <div className="flex items-center gap-1.5">
+                              <Calendar size={11} className="text-gray-600" />
+                              <span className="truncate">
+                                {agent.event_title}
+                              </span>
+                            </div>
+                          )
+                        ) : (
+                          <p>
+                            Template:{" "}
+                            <span className="text-gray-300">
+                              {agent.agent_templates?.name || "Not linked"}
+                            </span>
+                          </p>
+                        )}
+                        <p>
+                          KB:{" "}
+                          <span className="text-gray-300">
+                            {agent.knowledge_bases?.name || "Not linked"}
+                          </span>
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Activity size={15} />
-                      {agent.total_tests}
+
+                    {/* ── Stats row ── */}
+                    <div className="mb-4 flex items-center justify-between rounded-xl bg-[#0A0A0F] border border-[#1A1A2A] px-4 py-2.5 text-xs text-gray-400">
+                      <div className="flex items-center gap-1.5">
+                        <Phone size={12} className="text-blue-400" />
+                        <span>{agent.total_calls ?? 0}</span>
+                        <span className="text-gray-600">calls</span>
+                      </div>
+                      <div className="h-3 w-px bg-[#2A2A3E]" />
+                      <div className="flex items-center gap-1.5">
+                        <MessageSquare size={12} className="text-teal-400" />
+                        <span>{agent.total_chats ?? 0}</span>
+                        <span className="text-gray-600">chats</span>
+                      </div>
+                      <div className="h-3 w-px bg-[#2A2A3E]" />
+                      <div className="flex items-center gap-1.5">
+                        <Activity size={12} className="text-purple-400" />
+                        <span>{agent.total_tests ?? 0}</span>
+                        <span className="text-gray-600">tests</span>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="mb-6 flex flex-wrap gap-2">
-                    {agent.voice_enabled && (
-                      <span className="rounded-lg bg-blue-500/20 px-2 py-1 text-xs text-blue-300">
-                        Voice Enabled
-                      </span>
-                    )}
-                    {agent.chat_enabled && (
-                      <span className="rounded-lg bg-teal-500/20 px-2 py-1 text-xs text-teal-300">
-                        Chat Enabled
-                      </span>
-                    )}
-                  </div>
+                    {/* ── Channel badges ── */}
+                    <div className="mb-4 flex flex-wrap gap-1.5">
+                      {agent.voice_enabled && (
+                        <span className="flex items-center gap-1 rounded-lg bg-blue-500/10 border border-blue-500/15 px-2 py-0.5 text-xs text-blue-300">
+                          <Phone size={10} /> Voice
+                        </span>
+                      )}
+                      {agent.chat_enabled && (
+                        <span className="flex items-center gap-1 rounded-lg bg-teal-500/10 border border-teal-500/15 px-2 py-0.5 text-xs text-teal-300">
+                          <MessageSquare size={10} /> Chat
+                        </span>
+                      )}
+                    </div>
 
-                  <div className="flex items-center justify-between gap-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/agents/${agent.agent_id}`);
-                      }}
-                      className="text-sm text-blue-300 transition hover:text-blue-200"
-                    >
-                      View Details
-                    </button>
-
-                    <div className="flex items-center gap-2">
+                    {/* ── Actions ── */}
+                    <div className="flex items-center justify-between gap-2 pt-3 border-t border-[#1A1A2A]">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDelete(agent.agent_id, agent.agent_name);
+                          navigate(`/agents/${agent.agent_id}`);
                         }}
-                        disabled={deletingId === agent.agent_id}
-                        className="flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-sm text-red-300 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="text-xs text-blue-400 transition hover:text-blue-300"
                       >
-                        <Trash2 size={14} />
-                        {deletingId === agent.agent_id
-                          ? "Deleting..."
-                          : "Delete"}
+                        View Details →
                       </button>
 
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/agents/${agent.agent_id}/test`);
-                        }}
-                        className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-1.5 text-sm transition hover:opacity-90"
-                      >
-                        <TestTube size={14} />
-                        Test Agent
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(agent.agent_id, agent.agent_name);
+                          }}
+                          disabled={deletingId === agent.agent_id}
+                          className="flex items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/8 px-2.5 py-1.5 text-xs text-red-400 transition hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Trash2 size={12} />
+                          {deletingId === agent.agent_id ? "..." : "Delete"}
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/agents/${agent.agent_id}/test`);
+                          }}
+                          className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-2.5 py-1.5 text-xs font-medium transition hover:opacity-90"
+                        >
+                          <TestTube size={12} />
+                          Test
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
           </motion.div>
         )}
