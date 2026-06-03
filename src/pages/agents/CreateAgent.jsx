@@ -40,7 +40,12 @@ const FIELD_TYPES = [
     icon: Hash,
     description: "Collect a numeric value",
   },
-  // { value: "text", label: "Text", icon: Type, description: "Collect a free-text answer" },
+  {
+    value: "text",
+    label: "Text",
+    icon: Type,
+    description: "Collect a free-text answer",
+  },
   {
     value: "choice",
     label: "Multiple Choice",
@@ -958,7 +963,7 @@ const CreateAgent = () => {
                   <label className="mb-1.5 block text-xs font-semibold text-gray-400">
                     Agent First Message{" "}
                     <span className="text-gray-500 font-normal">
-                      (optional)
+                      {/* (optional) */}
                     </span>
                   </label>
                   <input

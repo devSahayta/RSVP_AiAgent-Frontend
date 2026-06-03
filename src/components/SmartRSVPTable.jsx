@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+import { AnimatePresence } from "framer-motion";
 import {
   Users,
   Phone,
@@ -16,9 +17,11 @@ import {
   AlertCircle,
   PhoneCall,
   MessageSquare,
+  Mic,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import TranscriptDrawer from "./TranscriptDrawer";
 
 const FIELD_ICONS = {
   yes_no: ToggleLeft,
@@ -79,7 +82,7 @@ const FieldValue = ({ value, fieldType }) => {
   return <span style={{ color: "#e5e7eb" }}>{str}</span>;
 };
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Main Component ───────────────────────────────────────────────────────────
 const SmartRSVPTable = ({ eventId: propEventId }) => {
   const { eventId: paramEventId } = useParams();
   const eventId = propEventId || paramEventId;
@@ -95,47 +98,46 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // retry batch call state
+  // Transcript drawer
+  const [selectedParticipant, setSelectedParticipant] = useState(null);
+
+  // Retry / batch message
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState({ success: true, text: "" });
 
-  // ── Fetch ──────────────────────────────────────────────────────────────────
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setFetchError(null);
+  // Track whether drawer is open to pause auto-refresh
+  const drawerOpenRef = React.useRef(false);
+  drawerOpenRef.current = !!selectedParticipant;
 
+  // ── Fetch ──────────────────────────────────────────────────────────────────
+  const fetchData = async (silent = false) => {
+    try {
+      if (!silent) setLoading(true);
+      setFetchError(null);
       const res = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/smart-rsvp-data`,
       );
       const json = await res.json();
-
       if (json.success) {
         setFields(json.fields || []);
         setData(json.data || []);
         return;
       }
-
-      // fallback
       const res2 = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/rsvp-data`,
       );
       const json2 = await res2.json();
-
       if (json2.field_mode === "smart_fields") {
         setFields(json2.fields || []);
         setData(json2.data || []);
-      } else if (Array.isArray(json2)) {
-        setData(json2);
-      } else {
-        setFetchError("Unexpected response from server.");
-      }
+      } else if (Array.isArray(json2)) setData(json2);
+      else setFetchError("Unexpected response from server.");
     } catch (err) {
       setFetchError(err.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -146,7 +148,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
         `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/sync-batch-status`,
         { method: "POST" },
       );
-      await fetchData();
+      await fetchData(true);
     } catch (err) {
       console.error(err);
     } finally {
@@ -157,7 +159,11 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
   useEffect(() => {
     if (!eventId) return;
     fetchData();
-    const iv = setInterval(fetchData, 60000);
+    const iv = setInterval(() => {
+      // Pause auto-refresh while drawer is open to avoid interrupting audio
+      if (drawerOpenRef.current) return;
+      fetchData(true); // silent — no loading spinner
+    }, 60000);
     return () => clearInterval(iv);
   }, [eventId]);
 
@@ -204,7 +210,6 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
     });
   };
 
-  // ── Retry batch call ───────────────────────────────────────────────────────
   const handleRetryBatch = async () => {
     try {
       setIsRetrying(true);
@@ -216,7 +221,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
       setShowConfirmModal(false);
       toast(true, "✅ Retry batch call started successfully!");
       await fetchData();
-    } catch (err) {
+    } catch {
       setShowConfirmModal(false);
       toast(false, "❌ Failed to start retry batch call.");
     } finally {
@@ -224,7 +229,6 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
     }
   };
 
-  // ── Start batch message (WhatsApp) ─────────────────────────────────────────
   const handleBatchMessage = async () => {
     try {
       const token = await getToken();
@@ -236,15 +240,16 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
         },
         body: JSON.stringify({ event_id: eventId }),
       });
-      const pendingCount = notRespondedRows.length;
-      toast(true, `Sending messages to ${pendingCount} participant(s)!`);
+      toast(
+        true,
+        `Sending messages to ${notRespondedRows.length} participant(s)!`,
+      );
       await fetchData();
-    } catch (err) {
+    } catch {
       toast(false, "❌ Failed to send batch messages.");
     }
   };
 
-  // ── Export ─────────────────────────────────────────────────────────────────
   const exportToExcel = () => {
     if (!filtered.length) return;
     const rows = filtered.map((row, i) => {
@@ -287,7 +292,6 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
     ),
   ).length;
   const notResponded = filtered.length - responded;
-  // "not responded" participants for batch message hint
   const notRespondedRows = data.filter(
     (row) =>
       !fields.some(
@@ -387,436 +391,505 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div
-      style={{
-        background: "#111111",
-        border: "1px solid #2a2a2a",
-        borderRadius: 12,
-        padding: "1.5rem",
-      }}
-    >
-      {/* Top bar */}
+    <>
       <div
         style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 10,
-          alignItems: "center",
-          marginBottom: "1.25rem",
+          background: "#111111",
+          border: "1px solid #2a2a2a",
+          borderRadius: 12,
+          padding: "1.5rem",
         }}
       >
-        <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
-          <Search
-            size={15}
-            style={{
-              position: "absolute",
-              left: 11,
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: "#6b7280",
-            }}
-          />
-          <input
-            type="text"
-            placeholder="Search by name, phone, or response..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "9px 12px 9px 34px",
-              background: "#1a1a1a",
-              border: "1px solid #2a2a2a",
-              borderRadius: 8,
-              color: "#fff",
-              fontSize: 13,
-              outline: "none",
-              boxSizing: "border-box",
-            }}
-          />
-        </div>
-        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-          <button
-            onClick={syncBatch}
-            disabled={syncing}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "8px 13px",
-              borderRadius: 8,
-              border: "1px solid #2a2a2a",
-              background: "#1a1a1a",
-              color: "#9ca3af",
-              cursor: syncing ? "not-allowed" : "pointer",
-              fontSize: 13,
-            }}
-          >
-            <RefreshCw
-              size={13}
+        {/* Top bar */}
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 10,
+            alignItems: "center",
+            marginBottom: "1.25rem",
+          }}
+        >
+          <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
+            <Search
+              size={15}
               style={{
-                animation: syncing ? "spin 1s linear infinite" : "none",
+                position: "absolute",
+                left: 11,
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "#6b7280",
               }}
             />
-            {syncing ? "Syncing..." : "Sync"}
-          </button>
-          <button
-            onClick={exportToExcel}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "8px 13px",
-              borderRadius: 8,
-              border: "1px solid #2a2a2a",
-              background: "#000",
-              color: "#fff",
-              cursor: "pointer",
-              fontSize: 13,
-              fontWeight: 600,
-            }}
-          >
-            <Download size={13} /> Export Excel
-          </button>
-        </div>
-      </div>
-
-      {/* Field legend */}
-      {fields.length > 0 && (
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 6,
-            marginBottom: "1rem",
-            alignItems: "center",
-          }}
-        >
-          {fields.map((f) => {
-            const Icon = FIELD_ICONS[f.field_type] || Type;
-            return (
-              <span
-                key={f.field_key}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 5,
-                  padding: "3px 10px",
-                  borderRadius: 20,
-                  background: "#1a1a2a",
-                  border: "1px solid #2a2a3e",
-                  color: "#93c5fd",
-                  fontSize: 12,
-                }}
-              >
-                <Icon size={11} />
-                {f.field_label}
-                {f.is_required && <span style={{ color: "#f87171" }}>*</span>}
-              </span>
-            );
-          })}
-          <span
-            style={{
-              marginLeft: "auto",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 5,
-              padding: "3px 12px",
-              borderRadius: 20,
-              background: "#0a1628",
-              border: "1px solid #1e3a5f",
-              color: "#60a5fa",
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            {responded}/{data.length} responded
-          </span>
-        </div>
-      )}
-
-      {/* No results */}
-      {filtered.length === 0 && data.length > 0 && (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "2rem",
-            color: "#6b7280",
-            fontSize: 14,
-          }}
-        >
-          No results match "{searchTerm}"
-        </div>
-      )}
-
-      {/* Table */}
-      {filtered.length > 0 && (
-        <div
-          style={{
-            overflowX: "auto",
-            marginBottom: "1.25rem",
-            WebkitOverflowScrolling: "touch",
-            borderRadius: 8,
-            border: "1px solid #1f1f1f",
-          }}
-        >
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              minWidth: Math.max(600, 500 + fields.length * 150),
-            }}
-          >
-            <thead>
-              <tr
-                style={{
-                  background: "#1a1a1a",
-                  borderBottom: "1px solid #2a2a2a",
-                }}
-              >
-                <Th>#</Th>
-                <Th>Full Name</Th>
-                <Th>Phone</Th>
-                {fields.map((f) => {
-                  const Icon = FIELD_ICONS[f.field_type] || Type;
-                  return (
-                    <Th key={f.field_key}>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 5,
-                        }}
-                      >
-                        <Icon
-                          size={12}
-                          style={{ color: "#60a5fa", flexShrink: 0 }}
-                        />
-                        {f.field_label}
-                        {f.is_required && (
-                          <span style={{ color: "#f87171" }}>*</span>
-                        )}
-                      </div>
-                    </Th>
-                  );
-                })}
-                <Th>Timestamp</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.map((row, i) => {
-                const rowNum = (currentPage - 1) * itemsPerPage + i + 1;
-                const hasAnyResp = fields.some(
-                  (f) =>
-                    row[f.field_key] !== null && row[f.field_key] !== undefined,
-                );
-                return (
-                  <tr
-                    key={row.id}
-                    style={{
-                      borderBottom: "1px solid #1a1a1a",
-                      transition: "background 0.15s",
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background = "#141420")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "transparent")
-                    }
-                  >
-                    <Td>
-                      <span style={{ color: "#4b5563", fontSize: 12 }}>
-                        {rowNum}
-                      </span>
-                    </Td>
-                    <Td>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: 28,
-                            height: 28,
-                            borderRadius: "50%",
-                            background: hasAnyResp ? "#1e3a5f" : "#1a1a1a",
-                            border: `1px solid ${hasAnyResp ? "#1d4ed8" : "#2a2a2a"}`,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
-                            fontSize: 11,
-                            fontWeight: 700,
-                            color: hasAnyResp ? "#60a5fa" : "#4b5563",
-                          }}
-                        >
-                          {(row.fullName || "?")[0].toUpperCase()}
-                        </div>
-                        <span
-                          style={{
-                            color: "#f3f4f6",
-                            fontWeight: 500,
-                            fontSize: 13,
-                          }}
-                        >
-                          {row.fullName}
-                        </span>
-                      </div>
-                    </Td>
-                    <Td>
-                      <span
-                        style={{
-                          color: "#9ca3af",
-                          fontFamily: "monospace",
-                          fontSize: 12,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {row.phoneNumber}
-                      </span>
-                    </Td>
-                    {fields.map((f) => (
-                      <Td key={f.field_key}>
-                        <FieldValue
-                          value={row[f.field_key]}
-                          fieldType={f.field_type}
-                        />
-                      </Td>
-                    ))}
-                    <Td>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 5,
-                          color: "#4b5563",
-                          whiteSpace: "nowrap",
-                          fontSize: 11,
-                        }}
-                      >
-                        <Calendar size={11} />
-                        {formatDate(row.timestamp)}
-                      </div>
-                    </Td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: 6,
-            marginBottom: "1.25rem",
-            flexWrap: "wrap",
-          }}
-        >
-          <PageBtn
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-          >
-            Previous
-          </PageBtn>
-          {Array.from({ length: totalPages }, (_, i) => (
-            <button
-              key={i}
-              onClick={() => setCurrentPage(i + 1)}
+            <input
+              type="text"
+              placeholder="Search by name, phone, or response..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               style={{
-                padding: "6px 11px",
-                borderRadius: 6,
-                fontSize: 12,
-                cursor: "pointer",
-                border:
-                  currentPage === i + 1
-                    ? "1px solid #1d4ed8"
-                    : "1px solid #2a2a2a",
-                background: currentPage === i + 1 ? "#1d4ed8" : "#111",
-                color: currentPage === i + 1 ? "#fff" : "#6b7280",
+                width: "100%",
+                padding: "9px 12px 9px 34px",
+                background: "#1a1a1a",
+                border: "1px solid #2a2a2a",
+                borderRadius: 8,
+                color: "#fff",
+                fontSize: 13,
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <button
+              onClick={syncBatch}
+              disabled={syncing}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 13px",
+                borderRadius: 8,
+                border: "1px solid #2a2a2a",
+                background: "#1a1a1a",
+                color: "#9ca3af",
+                cursor: syncing ? "not-allowed" : "pointer",
+                fontSize: 13,
               }}
             >
-              {i + 1}
+              <RefreshCw
+                size={13}
+                style={{
+                  animation: syncing ? "spin 1s linear infinite" : "none",
+                }}
+              />
+              {syncing ? "Syncing..." : "Sync"}
             </button>
-          ))}
-          <PageBtn
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-          >
-            Next
-          </PageBtn>
+            <button
+              onClick={exportToExcel}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 13px",
+                borderRadius: 8,
+                border: "1px solid #2a2a2a",
+                background: "#000",
+                color: "#fff",
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: 600,
+              }}
+            >
+              <Download size={13} /> Export Excel
+            </button>
+          </div>
         </div>
-      )}
 
-      {/* Stats */}
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "1.5rem",
-          paddingTop: "1rem",
-          borderTop: "1px solid #1f1f1f",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "1.5rem",
-        }}
-      >
-        <StatPill label="Total" value={filtered.length} color="#f3f4f6" />
-        <StatPill label="Responded" value={responded} color="#34d399" />
-        <StatPill label="Not Responded" value={notResponded} color="#f59e0b" />
-        <StatPill label="Smart Fields" value={fields.length} color="#60a5fa" />
-        <p style={{ fontSize: 11, color: "#4b5563", margin: 0 }}>
-          Auto-refreshes every 60s
-        </p>
+        {/* Field legend */}
+        {fields.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 6,
+              marginBottom: "1rem",
+              alignItems: "center",
+            }}
+          >
+            {fields.map((f) => {
+              const Icon = FIELD_ICONS[f.field_type] || Type;
+              return (
+                <span
+                  key={f.field_key}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    padding: "3px 10px",
+                    borderRadius: 20,
+                    background: "#1a1a2a",
+                    border: "1px solid #2a2a3e",
+                    color: "#93c5fd",
+                    fontSize: 12,
+                  }}
+                >
+                  <Icon size={11} />
+                  {f.field_label}
+                  {f.is_required && <span style={{ color: "#f87171" }}>*</span>}
+                </span>
+              );
+            })}
+            <span
+              style={{
+                marginLeft: "auto",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "3px 12px",
+                borderRadius: 20,
+                background: "#0a1628",
+                border: "1px solid #1e3a5f",
+                color: "#60a5fa",
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            >
+              {responded}/{data.length} responded
+            </span>
+          </div>
+        )}
+
+        {filtered.length === 0 && data.length > 0 && (
+          <div
+            style={{
+              textAlign: "center",
+              padding: "2rem",
+              color: "#6b7280",
+              fontSize: 14,
+            }}
+          >
+            No results match "{searchTerm}"
+          </div>
+        )}
+
+        {/* Table */}
+        {filtered.length > 0 && (
+          <div
+            style={{
+              overflowX: "auto",
+              marginBottom: "1.25rem",
+              WebkitOverflowScrolling: "touch",
+              borderRadius: 8,
+              border: "1px solid #1f1f1f",
+            }}
+          >
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                minWidth: Math.max(700, 600 + fields.length * 150),
+              }}
+            >
+              <thead>
+                <tr
+                  style={{
+                    background: "#1a1a1a",
+                    borderBottom: "1px solid #2a2a2a",
+                  }}
+                >
+                  <Th>#</Th>
+                  <Th>Full Name</Th>
+                  <Th>Phone</Th>
+                  {fields.map((f) => {
+                    const Icon = FIELD_ICONS[f.field_type] || Type;
+                    return (
+                      <Th key={f.field_key}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 5,
+                          }}
+                        >
+                          <Icon
+                            size={12}
+                            style={{ color: "#60a5fa", flexShrink: 0 }}
+                          />
+                          {f.field_label}
+                          {f.is_required && (
+                            <span style={{ color: "#f87171" }}>*</span>
+                          )}
+                        </div>
+                      </Th>
+                    );
+                  })}
+                  {/* Transcript column */}
+                  <Th>
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 5 }}
+                    >
+                      <Mic size={12} style={{ color: "#a78bfa" }} />
+                      Transcript
+                    </div>
+                  </Th>
+                  {/* Call Status column */}
+                  <Th>
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 5 }}
+                    >
+                      <Phone size={12} style={{ color: "#34d399" }} />
+                      Call Status
+                    </div>
+                  </Th>
+                  <Th>Timestamp</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginated.map((row, i) => {
+                  const rowNum = (currentPage - 1) * itemsPerPage + i + 1;
+                  const hasAnyResp = fields.some(
+                    (f) =>
+                      row[f.field_key] !== null &&
+                      row[f.field_key] !== undefined,
+                  );
+                  return (
+                    <tr
+                      key={row.id}
+                      style={{
+                        borderBottom: "1px solid #1a1a1a",
+                        transition: "background 0.15s",
+                      }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.background = "#141420")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.background = "transparent")
+                      }
+                    >
+                      <Td>
+                        <span style={{ color: "#4b5563", fontSize: 12 }}>
+                          {rowNum}
+                        </span>
+                      </Td>
+                      <Td>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: "50%",
+                              background: hasAnyResp ? "#1e3a5f" : "#1a1a1a",
+                              border: `1px solid ${hasAnyResp ? "#1d4ed8" : "#2a2a2a"}`,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                              fontSize: 11,
+                              fontWeight: 700,
+                              color: hasAnyResp ? "#60a5fa" : "#4b5563",
+                            }}
+                          >
+                            {(row.fullName || "?")[0].toUpperCase()}
+                          </div>
+                          <span
+                            style={{
+                              color: "#f3f4f6",
+                              fontWeight: 500,
+                              fontSize: 13,
+                            }}
+                          >
+                            {row.fullName}
+                          </span>
+                        </div>
+                      </Td>
+                      <Td>
+                        <span
+                          style={{
+                            color: "#9ca3af",
+                            fontFamily: "monospace",
+                            fontSize: 12,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {row.phoneNumber}
+                        </span>
+                      </Td>
+                      {fields.map((f) => (
+                        <Td key={f.field_key}>
+                          <FieldValue
+                            value={row[f.field_key]}
+                            fieldType={f.field_type}
+                          />
+                        </Td>
+                      ))}
+
+                      {/* Transcript button cell */}
+                      <Td>
+                        {row.conversation_id ? (
+                          <button
+                            onClick={() => setSelectedParticipant(row)}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 5,
+                              padding: "5px 11px",
+                              borderRadius: 8,
+                              background:
+                                "linear-gradient(135deg,rgba(124,58,237,0.15),rgba(99,102,241,0.15))",
+                              border: "1px solid rgba(124,58,237,0.35)",
+                              color: "#c4b5fd",
+                              cursor: "pointer",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              transition: "all 0.2s",
+                            }}
+                            onMouseEnter={(e) =>
+                              (e.currentTarget.style.background =
+                                "linear-gradient(135deg,rgba(124,58,237,0.28),rgba(99,102,241,0.28))")
+                            }
+                            onMouseLeave={(e) =>
+                              (e.currentTarget.style.background =
+                                "linear-gradient(135deg,rgba(124,58,237,0.15),rgba(99,102,241,0.15))")
+                            }
+                          >
+                            <Mic size={11} /> View
+                          </button>
+                        ) : (
+                          <span style={{ color: "#374151", fontSize: 12 }}>
+                            —
+                          </span>
+                        )}
+                      </Td>
+
+                      {/* Call Status cell */}
+                      <Td>
+                        <CallStatusBadge status={row.call_outcome} />
+                      </Td>
+
+                      <Td>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 5,
+                            color: "#4b5563",
+                            whiteSpace: "nowrap",
+                            fontSize: 11,
+                          }}
+                        >
+                          <Calendar size={11} />
+                          {formatDate(row.timestamp)}
+                        </div>
+                      </Td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: 6,
+              marginBottom: "1.25rem",
+              flexWrap: "wrap",
+            }}
+          >
+            <PageBtn
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </PageBtn>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrentPage(i + 1)}
+                style={{
+                  padding: "6px 11px",
+                  borderRadius: 6,
+                  fontSize: 12,
+                  cursor: "pointer",
+                  border:
+                    currentPage === i + 1
+                      ? "1px solid #1d4ed8"
+                      : "1px solid #2a2a2a",
+                  background: currentPage === i + 1 ? "#1d4ed8" : "#111",
+                  color: currentPage === i + 1 ? "#fff" : "#6b7280",
+                }}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <PageBtn
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </PageBtn>
+          </div>
+        )}
+
+        {/* Stats */}
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "1.5rem",
+            paddingTop: "1rem",
+            borderTop: "1px solid #1f1f1f",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "1.5rem",
+          }}
+        >
+          <StatPill label="Total" value={filtered.length} color="#f3f4f6" />
+          <StatPill label="Responded" value={responded} color="#34d399" />
+          <StatPill
+            label="Not Responded"
+            value={notResponded}
+            color="#f59e0b"
+          />
+          <StatPill
+            label="Smart Fields"
+            value={fields.length}
+            color="#60a5fa"
+          />
+          <p style={{ fontSize: 11, color: "#4b5563", margin: 0 }}>
+            Auto-refreshes every 60s • Paused while drawer is open
+          </p>
+        </div>
+
+        {/* Action Buttons */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 8,
+            borderTop: "1px solid #1f1f1f",
+            paddingTop: "1.5rem",
+          }}
+        >
+          <ActionButton
+            onClick={() => setShowConfirmModal(true)}
+            disabled={allResponded}
+            icon={<PhoneCall size={15} />}
+            label="Retry Batch Call"
+          />
+          <HintText success={allResponded}>
+            {allResponded
+              ? "✅ All participants responded — retry not needed."
+              : `⚠️ ${notRespondedRows.length} participant(s) haven't responded — Retry available`}
+          </HintText>
+          <ActionButton
+            onClick={handleBatchMessage}
+            disabled={allResponded}
+            icon={<MessageSquare size={15} />}
+            label="Start Batch Message"
+          />
+          <HintText success={allResponded}>
+            {allResponded
+              ? "✅ All participants responded — messages not needed."
+              : `⚠️ ${notRespondedRows.length} participant(s) haven't responded — Start available`}
+          </HintText>
+        </div>
       </div>
 
-      {/* ── Action Buttons (same as classic RSVPTable) ── */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 8,
-          borderTop: "1px solid #1f1f1f",
-          paddingTop: "1.5rem",
-        }}
-      >
-        {/* Retry Batch Call */}
-        <ActionButton
-          onClick={() => setShowConfirmModal(true)}
-          disabled={allResponded}
-          icon={<PhoneCall size={15} />}
-          label="Retry Batch Call"
-        />
-        <HintText success={allResponded}>
-          {allResponded
-            ? "✅ All participants responded — retry not needed."
-            : `⚠️ ${notRespondedRows.length} participant(s) haven't responded — Retry available`}
-        </HintText>
-
-        {/* Start Batch Message */}
-        <ActionButton
-          onClick={handleBatchMessage}
-          disabled={allResponded}
-          icon={<MessageSquare size={15} />}
-          label="Start Batch Message"
-        />
-        <HintText success={allResponded}>
-          {allResponded
-            ? "✅ All participants responded — messages not needed."
-            : `⚠️ ${notRespondedRows.length} participant(s) haven't responded — Start available`}
-        </HintText>
-      </div>
-
-      {/* ── Confirm Modal ── */}
+      {/* Confirm Modal */}
       {showConfirmModal && (
         <div
           style={{
@@ -846,7 +919,6 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
                 fontSize: 18,
                 fontWeight: 600,
                 color: "#fff",
-                marginBottom: 10,
                 margin: "0 0 10px",
               }}
             >
@@ -879,8 +951,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
                   background: "#1a1a1a",
                   border: "1px solid #2a2a2a",
                   borderRadius: 8,
-                  cursor: isRetrying ? "not-allowed" : "pointer",
-                  opacity: isRetrying ? 0.5 : 1,
+                  cursor: "pointer",
                 }}
               >
                 Cancel
@@ -907,7 +978,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
         </div>
       )}
 
-      {/* ── Toast ── */}
+      {/* Toast */}
       {showToast && (
         <div
           style={{
@@ -925,12 +996,12 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
               color: "#fff",
               padding: "14px 20px",
               borderRadius: 8,
-              boxShadow: "0 10px 25px rgba(0,0,0,0.3)",
               display: "flex",
               alignItems: "center",
               gap: 10,
               minWidth: 300,
               maxWidth: "90vw",
+              boxShadow: "0 10px 25px rgba(0,0,0,0.3)",
             }}
           >
             <span style={{ fontSize: 14, fontWeight: 600, flex: 1 }}>
@@ -954,15 +1025,128 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
         </div>
       )}
 
+      {/* Transcript Drawer */}
+      <AnimatePresence>
+        {selectedParticipant && (
+          <TranscriptDrawer
+            participant={selectedParticipant}
+            eventId={eventId}
+            onClose={() => setSelectedParticipant(null)}
+          />
+        )}
+      </AnimatePresence>
+
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes slideDown { from { opacity: 0; transform: translateX(-50%) translateY(-16px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        @keyframes slideDown { from { opacity:0; transform:translateX(-50%) translateY(-16px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
       `}</style>
-    </div>
+    </>
   );
 };
 
 export default SmartRSVPTable;
+
+/* ─── Call Status Badge ────────────────────────────────────────────────────── */
+const CallStatusBadge = ({ status }) => {
+  if (!status || status === "pending") {
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+          padding: "3px 9px",
+          borderRadius: 20,
+          background: "#1c1a08",
+          border: "1px solid #3d3207",
+          color: "#fbbf24",
+          fontSize: 11,
+          fontWeight: 600,
+        }}
+      >
+        pending
+      </span>
+    );
+  }
+  if (status === "completed" || status === "done") {
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+          padding: "3px 9px",
+          borderRadius: 20,
+          background: "#064e3b",
+          border: "1px solid #065f46",
+          color: "#34d399",
+          fontSize: 11,
+          fontWeight: 600,
+        }}
+      >
+        completed
+      </span>
+    );
+  }
+  if (status === "failed" || status === "no_answer") {
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+          padding: "3px 9px",
+          borderRadius: 20,
+          background: "#450a0a",
+          border: "1px solid #7f1d1d",
+          color: "#f87171",
+          fontSize: 11,
+          fontWeight: 600,
+        }}
+      >
+        {status}
+      </span>
+    );
+  }
+  if (status === "initiated" || status === "in_progress") {
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+          padding: "3px 9px",
+          borderRadius: 20,
+          background: "#0a1628",
+          border: "1px solid #1e3a5f",
+          color: "#60a5fa",
+          fontSize: 11,
+          fontWeight: 600,
+        }}
+      >
+        {status}
+      </span>
+    );
+  }
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        padding: "3px 9px",
+        borderRadius: 20,
+        background: "#1a1a1a",
+        border: "1px solid #2a2a2a",
+        color: "#6b7280",
+        fontSize: 11,
+        fontWeight: 600,
+      }}
+    >
+      {status}
+    </span>
+  );
+};
 
 /* ─── Helpers ──────────────────────────────────────────────────────────────── */
 const Th = ({ children }) => (
@@ -1040,10 +1224,10 @@ const ActionButton = ({ onClick, disabled, icon, label }) => (
       border: "none",
       borderRadius: 8,
       cursor: disabled ? "not-allowed" : "pointer",
-      transition: "all 0.2s",
       width: "100%",
       maxWidth: 300,
       opacity: disabled ? 0.6 : 1,
+      transition: "all 0.2s",
     }}
     onMouseEnter={(e) => {
       if (!disabled) e.currentTarget.style.background = "#1a1a1a";
