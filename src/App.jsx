@@ -25,6 +25,7 @@ import WAccountPage from "./pages/WAccountPage";
 
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { addUserToBackend } from "./api/userApi";
+import { setAuthToken } from "./api/apiClient";
 
 import "./styles/global.css";
 import { fetchWhatsappAccount } from "./api/waccount";
@@ -40,7 +41,10 @@ import SingleAgent from "./pages/agents/SingleAgent";
 import CreateAgent from "./pages/agents/CreateAgent";
 import TestAgent from "./pages/agents/test/TestAgent";
 import TestHistory from "./pages/agents/test/TestHistory";
-import Welcome from "./pages/HomeDashboard.jsx"
+import Welcome from "./pages/HomeDashboard.jsx";
+
+import SamvaadikConnect from "./pages/SamvaadikConnect";
+import WhatsAppTemplates from "./pages/WhatsAppTemplates";
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, isLoading } = useKindeAuth();
@@ -84,7 +88,7 @@ function WhatsappAccountRoute({ children }) {
 }
 
 function AppContent() {
-  const { user, isAuthenticated, isLoading } = useKindeAuth();
+  const { user, isAuthenticated, isLoading, getToken } = useKindeAuth();
   const location = useLocation();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -99,6 +103,14 @@ function AppContent() {
   useEffect(() => {
     if (isAuthenticated && user) {
       addUserToBackend(user);
+      getToken()
+        .then((token) => {
+          setAuthToken(token);
+          console.log("User authenticated and token set in API client", token);
+        })
+        .catch((err) => {
+          console.error("getToken failed:", err);
+        });
     }
   }, [isAuthenticated, user]);
 
@@ -143,9 +155,7 @@ function AppContent() {
               </PrivateRoute>
             }
           />
-
           <Route path="/contact" element={<ContactPage />} />
-
           <Route
             path="/createEvent"
             element={
@@ -154,7 +164,6 @@ function AppContent() {
               </PrivateRoute>
             }
           />
-
           <Route
             path="/dashboard/:eventId"
             element={
@@ -163,7 +172,6 @@ function AppContent() {
               </PrivateRoute>
             }
           />
-
           <Route
             path="/call-batch/:eventId"
             element={
@@ -172,7 +180,6 @@ function AppContent() {
               </PrivateRoute>
             }
           />
-
           <Route
             path="/chatbot"
             element={
@@ -181,9 +188,7 @@ function AppContent() {
               </PrivateRoute>
             }
           />
-
           <Route path="/whatsapp-account" element={<WAccountPage />} />
-
           <Route
             path="/templates"
             element={
@@ -194,7 +199,6 @@ function AppContent() {
               </PrivateRoute>
             }
           />
-
           <Route
             path="/template/create"
             element={
@@ -205,7 +209,6 @@ function AppContent() {
               </PrivateRoute>
             }
           />
-
           <Route
             path="/templates/send/:templateId"
             element={
@@ -216,46 +219,53 @@ function AppContent() {
               </PrivateRoute>
             }
           />
-
           <Route
             path="/document-upload/:participantId"
             element={<DocumentUpload />}
           />
-
           <Route
             path="/document-viewer/:participantId"
             element={<DocumentViewer />}
           />
-
           <Route path="/knowledge-bases" element={<KnowledgeBases />} />
-
           <Route
             path="/knowledge-bases/create"
             element={<CreateKnowledgeBase />}
           />
-
           <Route
             path="/knowledge-bases/:id"
             element={<KnowledgeBaseDetail />}
           />
-
           <Route path="/flight-status/:eventId" element={<FlightStatus />} />
-
           <Route path="/agents" element={<ListAgents />} />
           <Route path="/agents/:agentId" element={<SingleAgent />} />
           <Route path="/agents/create" element={<CreateAgent />} />
-
           {/* Test Agents */}
           <Route path="/agents/:agent_id/test" element={<TestAgent />} />
           <Route path="/agents/test-history" element={<TestHistory />} />
-
           <Route
             path="/transport-planning/:eventId"
             element={<TransportPlanning />}
           />
-
           <Route path="/flight-status/:eventId" element={<FlightStatus />} />
-
+          <Route
+            path="/settings/samvaadik"
+            element={
+              <PrivateRoute>
+                <SamvaadikConnect />
+              </PrivateRoute>
+            }
+          />
+          ;
+          <Route
+            path="/templates/whatsapp"
+            element={
+              <PrivateRoute>
+                <WhatsAppTemplates />
+              </PrivateRoute>
+            }
+          />
+          ;
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
