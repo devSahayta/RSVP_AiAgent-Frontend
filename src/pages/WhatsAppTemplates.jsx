@@ -547,7 +547,10 @@ const TemplateCard = ({ t, selected, onSelect, pickerMode, onPreview }) => {
 
 // ─── WhatsApp Preview Modal ───────────────────────────────────────────────────
 const WhatsAppPreviewModal = ({ template, onClose }) => {
+  const { getToken } = useKindeAuth();
   const loading = template?._loading;
+  const [mediaUrl, setMediaUrl] = useState(null);
+  const [mediaLoading, setMediaLoading] = useState(false);
 
   // Parse helpers
   const safeParse = (val) => {
@@ -560,7 +563,7 @@ const WhatsAppPreviewModal = ({ template, onClose }) => {
     }
   };
 
-  // Use preview.components (has real CDN media URLs) → fallback to components
+  // Use preview.components → fallback to components
   const rawComps = template?.preview?.components || template?.components || [];
   const components = Array.isArray(rawComps)
     ? rawComps
@@ -571,17 +574,44 @@ const WhatsAppPreviewModal = ({ template, onClose }) => {
   const footer = components.find((c) => c.type === "FOOTER");
   const btnComp = components.find((c) => c.type === "BUTTONS");
 
-  // Buttons: try components first, then template.buttons (parse if string)
+  // Buttons
   const rawBtns = btnComp?.buttons || template?.buttons || [];
   const buttons = Array.isArray(rawBtns) ? rawBtns : safeParse(rawBtns) || [];
 
-  // Media URL — proxied through Sutrak backend to avoid WhatsApp CDN CORS blocks
-  const rawMediaUrl = header?.example?.header_handle?.[0] || null;
-  const mediaUrl = rawMediaUrl
-    ? `${import.meta.env.VITE_BACKEND_URL}/api/samvaadik/media-proxy?url=${encodeURIComponent(rawMediaUrl)}`
-    : null;
+  const hasMedia = header?.format === "IMAGE" || header?.format === "VIDEO";
 
-  // Replace {{N}} placeholders with sample values from variables array
+  // Build authenticated media stream URL
+  // Sutrak backend streams image bytes directly (Samvaadik fetches from Meta with token)
+  useEffect(() => {
+    if (!hasMedia || !template?.wt_id || loading) return;
+    const buildUrl = async () => {
+      try {
+        const token = await getToken();
+        // We need to pass auth token — use a signed URL approach via fetch + blob
+        setMediaLoading(true);
+        const response = await fetch(
+          `${import.meta.env.VITE_BACKEND_URL}/api/samvaadik/templates/${template.wt_id}/media`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (response.ok) {
+          const blob = await response.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          setMediaUrl(blobUrl);
+        }
+      } catch (err) {
+        console.error("Media stream error:", err);
+      } finally {
+        setMediaLoading(false);
+      }
+    };
+    buildUrl();
+    // Cleanup blob URL on unmount
+    return () => {
+      if (mediaUrl) URL.revokeObjectURL(mediaUrl);
+    };
+  }, [template?.wt_id, loading]);
+
+  // Replace {{N}} placeholders with sample values
   const vars = Array.isArray(template?.variables) ? template.variables : [];
   const renderBody = (text) => {
     if (!text) return "";
@@ -714,60 +744,135 @@ const WhatsAppPreviewModal = ({ template, onClose }) => {
                   }}
                 >
                   {/* HEADER — Image */}
-                  {header?.format === "IMAGE" && mediaUrl && (
-                    <img
-                      src={mediaUrl}
-                      alt="Template header"
-                      style={{
-                        width: "100%",
-                        maxHeight: 200,
-                        objectFit: "cover",
-                        display: "block",
-                      }}
-                      onError={(e) => {
-                        e.target.style.display = "none";
-                      }}
-                    />
-                  )}
-
-                  {/* HEADER — Video placeholder */}
-                  {header?.format === "VIDEO" && (
-                    <div
-                      style={{
-                        background: "#003d2e",
-                        padding: "20px",
-                        textAlign: "center",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
+                  {header?.format === "IMAGE" &&
+                    (mediaLoading ? (
                       <div
                         style={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: "50%",
-                          background: "rgba(37,211,102,0.15)",
-                          border: "1px solid rgba(37,211,102,0.3)",
+                          background: "#003d2e",
+                          padding: "24px",
+                          textAlign: "center",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
+                          gap: 8,
                         }}
                       >
-                        <Video size={18} style={{ color: "#25d366" }} />
+                        <RefreshCw
+                          size={13}
+                          style={{
+                            animation: "spin 1s linear infinite",
+                            color: "#25d366",
+                          }}
+                        />
+                        <span style={{ color: "#25d366", fontSize: 11 }}>
+                          Loading image...
+                        </span>
                       </div>
-                      <span
+                    ) : mediaUrl ? (
+                      <img
+                        src={mediaUrl}
+                        alt="Template header"
                         style={{
-                          color: "#25d366",
-                          fontSize: 11,
-                          fontWeight: 500,
+                          width: "100%",
+                          maxHeight: 200,
+                          objectFit: "cover",
+                          display: "block",
+                        }}
+                        onError={(e) => {
+                          e.target.style.display = "none";
+                          e.target.nextSibling &&
+                            (e.target.nextSibling.style.display = "flex");
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          background: "#003d2e",
+                          padding: "20px",
+                          textAlign: "center",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: 6,
                         }}
                       >
-                        Video
-                      </span>
-                    </div>
-                  )}
+                        <Image size={18} style={{ color: "#25d366" }} />
+                        <span style={{ color: "#25d366", fontSize: 11 }}>
+                          No image preview
+                        </span>
+                      </div>
+                    ))}
+
+                  {/* HEADER — Video */}
+                  {header?.format === "VIDEO" &&
+                    (mediaLoading ? (
+                      <div
+                        style={{
+                          background: "#003d2e",
+                          padding: "24px",
+                          textAlign: "center",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 8,
+                        }}
+                      >
+                        <RefreshCw
+                          size={13}
+                          style={{
+                            animation: "spin 1s linear infinite",
+                            color: "#25d366",
+                          }}
+                        />
+                        <span style={{ color: "#25d366", fontSize: 11 }}>
+                          Loading video...
+                        </span>
+                      </div>
+                    ) : mediaUrl ? (
+                      <video
+                        src={mediaUrl}
+                        controls
+                        style={{
+                          width: "100%",
+                          maxHeight: 220,
+                          display: "block",
+                          background: "#000",
+                        }}
+                        onError={(e) => {
+                          e.target.style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          background: "#003d2e",
+                          padding: "20px",
+                          textAlign: "center",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: "50%",
+                            background: "rgba(37,211,102,0.15)",
+                            border: "1px solid rgba(37,211,102,0.3)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Video size={18} style={{ color: "#25d366" }} />
+                        </div>
+                        <span style={{ color: "#25d366", fontSize: 11 }}>
+                          No video preview
+                        </span>
+                      </div>
+                    ))}
 
                   {/* HEADER — TEXT */}
                   {header?.format === "TEXT" && header?.text && (
