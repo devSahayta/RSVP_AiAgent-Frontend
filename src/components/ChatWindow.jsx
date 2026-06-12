@@ -1,465 +1,204 @@
-// import { useEffect, useRef, useState } from "react";
-// import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
-// import useAuthUser from "../hooks/useAuthUser";
-// import MediaPreview from "./MediaPreview";
-
-// export default function ChatWindow({ chatId, userInfo, chatMode, setChatMode }) {
-//   const { userId } = useAuthUser();
-//   const [messages, setMessages] = useState([]);
-//   const [inputText, setInputText] = useState("");
-//   const messagesEndRef = useRef(null);
-//   const { getToken } = useKindeAuth();
-//   const lastMessageTsRef = useRef(null);
-
-//   const isNearBottom = () => {
-//     const el = messagesEndRef.current?.parentElement;
-//     if (!el) return true;
-//     return el.scrollHeight - el.scrollTop - el.clientHeight < 120;
-//   };
-
-//   const parseTs = (ts) => {
-//     try {
-//       return ts ? new Date(ts) : new Date();
-//     } catch {
-//       return new Date();
-//     }
-//   };
-
-//   const getParticipantName = (userInfo) => {
-//   if (!userInfo) return "User";
-
-//   // ✅ Priority 1: participant full name (MOST IMPORTANT)
-//   if (userInfo.full_name && userInfo.full_name.trim()) {
-//     return userInfo.full_name;
-//   }
-
-//   // ✅ Priority 2: person_name (future-proof)
-//   if (userInfo.person_name && userInfo.person_name.trim()) {
-//     return userInfo.person_name;
-//   }
-
-//   // ✅ Priority 3: generic name field
-//   if (userInfo.name && userInfo.name.trim()) {
-//     return userInfo.name;
-//   }
-
-//   // ✅ Priority 4: phone fallback
-//   if (userInfo.phone_number && userInfo.phone_number.trim()) {
-//     return userInfo.phone_number;
-//   }
-
-//   if (userInfo.phone && userInfo.phone.trim()) {
-//     return userInfo.phone;
-//   }
-
-//   return "User";
-// };
-
-//   const formatBubbleTime = (timestamp) => {
-//     if (!timestamp) return "";
-//     const d = parseTs(timestamp);
-//     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-//   };
-
-//   const normalizeAndSort = (arr) => {
-//     const normalized = (arr || []).map((m) => ({
-//       ...m,
-//       created_at: m.created_at || new Date().toISOString(),
-//     }));
-//     normalized.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-//     return normalized;
-//   };
-
-//   const scrollToBottom = (behavior = "smooth") => {
-//     setTimeout(() => {
-//       messagesEndRef.current?.scrollIntoView({ behavior });
-//     }, 60);
-//   };
-
-//   useEffect(() => {
-//   console.log("🧠 ChatWindow userInfo:", userInfo);
-// }, [userInfo]);
-
-//   useEffect(() => {
-//     if (!chatId) {
-//       setMessages([]);
-//       return;
-//     }
-
-//     let cancelled = false;
-//     let intervalId;
-
-//     const loadMessages = async (initial = false) => {
-//       try {
-//         const res = await fetch(
-//           `${import.meta.env.VITE_BACKEND_URL}/api/chats/${chatId}/messages`
-//         );
-//         const data = await res.json();
-//         if (!data?.ok || !Array.isArray(data.messages)) return;
-
-//         const sorted = normalizeAndSort(data.messages);
-//         const lastTs = sorted.at(-1)?.created_at;
-
-//         if (!initial && lastMessageTsRef.current === lastTs) return;
-//         lastMessageTsRef.current = lastTs;
-
-//         if (!cancelled) {
-//           const shouldScroll = initial || isNearBottom();
-//           setMessages(sorted);
-//           if (shouldScroll) scrollToBottom("auto");
-//         }
-//       } catch (err) {
-//         console.error("Error loading messages:", err);
-//       }
-//     };
-
-//     loadMessages(true);
-//     intervalId = setInterval(() => loadMessages(false), 3000);
-
-//     return () => {
-//       cancelled = true;
-//       clearInterval(intervalId);
-//     };
-//   }, [chatId]);
-
-//   useEffect(() => {
-//     scrollToBottom();
-//   }, [messages.length]);
-
-//   const isSentByAdminOrAI = (sender_type) => {
-//     if (!sender_type) return false;
-//     const s = sender_type.toLowerCase();
-//     return ["admin", "ai", "bot", "system"].includes(s);
-//   };
-
-//   /* 🔹 NEW: Sender label formatter (ADDED) */
-//   const getSenderLabel = (sender_type) => {
-//     if (!sender_type) return "User";
-//     const s = sender_type.toLowerCase();
-//     if (s === "ai" || s === "bot" || s === "system") return "AI";
-//     if (s === "admin") return "Admin";
-//     return "User";
-//   };
-
-//   const resumeAI = async () => {
-//     if (!chatId) return;
-//     try {
-//       const token = await getToken();
-//       const res = await fetch(
-//         `${import.meta.env.VITE_BACKEND_URL}/admin/chat/resume-ai`,
-//         {
-//           method: "POST",
-//           headers: {
-//             "Content-Type": "application/json",
-//             Authorization: `Bearer ${token}`,
-//           },
-//           body: JSON.stringify({ chat_id: chatId }),
-//         }
-//       );
-//       const data = await res.json();
-//       if (res.ok && data.success) setChatMode("AI");
-//     } catch (err) {
-//       console.error("Failed to resume AI", err);
-//     }
-//   };
-
-//   /* ================= DATE SEPARATOR HELPERS ================= */
-
-//   const startOfDay = (d) =>
-//     new Date(d.getFullYear(), d.getMonth(), d.getDate());
-
-//   const formatDateLabel = (date) => {
-//     const today = startOfDay(new Date());
-//     const msgDay = startOfDay(date);
-//     const diffDays = Math.round(
-//       (today - msgDay) / (1000 * 60 * 60 * 24)
-//     );
-
-//     if (diffDays === 0) return "Today";
-//     if (diffDays === 1) return "Yesterday";
-//     if (diffDays < 7)
-//       return msgDay.toLocaleDateString([], { weekday: "long" });
-
-//     return msgDay.toLocaleDateString([], {
-//       day: "2-digit",
-//       month: "short",
-//       year: "numeric",
-//     });
-//   };
-
-//   /* ========================================================== */
-
-//   const sendMessage = async () => {
-//     const trimmed = inputText.trim();
-//     if (!trimmed || !chatId) return;
-
-//     const temp = {
-//       message_id: `temp-${Date.now()}`,
-//       sender_type: "admin",
-//       message: trimmed,
-//       created_at: new Date().toISOString(),
-//     };
-
-//     setMessages((prev) => [...prev, temp]);
-//     setInputText("");
-//     scrollToBottom();
-//     setChatMode("MANUAL");
-
-//     try {
-//       const token = await getToken();
-//       await fetch(
-//         `${import.meta.env.VITE_BACKEND_URL}/admin/chat/send`,
-//         {
-//           method: "POST",
-//           headers: {
-//             "Content-Type": "application/json",
-//             Authorization: `Bearer ${token}`,
-//           },
-//           body: JSON.stringify({ chat_id: chatId, message: trimmed }),
-//         }
-//       );
-//     } catch (err) {
-//       console.error("Send message failed:", err);
-//     }
-//   };
-
-//   return (
-//     <div className="wa-chat-window">
-//       {/* HEADER */}
-//       <div className="wa-chat-header">
-//   <div className="wa-header-left">
-//     <div className="wa-header-avatar">
-//       {getParticipantName(userInfo).charAt(0).toUpperCase()}
-//     </div>
-//     <div className="wa-header-meta">
-//       <h3>{getParticipantName(userInfo)}</h3>
-//       <div className="wa-last-seen">
-//         {chatMode === "AI" ? "🤖 AI active" : "👤 Admin mode"}
-//       </div>
-//     </div>
-//   </div>
-
-//   {chatMode === "MANUAL" && (
-//     <div className="resume-ai-banner" onClick={resumeAI}>
-//       ▶ Resume AI
-//     </div>
-//   )}
-// </div>
-
-//       {/* MESSAGES */}
-//       <div className="wa-messages">
-//         {messages.map((msg, index) => {
-//           const sent = isSentByAdminOrAI(msg.sender_type);
-//           const currentDate = parseTs(msg.created_at);
-//           const prevMsg = messages[index - 1];
-//           const prevDate = prevMsg ? parseTs(prevMsg.created_at) : null;
-
-//           const showDateSeparator =
-//             !prevDate ||
-//             startOfDay(currentDate).getTime() !==
-//               startOfDay(prevDate).getTime();
-
-//           return (
-//             <div key={msg.message_id} className="wa-message-row">
-//               {showDateSeparator && (
-//                 <div className="wa-date-separator">
-//                   {formatDateLabel(currentDate)}
-//                 </div>
-//               )}
-
-//               <div className={`wa-message-bubble ${sent ? "sent" : "received"}`}>
-//                 <div className="wa-message-text">{msg.message}</div>
-
-//                 {/* 🔹 UPDATED: Time + Sender Type */}
-//                 <div className="wa-message-time">
-//                   {formatBubbleTime(msg.created_at)} ·{" "}
-//                   <span className="wa-sender-type">
-//                     {getSenderLabel(msg.sender_type)}
-//                   </span>
-//                 </div>
-//               </div>
-//             </div>
-//           );
-//         })}
-//         <div ref={messagesEndRef} />
-//       </div>
-
-//       {/* INPUT */}
-//       <div className="wa-input-area">
-//         <input
-//           value={inputText}
-//           onChange={(e) => setInputText(e.target.value)}
-//           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-//           placeholder="Type a message…"
-//         />
-//         <button onClick={sendMessage}>Send</button>
-//       </div>
-//     </div>
-//   );
-// }
-
+// components/ChatWindow.jsx
 import { useEffect, useRef, useState } from "react";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import useAuthUser from "../hooks/useAuthUser";
 import { showError } from "../utils/toast";
 
-export default function ChatWindow({ chatId, userInfo }) {
-  const { userId } = useAuthUser();
+/* ── Avatar colours — must match ChatList ─────────────────────── */
+const AVA = [
+  "#B45309",
+  "#0369A1",
+  "#0D9488",
+  "#7C3AED",
+  "#B91C1C",
+  "#1D4ED8",
+  "#047857",
+  "#BE185D",
+];
+const avaColor = (s) => AVA[(s || "U").charCodeAt(0) % AVA.length];
+
+/* ── Icons ────────────────────────────────────────────────────── */
+const IconSend = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M22 2L11 13"
+      stroke="#000"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M22 2L15 22L11 13L2 9L22 2Z"
+      stroke="#000"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const IconBot = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2a2 2 0 0 1 2 2 2 2 0 0 1-2 2 2 2 0 0 1-2-2 2 2 0 0 1 2-2m8 7H4V7h16v2m-8 2c3.31 0 6 2.69 6 6H6c0-3.31 2.69-6 6-6m0 2a4 4 0 0 0-4 4h8a4 4 0 0 0-4-4z" />
+  </svg>
+);
+
+const IconBack = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M15 18l-6-6 6-6"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+/* ── Block reason text ────────────────────────────────────────── */
+const BLOCK_MSG = {
+  NO_USER_REPLY: "User hasn't replied yet — send a template to start.",
+  WINDOW_EXPIRED: "24-hour window expired — send a template to re-engage.",
+  TEMPLATE_ONLY_WAITING_FOR_USER:
+    "Template sent. Waiting for the user to reply…",
+};
+
+/* ── Helpers ──────────────────────────────────────────────────── */
+const parseTs = (ts) => {
+  try {
+    return ts ? new Date(ts) : new Date();
+  } catch {
+    return new Date();
+  }
+};
+const fmtTime = (ts) =>
+  parseTs(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+const startDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+const fmtDateLabel = (date) => {
+  const today = startDay(new Date());
+  const diff = Math.round((today - startDay(date)) / 86400000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  if (diff < 7)
+    return startDay(date).toLocaleDateString([], { weekday: "long" });
+  return startDay(date).toLocaleDateString([], {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const sortMsgs = (arr) =>
+  [...(arr || [])]
+    .map((m) => ({
+      ...m,
+      created_at: m.created_at || new Date().toISOString(),
+    }))
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+const getName = (info) =>
+  info?.full_name?.trim() ||
+  info?.person_name?.trim() ||
+  info?.name?.trim() ||
+  info?.phone_number?.trim() ||
+  "User";
+
+const parseBtns = (b) => {
+  if (!b) return [];
+  try {
+    return typeof b === "string" ? JSON.parse(b) : b;
+  } catch {
+    return [];
+  }
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   COMPONENT
+═══════════════════════════════════════════════════════════════ */
+export default function ChatWindow({
+  chatId,
+  userInfo,
+  chatMode,
+  setChatMode,
+  onBack,
+}) {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
-  const messagesEndRef = useRef(null);
-  const { getToken } = useKindeAuth();
-  const lastMessageTsRef = useRef(null);
-
   const [sendBlocked, setSendBlocked] = useState(false);
   const [blockReason, setBlockReason] = useState(null);
   const [isSending, setIsSending] = useState(false);
+  const [isResuming, setIsResuming] = useState(false);
 
-  /* ================= HELPERS ================= */
+  const endRef = useRef(null);
+  const lastTsRef = useRef(null);
+  const { getToken } = useKindeAuth();
 
-  const isNearBottom = () => {
-    const el = messagesEndRef.current?.parentElement;
+  /* ── Scroll ────────────────────────────────────────────────── */
+  const nearBottom = () => {
+    const el = endRef.current?.parentElement;
     if (!el) return true;
-    return el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 150;
   };
+  const scrollDown = (beh = "smooth") =>
+    setTimeout(() => endRef.current?.scrollIntoView({ behavior: beh }), 60);
 
-  const parseTs = (ts) => {
-    try {
-      return ts ? new Date(ts) : new Date();
-    } catch {
-      return new Date();
-    }
-  };
-
-  const getParticipantName = (userInfo) => {
-    if (!userInfo) return "User";
-
-    if (userInfo.full_name?.trim()) return userInfo.full_name;
-    if (userInfo.person_name?.trim()) return userInfo.person_name;
-    if (userInfo.name?.trim()) return userInfo.name;
-    if (userInfo.phone_number?.trim()) return userInfo.phone_number;
-    if (userInfo.phone?.trim()) return userInfo.phone;
-
-    return "User";
-  };
-
-  const formatBubbleTime = (timestamp) => {
-    if (!timestamp) return "";
-    return parseTs(timestamp).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const normalizeAndSort = (arr) => {
-    const normalized = (arr || []).map((m) => ({
-      ...m,
-      created_at: m.created_at || new Date().toISOString(),
-    }));
-    normalized.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    return normalized;
-  };
-
-  const scrollToBottom = (behavior = "smooth") => {
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior });
-    }, 60);
-  };
-
-  /* ================= LOAD MESSAGES ================= */
-
+  /* ── Load messages ─────────────────────────────────────────── */
   useEffect(() => {
     if (!chatId) {
       setMessages([]);
       return;
     }
+    let dead = false;
+    let timer;
 
-    let cancelled = false;
-    let intervalId;
-
-    const loadMessages = async (initial = false) => {
+    const load = async (init = false) => {
       try {
-        const res = await fetch(
+        const r = await fetch(
           `${import.meta.env.VITE_BACKEND_URL}/api/chats/${chatId}/messages`,
         );
-        const data = await res.json();
-        if (!data?.ok || !Array.isArray(data.messages)) return;
-
-        const sorted = normalizeAndSort(data.messages);
+        const d = await r.json();
+        if (!d?.ok || !Array.isArray(d.messages)) return;
+        const sorted = sortMsgs(d.messages);
         const lastTs = sorted.at(-1)?.created_at;
-
-        if (!initial && lastMessageTsRef.current === lastTs) return;
-        lastMessageTsRef.current = lastTs;
-
-        if (!cancelled) {
-          const shouldScroll = initial || isNearBottom();
+        if (!init && lastTsRef.current === lastTs) return;
+        lastTsRef.current = lastTs;
+        if (!dead) {
+          const scroll = init || nearBottom();
           setMessages(sorted);
-          if (shouldScroll) scrollToBottom("auto");
+          if (scroll) scrollDown("auto");
         }
-      } catch (err) {
-        console.error("Error loading messages:", err);
+      } catch (e) {
+        console.error("Messages:", e);
       }
     };
 
-    loadMessages(true);
-    intervalId = setInterval(() => loadMessages(false), 3000);
-
+    load(true);
+    timer = setInterval(() => load(false), 3000);
     return () => {
-      cancelled = true;
-      clearInterval(intervalId);
+      dead = true;
+      clearInterval(timer);
     };
   }, [chatId]);
 
   useEffect(() => {
-    scrollToBottom();
+    scrollDown();
   }, [messages.length]);
 
-  /* ================= MESSAGE UTILS ================= */
+  /* Reset block on chat switch */
+  useEffect(() => {
+    setSendBlocked(false);
+    setBlockReason(null);
+  }, [chatId]);
 
-  const isSentByAdmin = (sender_type) => sender_type?.toLowerCase() === "admin";
-
-  const isSentByAI = (sender_type) => sender_type?.toLowerCase() === "ai";
-
-  const getSenderLabel = (sender_type) =>
-    sender_type?.toLowerCase() === "admin"
-      ? "Admin"
-      : sender_type?.toLowerCase() === "ai"
-        ? "AI"
-        : "User";
-
-  /* ================= DATE SEPARATORS ================= */
-
-  const startOfDay = (d) =>
-    new Date(d.getFullYear(), d.getMonth(), d.getDate());
-
-  const formatDateLabel = (date) => {
-    const today = startOfDay(new Date());
-    const msgDay = startOfDay(date);
-    const diffDays = Math.round((today - msgDay) / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays < 7) return msgDay.toLocaleDateString([], { weekday: "long" });
-
-    return msgDay.toLocaleDateString([], {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  };
-
-  /* ================= SEND MESSAGE ================= */
-
+  /* ── Send ──────────────────────────────────────────────────── */
   const sendMessage = async () => {
-    const trimmed = inputText.trim();
-    if (!trimmed || !chatId) return;
-
+    const text = inputText.trim();
+    if (!text || !chatId || isSending) return;
     try {
       setIsSending(true);
-
       const token = await getToken();
-
-      const res = await fetch(
+      const r = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}/admin/chat/send`,
         {
           method: "POST",
@@ -467,191 +206,228 @@ export default function ChatWindow({ chatId, userInfo }) {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ chat_id: chatId, message: trimmed }),
+          body: JSON.stringify({ chat_id: chatId, message: text }),
         },
       );
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        // 🚫 Backend-enforced WhatsApp rules
+      const d = await r.json();
+      if (!r.ok) {
         setSendBlocked(true);
-        setBlockReason(data.code);
-
-        showError(data.error || "Message not allowed");
-
+        setBlockReason(d.code || null);
+        showError(d.error || "Message not allowed");
         setInputText("");
         return;
       }
-
-      // ✅ Success
       setSendBlocked(false);
       setBlockReason(null);
-
-      setMessages((prev) => [
-        ...prev,
+      setMessages((p) => [
+        ...p,
         {
-          message_id: `temp-${Date.now()}`,
+          message_id: `t-${Date.now()}`,
           sender_type: "admin",
-          message: trimmed,
+          message: text,
           created_at: new Date().toISOString(),
         },
       ]);
-
       setInputText("");
-      scrollToBottom();
-    } catch (err) {
-      console.error("Send message failed:", err);
-      showError("Failed to send message");
+      scrollDown();
+    } catch {
+      showError("Failed to send");
     } finally {
       setIsSending(false);
     }
   };
 
-  const parseButtons = (buttons) => {
-    if (!buttons) return [];
+  /* ── Resume AI ─────────────────────────────────────────────── */
+  const resumeAI = async () => {
+    if (!chatId || isResuming) return;
     try {
-      return typeof buttons === "string" ? JSON.parse(buttons) : buttons;
-    } catch (err) {
-      console.error("Failed to parse buttons:", err);
-      return [];
+      setIsResuming(true);
+      const token = await getToken();
+      const r = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/admin/chat/resume-ai`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ chat_id: chatId }),
+        },
+      );
+      if (r.ok) {
+        setChatMode("AI");
+        setSendBlocked(false);
+        setBlockReason(null);
+      } else showError("Failed to resume AI");
+    } catch {
+      showError("Failed to resume AI");
+    } finally {
+      setIsResuming(false);
     }
   };
 
-  const downloadFile = async (url, filename = "image.jpg") => {
+  /* ── Download ──────────────────────────────────────────────── */
+  const download = async (url, name = "file") => {
     try {
-      const res = await fetch(url);
-      const blob = await res.blob();
-
-      const blobUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = filename;
-      document.body.appendChild(a);
+      const blob = await fetch(url).then((r) => r.blob());
+      const a = Object.assign(document.createElement("a"), {
+        href: URL.createObjectURL(blob),
+        download: name,
+      });
       a.click();
-
-      a.remove();
-      window.URL.revokeObjectURL(blobUrl);
-    } catch (err) {
-      console.error("Download failed:", err);
-      alert("Failed to download file");
+      URL.revokeObjectURL(a.href);
+    } catch {
+      alert("Download failed");
     }
   };
 
-  console.log({ messages, inputText });
+  /* ── Helpers ───────────────────────────────────────────────── */
+  const isSent = (s) => s === "admin" || s === "ai";
+  const isSystem = (s) => s === "system";
+  const lbl = (s) =>
+    s === "admin" ? "Admin" : s === "ai" ? "AI" : s === "user" ? "User" : null;
 
-  /* ================= UI ================= */
+  const name = getName(userInfo);
+  const mode = chatMode || "AI";
+  const color = avaColor(name);
 
+  /* ═══════════════════════════════════════════════════════════ */
   return (
     <div className="wa-chat-window">
       {/* HEADER */}
       <div className="wa-chat-header">
-        <div className="wa-header-left">
-          <div className="wa-header-avatar">
-            {getParticipantName(userInfo).charAt(0).toUpperCase()}
+        {onBack && (
+          <button
+            className="wa-back-btn"
+            onClick={onBack}
+            aria-label="Back to chats"
+          >
+            <IconBack />
+          </button>
+        )}
+
+        <div
+          className="wa-header-ava"
+          style={{ background: color }}
+          aria-hidden="true"
+        >
+          {name.charAt(0).toUpperCase()}
+        </div>
+
+        <div className="wa-header-info">
+          <div className="wa-header-name">{name}</div>
+          <div className="wa-header-sub">
+            {userInfo?.phone_number && (
+              <span className="wa-header-phone">{userInfo.phone_number}</span>
+            )}
+            <span
+              className={`wa-mode-badge ${mode === "MANUAL" ? "manual" : "ai"}`}
+            >
+              <span className="wa-mode-dot" />
+              {mode === "MANUAL" ? "Manual" : "AI active"}
+            </span>
           </div>
-          <div className="wa-header-meta">
-            <h3>{getParticipantName(userInfo)}</h3>
-            <div className="wa-last-seen">👤 Participant</div>
-          </div>
+        </div>
+
+        <div className="wa-header-actions">
+          {mode === "MANUAL" ? (
+            <button
+              className="wa-hdr-btn ok"
+              onClick={resumeAI}
+              disabled={isResuming}
+            >
+              <IconBot />
+              <span>{isResuming ? "Resuming…" : "Resume AI"}</span>
+            </button>
+          ) : (
+            <button className="wa-hdr-btn" disabled>
+              <IconBot />
+              <span>AI handling</span>
+            </button>
+          )}
         </div>
       </div>
 
       {/* MESSAGES */}
       <div className="wa-messages">
-        {messages.map((msg, index) => {
-          const sent =
-            isSentByAdmin(msg.sender_type) || isSentByAI(msg.sender_type);
-          const currentDate = parseTs(msg.created_at);
-          const prevMsg = messages[index - 1];
-          const prevDate = prevMsg ? parseTs(prevMsg.created_at) : null;
-
-          const showDateSeparator =
-            !prevDate ||
-            startOfDay(currentDate).getTime() !==
-              startOfDay(prevDate).getTime();
+        {messages.map((msg, i) => {
+          const sent = isSent(msg.sender_type);
+          const sys = isSystem(msg.sender_type);
+          const cur = parseTs(msg.created_at);
+          const prev = messages[i - 1];
+          const showSep =
+            !prev ||
+            startDay(cur).getTime() !==
+              startDay(parseTs(prev.created_at)).getTime();
+          const sender = lbl(msg.sender_type);
 
           return (
-            <div key={msg.message_id} className="wa-message-row">
-              {showDateSeparator && (
-                <div className="wa-date-separator">
-                  {formatDateLabel(currentDate)}
-                </div>
+            <div key={msg.message_id || i} className="wa-msg-row">
+              {showSep && (
+                <div className="wa-date-sep">{fmtDateLabel(cur)}</div>
               )}
 
               <div
-                className={`wa-message-bubble ${sent ? "sent" : "received"}`}
+                className={[
+                  "wa-bubble",
+                  sys ? "sys" : "",
+                  sent ? "sent" : "",
+                  !sent && !sys ? "recv" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
               >
-                {/* Message Text */}
-                {/* Message Content */}
-                {/* Message Content */}
+                {/* Image */}
                 {msg.message_type === "image" && msg.media_path ? (
-                  /* IMAGE */
-                  <div className="wa-image-message">
+                  <div className="wa-img-wrap">
                     <img
                       src={msg.media_path}
-                      alt="WhatsApp Image"
-                      className="wa-chat-image"
+                      alt="Image"
+                      className="wa-chat-img"
                       onClick={() => window.open(msg.media_path, "_blank")}
                     />
-
                     <div
-                      className="wa-image-download"
-                      onClick={() =>
-                        downloadFile(
-                          msg.media_path,
-                          `whatsapp-image-${msg.message_id}.jpg`,
-                        )
-                      }
+                      className="wa-img-dl"
                       title="Download"
+                      onClick={() =>
+                        download(msg.media_path, `img-${msg.message_id}.jpg`)
+                      }
                     >
-                      ⬇️
+                      ↓
                     </div>
                   </div>
-                ) : msg.message_type === "document" && msg.media_path ? (
-                  /* DOCUMENT */
+                ) : /* Document */
+                msg.message_type === "document" && msg.media_path ? (
                   <div
-                    className="wa-document-message"
+                    className="wa-doc-wrap"
                     onClick={() => window.open(msg.media_path, "_blank")}
                   >
-                    <div className="wa-doc-icon">📄</div>
-
+                    <div className="wa-doc-ico">📄</div>
                     <div className="wa-doc-info">
                       <div className="wa-doc-name">Document</div>
-                      <div className="wa-doc-meta">Click to view</div>
+                      <div className="wa-doc-sub">Tap to view</div>
                     </div>
-
                     <div
-                      className="wa-doc-download"
-                      onClick={() =>
-                        downloadFile(
-                          msg.media_path,
-                          `document-${msg.message_id}.pdf`,
-                        )
-                      }
-                      title="Download document"
+                      className="wa-doc-dl"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        download(msg.media_path, `doc-${msg.message_id}.pdf`);
+                      }}
                     >
-                      ⬇️
+                      ↓
                     </div>
                   </div>
                 ) : (
-                  /* TEXT */
-                  <div className="wa-message-text">{msg.message}</div>
+                  /* Text */
+                  <div className="wa-bubble-text">{msg.message}</div>
                 )}
 
-                {/* WhatsApp Template Buttons */}
+                {/* Template buttons */}
                 {msg.message_type === "template" &&
-                  parseButtons(msg.buttons).length > 0 && (
-                    <div className="wa-template-buttons">
-                      {parseButtons(msg.buttons).map((btn, i) => (
-                        <button
-                          key={i}
-                          className="wa-template-button"
-                          onClick={() => {
-                            console.log("Template button clicked:", btn.text);
-                            // later → send this back to backend if needed
-                          }}
-                        >
+                  parseBtns(msg.buttons).length > 0 && (
+                    <div className="wa-tpl-btns">
+                      {parseBtns(msg.buttons).map((btn, j) => (
+                        <button key={j} className="wa-tpl-btn">
                           {btn.text}
                         </button>
                       ))}
@@ -659,39 +435,63 @@ export default function ChatWindow({ chatId, userInfo }) {
                   )}
 
                 {/* Meta */}
-                <div className="wa-message-time">
-                  {formatBubbleTime(msg.created_at)} ·{" "}
-                  <span className="wa-sender-type">
-                    {getSenderLabel(msg.sender_type)}
-                  </span>
-                </div>
+                {!sys && (
+                  <div
+                    className={`wa-bubble-meta ${!sent ? "split" : "right"}`}
+                  >
+                    {sender && <span className="wa-sender-lbl">{sender}</span>}
+                    <span>{fmtTime(msg.created_at)}</span>
+                  </div>
+                )}
               </div>
             </div>
           );
         })}
-        <div ref={messagesEndRef} />
+        <div ref={endRef} />
       </div>
 
       {/* INPUT */}
-      <div className="wa-input-area">
-        <input
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          // disabled={sendBlocked}
-          placeholder={
-            blockReason === "NO_USER_REPLY"
-              ? "User hasn’t replied yet. Send a template."
-              : blockReason === "WINDOW_EXPIRED"
-                ? "24-hour window expired. Send a template."
-                : blockReason === "TEMPLATE_ONLY_WAITING_FOR_USER"
-                  ? "Waiting for user reply…"
-                  : "Type a message…"
-          }
-        />
+      <div className="wa-input-bar">
+        {sendBlocked && blockReason ? (
+          <div className="wa-block-notice" role="alert">
+            ⚠ {BLOCK_MSG[blockReason] || "Send a template to continue."}
+          </div>
+        ) : (
+          <input
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            placeholder="Type a message…"
+            autoComplete="off"
+            aria-label="Type a message"
+          />
+        )}
 
-        <button disabled={isSending} onClick={sendMessage}>
-          {isSending ? "Sending..." : "Send"}
+        <button
+          className="wa-send-btn"
+          onClick={sendMessage}
+          disabled={isSending || sendBlocked}
+          aria-label="Send message"
+        >
+          {isSending ? (
+            <span
+              style={{
+                color: "#000",
+                fontSize: 14,
+                fontWeight: 700,
+                lineHeight: 1,
+              }}
+            >
+              …
+            </span>
+          ) : (
+            <IconSend />
+          )}
         </button>
       </div>
     </div>
