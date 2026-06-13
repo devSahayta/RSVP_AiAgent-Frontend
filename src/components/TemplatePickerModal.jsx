@@ -1,0 +1,570 @@
+import { useState, useEffect, useRef } from "react";
+import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+
+const BACKEND = import.meta.env.VITE_BACKEND_URL;
+
+const css = `
+  * { box-sizing: border-box; }
+
+  .tpm-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(10, 8, 6, 0.8);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+    animation: tpm-fade 0.16s ease;
+  }
+
+  .tpm-modal {
+    width: 100%; max-width: 560px;
+    background: #1a1714;
+    border: 1px solid #2e2a25;
+    border-radius: 12px;
+    display: flex; flex-direction: column;
+    max-height: min(88vh, 680px);
+    overflow: hidden;
+    animation: tpm-up 0.2s ease;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+  }
+
+  /* ── Header ── */
+  .tpm-header {
+    padding: 20px 22px 16px;
+    border-bottom: 1px solid #252220;
+    flex-shrink: 0;
+  }
+  .tpm-title {
+    margin: 0 0 2px;
+    font-size: 0.97rem; font-weight: 600;
+    color: #f0ebe4; letter-spacing: -0.01em;
+  }
+  .tpm-subtitle {
+    margin: 0; font-size: 0.76rem;
+    color: #6b6259; line-height: 1.4;
+  }
+
+  /* ── Search ── */
+  .tpm-search-wrap {
+    padding: 12px 22px;
+    border-bottom: 1px solid #252220;
+    flex-shrink: 0;
+  }
+  .tpm-search {
+    width: 100%;
+    background: #120f0d; border: 1px solid #2e2a25;
+    border-radius: 7px; padding: 9px 12px;
+    color: #d4cdc6; font-size: 0.84rem;
+    outline: none; transition: border-color 0.15s;
+    font-family: inherit;
+  }
+  .tpm-search:focus { border-color: #5a4f45; }
+  .tpm-search::placeholder { color: #3d3730; }
+
+  /* ── List ── */
+  .tpm-list {
+    flex: 1; overflow-y: auto; padding: 6px 0;
+  }
+  .tpm-list::-webkit-scrollbar { width: 3px; }
+  .tpm-list::-webkit-scrollbar-track { background: transparent; }
+  .tpm-list::-webkit-scrollbar-thumb { background: #2e2a25; border-radius: 2px; }
+
+  .tpm-row {
+    all: unset; display: block; width: 100%;
+    padding: 12px 22px; cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: background 0.1s, border-color 0.1s;
+  }
+  .tpm-row:hover { background: #1f1c19; }
+  .tpm-row.sel {
+    background: #1f1c18;
+    border-left-color: #c9a97a;
+  }
+
+  .tpm-row-top {
+    display: flex; align-items: center;
+    justify-content: space-between; gap: 10px;
+    margin-bottom: 5px;
+  }
+  .tpm-name {
+    font-family: 'SF Mono','Fira Code','Cascadia Code',monospace;
+    font-size: 0.81rem; font-weight: 500;
+    color: #b8b0a6;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .tpm-row.sel .tpm-name { color: #e8ddd0; }
+
+  .tpm-badges { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .tpm-badge {
+    font-size: 0.65rem; font-weight: 600;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 4px;
+  }
+  .tpm-badge-marketing { background: #2a1f10; color: #c9965a; border: 1px solid #3d2c18; }
+  .tpm-badge-utility   { background: #101e2a; color: #5a9ec9; border: 1px solid #18303d; }
+  .tpm-badge-auth      { background: #1a1028; color: #9a7ac9; border: 1px solid #2c1e40; }
+  .tpm-badge-service   { background: #0e1e14; color: #5ab87a; border: 1px solid #183028; }
+  .tpm-badge-default   { background: #1e1c1a; color: #7a7068; border: 1px solid #2e2a25; }
+  .tpm-badge-lang      { background: transparent; color: #4a4540; border: 1px solid #2e2a25;
+                         font-size: 0.63rem; }
+
+  .tpm-body-text {
+    font-size: 0.77rem; color: #4a4540; line-height: 1.45; margin: 0;
+    display: -webkit-box; -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .tpm-row.sel .tpm-body-text { color: #5a5248; }
+
+  .tpm-sep { height: 1px; background: #1f1c19; margin: 0 22px; }
+
+  /* ── Footer ── */
+  .tpm-footer {
+    padding: 14px 22px;
+    border-top: 1px solid #252220;
+    flex-shrink: 0; background: #1a1714;
+  }
+  .tpm-footer-top {
+    display: flex; align-items: center;
+    justify-content: space-between; gap: 12px;
+    margin-bottom: 0;
+  }
+  .tpm-footer-info {
+    font-size: 0.78rem; color: #4a4540;
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .tpm-footer-info strong { color: #9a8e82; }
+  .tpm-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+  /* participant bar — shown after selecting */
+  .tpm-participant-bar {
+    margin-top: 10px; padding: 10px 14px;
+    background: #120f0d; border: 1px solid #2e2a25;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+    animation: tpm-fade 0.2s ease;
+  }
+  .tpm-participant-left { font-size: 0.78rem; color: #5a5248; }
+  .tpm-participant-left strong { color: #c9a97a; font-size: 1rem; }
+  .tpm-participant-right {
+    font-size: 0.72rem; color: #4a4540;
+    text-align: right; line-height: 1.4;
+  }
+
+  .tpm-btn {
+    border-radius: 7px; font-size: 0.82rem; font-weight: 600;
+    cursor: pointer; padding: 8px 18px;
+    transition: all 0.12s; font-family: inherit; border: none;
+    white-space: nowrap;
+  }
+  .tpm-btn-cancel {
+    background: transparent;
+    border: 1px solid #2e2a25 !important; color: #5a5248;
+  }
+  .tpm-btn-cancel:hover { border-color: #3d3730 !important; color: #8a8078; }
+  .tpm-btn-send {
+    background: #c9a97a; color: #120f0d;
+    border: 1px solid transparent !important;
+  }
+  .tpm-btn-send:hover:not(:disabled) { background: #d4b88a; }
+  .tpm-btn-send:disabled { background: #2a2420; color: #4a4540; cursor: not-allowed; }
+
+  /* ── States ── */
+  .tpm-center {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 48px 24px; gap: 10px; text-align: center;
+  }
+  .tpm-spinner {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid #2e2a25; border-top-color: #c9a97a;
+    animation: tpm-spin 0.75s linear infinite;
+  }
+  .tpm-center-label { font-size: 0.8rem; color: #4a4540; margin: 0; }
+  .tpm-empty { font-size: 0.82rem; color: #3d3730; margin: 0; }
+
+  .tpm-err {
+    margin: 10px 22px;
+    background: #1e0f0f; border: 1px solid #3d1818;
+    border-radius: 7px; padding: 11px 14px;
+  }
+  .tpm-err-title { font-size: 0.81rem; color: #c97a7a; font-weight: 600; margin: 0 0 3px; }
+  .tpm-err-msg { font-size: 0.76rem; color: #6b3030; margin: 0 0 8px; }
+  .tpm-err-retry {
+    background: none; border: 1px solid #3d1818;
+    color: #c97a7a; font-size: 0.74rem;
+    padding: 3px 10px; border-radius: 5px;
+    cursor: pointer; font-family: inherit;
+  }
+
+  /* ── Success ── */
+  .tpm-success { padding: 32px 22px; }
+  .tpm-success-head {
+    margin: 0 0 4px; font-size: 0.97rem;
+    font-weight: 600; color: #f0ebe4;
+  }
+  .tpm-success-sub {
+    margin: 0 0 20px; font-size: 0.77rem; color: #4a4540;
+  }
+  .tpm-counts {
+    display: flex; gap: 10px; margin-bottom: 18px;
+  }
+  .tpm-count {
+    flex: 1; background: #120f0d;
+    border: 1px solid #2e2a25; border-radius: 8px;
+    padding: 12px 10px; text-align: center;
+  }
+  .tpm-count-n { font-size: 1.65rem; font-weight: 700; color: #c9a97a; line-height: 1; }
+  .tpm-count-n.fail { color: #c97a7a; }
+  .tpm-count-n.ok   { color: #7ab87a; }
+  .tpm-count-lbl {
+    font-size: 0.67rem; color: #4a4540; margin-top: 4px;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .tpm-success-note {
+    font-size: 0.76rem; color: #4a4540; line-height: 1.5;
+    background: #120f0d; border: 1px solid #2e2a25;
+    border-radius: 7px; padding: 10px 13px; margin-bottom: 16px;
+  }
+  .tpm-done {
+    width: 100%; background: #c9a97a; color: #120f0d;
+    border: none; padding: 10px; border-radius: 7px;
+    font-size: 0.875rem; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: background 0.12s;
+  }
+  .tpm-done:hover { background: #d4b88a; }
+
+  @keyframes tpm-fade { from { opacity:0 } to { opacity:1 } }
+  @keyframes tpm-up {
+    from { opacity:0; transform:translateY(12px) }
+    to   { opacity:1; transform:translateY(0) }
+  }
+  @keyframes tpm-spin { to { transform:rotate(360deg) } }
+
+  @media (max-width: 580px) {
+    .tpm-overlay { padding: 0; align-items: flex-end; }
+    .tpm-modal {
+      max-width: 100%; border-radius: 14px 14px 0 0;
+      max-height: 93vh;
+    }
+    .tpm-header, .tpm-search-wrap, .tpm-footer { padding-left: 18px; padding-right: 18px; }
+    .tpm-row { padding-left: 18px; padding-right: 18px; }
+    .tpm-sep { margin: 0 18px; }
+    .tpm-err { margin: 10px 18px; }
+    .tpm-success { padding: 28px 18px; }
+  }
+`;
+
+function badgeClass(cat = "") {
+  const map = {
+    MARKETING: "tpm-badge-marketing",
+    UTILITY: "tpm-badge-utility",
+    AUTHENTICATION: "tpm-badge-auth",
+    SERVICE: "tpm-badge-service",
+  };
+  return map[cat.toUpperCase()] || "tpm-badge-default";
+}
+
+function extractBody(t) {
+  return t.components?.find((c) => c.type === "BODY")?.text || t.body || "";
+}
+
+export default function TemplatePickerModal({
+  eventId,
+  participantCount = null,
+  onClose,
+  onSuccess,
+}) {
+  const { getToken } = useKindeAuth();
+  const [templates, setTemplates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchErr, setFetchErr] = useState(null);
+  const [count, setCount] = useState(participantCount);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState(null);
+  const [sending, setSending] = useState(false);
+  const [sendErr, setSendErr] = useState(null);
+  const [result, setResult] = useState(null);
+  const searchRef = useRef(null);
+
+  useEffect(() => {
+    init();
+    const esc = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, []);
+
+  useEffect(() => {
+    if (!loading && searchRef.current) searchRef.current.focus();
+  }, [loading]);
+
+  async function init() {
+    setLoading(true);
+    setFetchErr(null);
+    try {
+      const token = await getToken();
+      const [tRes, pRes] = await Promise.all([
+        fetch(`${BACKEND}/api/samvaadik/templates`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        count === null
+          ? fetch(`${BACKEND}/api/events/${eventId}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            })
+          : Promise.resolve(null),
+      ]);
+
+      if (!tRes.ok) {
+        const d = await tRes.json().catch(() => ({}));
+        throw new Error(
+          d.error || `${tRes.status} — check Samvaadik connection`,
+        );
+      }
+      const tData = await tRes.json();
+      setTemplates(
+        (tData.data || []).filter(
+          (t) => !t.status || ["APPROVED", "approved"].includes(t.status),
+        ),
+      );
+
+      if (pRes) {
+        const pData = await pRes.json().catch(() => ({}));
+        const participants =
+          pData.participants || pData.data?.participants || [];
+        if (participants.length) setCount(participants.length);
+      }
+    } catch (e) {
+      setFetchErr(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSend() {
+    if (!selected || sending) return;
+    setSending(true);
+    setSendErr(null);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${BACKEND}/whatsapp/samvaadik-batch`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          event_id: eventId,
+          template_name: selected.name,
+          language_code: selected.language || selected.language_code || "en",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Send failed");
+      setResult({ sent: data.sent, failed: data.failed, total: data.total });
+      onSuccess?.({ sent: data.sent, failed: data.failed, total: data.total });
+    } catch (e) {
+      setSendErr(e.message);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  const filtered = templates.filter(
+    (t) =>
+      !search ||
+      t.name?.toLowerCase().includes(search.toLowerCase()) ||
+      extractBody(t).toLowerCase().includes(search.toLowerCase()),
+  );
+
+  return (
+    <>
+      <style>{css}</style>
+      <div
+        className="tpm-overlay"
+        onClick={(e) => e.target === e.currentTarget && onClose()}
+      >
+        <div className="tpm-modal">
+          {/* Header */}
+          <div className="tpm-header">
+            <h2 className="tpm-title">Send WhatsApp Template</h2>
+            <p className="tpm-subtitle">
+              Select a template · messages sent to all participants · chatbot
+              activates on reply
+            </p>
+          </div>
+
+          {result ? (
+            /* ── Success ── */
+            <div className="tpm-success">
+              <p className="tpm-success-head">All done</p>
+              <p className="tpm-success-sub">
+                Template{" "}
+                <span style={{ fontFamily: "monospace", color: "#7a7068" }}>
+                  {selected?.name}
+                </span>{" "}
+                dispatched
+              </p>
+              <div className="tpm-counts">
+                <div className="tpm-count">
+                  <div className="tpm-count-n ok">{result.sent}</div>
+                  <div className="tpm-count-lbl">Sent</div>
+                </div>
+                <div className="tpm-count">
+                  <div className={`tpm-count-n${result.failed ? " fail" : ""}`}>
+                    {result.failed}
+                  </div>
+                  <div className="tpm-count-lbl">Failed</div>
+                </div>
+                <div className="tpm-count">
+                  <div className="tpm-count-n">{result.total}</div>
+                  <div className="tpm-count-lbl">Total</div>
+                </div>
+              </div>
+              <p className="tpm-success-note">
+                The chatbot is now active. When participants reply, the AI will
+                respond automatically.
+              </p>
+              <button className="tpm-done" onClick={onClose}>
+                Done
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Search */}
+              <div className="tpm-search-wrap">
+                <input
+                  ref={searchRef}
+                  className="tpm-search"
+                  placeholder="Search templates…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+
+              {/* List */}
+              <div className="tpm-list">
+                {loading && (
+                  <div className="tpm-center">
+                    <div className="tpm-spinner" />
+                    <p className="tpm-center-label">Loading templates…</p>
+                  </div>
+                )}
+
+                {fetchErr && !loading && (
+                  <div className="tpm-err">
+                    <p className="tpm-err-title">Could not load templates</p>
+                    <p className="tpm-err-msg">{fetchErr}</p>
+                    <button className="tpm-err-retry" onClick={init}>
+                      Retry
+                    </button>
+                  </div>
+                )}
+
+                {!loading && !fetchErr && filtered.length === 0 && (
+                  <div className="tpm-center">
+                    <p className="tpm-empty">
+                      {search
+                        ? `No results for "${search}"`
+                        : "No approved templates found"}
+                    </p>
+                  </div>
+                )}
+
+                {!loading &&
+                  !fetchErr &&
+                  filtered.map((t, i) => {
+                    const body = extractBody(t);
+                    const sel = selected?.name === t.name;
+                    return (
+                      <div key={t.id || t.name}>
+                        {i > 0 && <div className="tpm-sep" />}
+                        <button
+                          className={`tpm-row${sel ? " sel" : ""}`}
+                          onClick={() => setSelected(sel ? null : t)}
+                        >
+                          <div className="tpm-row-top">
+                            <span className="tpm-name">{t.name}</span>
+                            <span className="tpm-badges">
+                              {t.category && (
+                                <span
+                                  className={`tpm-badge ${badgeClass(t.category)}`}
+                                >
+                                  {t.category}
+                                </span>
+                              )}
+                              {(t.language || t.language_code) && (
+                                <span className="tpm-badge tpm-badge-lang">
+                                  {t.language || t.language_code}
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                          {body && <p className="tpm-body-text">{body}</p>}
+                        </button>
+                      </div>
+                    );
+                  })}
+              </div>
+
+              {/* Send error */}
+              {sendErr && (
+                <div className="tpm-err" style={{ flexShrink: 0 }}>
+                  <p className="tpm-err-title" style={{ marginBottom: 0 }}>
+                    {sendErr}
+                  </p>
+                </div>
+              )}
+
+              {/* Footer */}
+              <div className="tpm-footer">
+                <div className="tpm-footer-top">
+                  <p className="tpm-footer-info">
+                    {selected ? (
+                      <>
+                        Template: <strong>{selected.name}</strong>
+                      </>
+                    ) : (
+                      "No template selected"
+                    )}
+                  </p>
+                  <div className="tpm-actions">
+                    <button
+                      className="tpm-btn tpm-btn-cancel"
+                      onClick={onClose}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="tpm-btn tpm-btn-send"
+                      onClick={handleSend}
+                      disabled={!selected || sending}
+                    >
+                      {sending ? "Sending…" : "Send to all"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Participant count bar — shown once a template is selected */}
+                {selected && !sending && (
+                  <div className="tpm-participant-bar">
+                    <div className="tpm-participant-left">
+                      <strong>{count !== null ? count : "—"}</strong>
+                      <span style={{ marginLeft: 6 }}>
+                        {count === 1 ? "participant" : "participants"} will
+                        receive this message
+                      </span>
+                    </div>
+                    <div className="tpm-participant-right">
+                      Chatbot activates
+                      <br />
+                      on their reply
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
