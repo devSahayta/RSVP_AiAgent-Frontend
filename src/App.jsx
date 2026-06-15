@@ -45,6 +45,7 @@ import Welcome from "./pages/HomeDashboard.jsx";
 
 import SamvaadikConnect from "./pages/SamvaadikConnect";
 import WhatsAppTemplates from "./pages/WhatsAppTemplates";
+import SutrakAssistant from "./components/SutrakAssistant/SutrakAssistant";
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, isLoading } = useKindeAuth();
@@ -269,6 +270,8 @@ function AppContent() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
+      {/* ✅ ADD THIS — Sutrak Assistant floating bubble */}
+      {isAuthenticated && !hideNavBar && <SutrakAssistant />}
     </div>
   );
 }
