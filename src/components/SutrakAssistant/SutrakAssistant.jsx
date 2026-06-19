@@ -1,20 +1,16 @@
 /**
- * SutrakAssistant.jsx — Redesigned
+ * SutrakAssistant.jsx — Production Ready
  *
- * Dark side panel that slides in from the right (30% width on desktop).
- * Triggered by a floating button (bottom-right, draggable).
- * Features:
- *   - Full-height side panel, black bg, Supabase-inspired
- *   - Rich input area with + menu: attach CSV, quick actions
- *   - CSV file upload for event creation flow
- *   - Responsive: full-screen on mobile
- *   - Smooth slide-in/out animation
+ * Full-height side panel (30% desktop / 100% mobile) with draggable trigger.
+ * Mount once in MainLayout.jsx inside auth-protected layout:
  *
- * Mount in AppContent (App.jsx):
+ *   import SutrakAssistant from "./components/SutrakAssistant/SutrakAssistant";
  *   {isAuthenticated && !hideNavBar && <SutrakAssistant />}
+ *
+ * Requires: react-router-dom, @kinde-oss/kinde-auth-react
  */
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { useNavigate } from "react-router-dom";
 
@@ -26,64 +22,153 @@ const QUICK_ACTIONS = [
     label: "Create event",
     prompt: "I want to create a new event",
   },
-  { icon: "robot", label: "List agents", prompt: "Show me all my agents" },
-  { icon: "users", label: "My events", prompt: "Show my events" },
+  {
+    icon: "robot",
+    label: "Create agent",
+    prompt: "I want to create a new agent",
+  },
+  { icon: "users", label: "My events", prompt: "Show me all my events" },
   {
     icon: "brand-whatsapp",
     label: "Send template",
-    prompt: "I want to send a WhatsApp template",
+    prompt: "I want to send a WhatsApp template to my guests",
   },
 ];
 
-/* ── Helpers ──────────────────────────────────────────────────────────────── */
-function Icon({ name, size = 16, style = {} }) {
-  const icons = {
-    calendar:
-      "M8 2v3M16 2v3M3.5 9.09h17M21 8.5V17c0 3-1.5 4-4 4H7c-2.5 0-4-1-4-4V8.5c0-3 1.5-4 4-4h10c2.5 0 4 1 4 4z",
-    robot:
-      "M12 8V4M8.56 3.69a4 4 0 00-2.87 2.86M15.44 3.69a4 4 0 012.87 2.86M3 14v-2a9 9 0 0118 0v2M3 14a2 2 0 002 2h14a2 2 0 002-2v-1a9 9 0 00-18 0v1zM9 17v1a3 3 0 006 0v-1M9 12h.01M15 12h.01",
-    users:
-      "M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z",
-    "brand-whatsapp":
-      "M3 21l1.65-3.8a9 9 0 113.4 2.9L3 21M9 10c0 .55.45 1 1 1h.01M12 10c0 .55.45 1 1 1h.01M15 10c0 .55.45 1 1 1h.01",
-    send: "M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z",
-    plus: "M12 5v14M5 12h14",
-    x: "M18 6L6 18M6 6l12 12",
-    paperclip:
-      "M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48",
-    csv: "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8",
-    trash: "M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6",
-    sparkles:
-      "M9.937 15.5A2 2 0 008.5 14.063l-6.135-1.582a.5.5 0 010-.962L8.5 9.936A2 2 0 009.937 8.5l1.582-6.135a.5.5 0 01.963 0L14.063 8.5A2 2 0 0015.5 9.937l6.135 1.581a.5.5 0 010 .963L15.5 14.063a2 2 0 00-1.437 1.437l-1.582 6.135a.5.5 0 01-.963 0z",
-    chevron_right: "M9 18l6-6-6-6",
-    refresh:
-      "M1 4v6h6M23 20v-6h-6M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15",
-  };
+const FILE_TYPES = [
+  {
+    ext: "csv",
+    color: "#6ee7b7",
+    bg: "#0b2218",
+    label: "CSV",
+    sub: "Guest list",
+  },
+  {
+    ext: "xlsx",
+    color: "#4ade80",
+    bg: "#081c0e",
+    label: "Excel",
+    sub: "Spreadsheet",
+  },
+  {
+    ext: "docx",
+    color: "#60a5fa",
+    bg: "#0a1628",
+    label: "Word",
+    sub: "Document",
+  },
+  { ext: "pdf", color: "#f87171", bg: "#280a0a", label: "PDF", sub: "Any PDF" },
+  {
+    ext: "jpg",
+    color: "#f472b6",
+    bg: "#280a1a",
+    label: "Image",
+    sub: "JPG / PNG",
+  },
+  {
+    ext: "mp4",
+    color: "#c084fc",
+    bg: "#1a0a28",
+    label: "Video",
+    sub: "MP4 / MOV",
+  },
+];
+
+const ACCEPTED =
+  ".csv,.xlsx,.xls,.doc,.docx,.pdf,.txt,.jpg,.jpeg,.png,.gif,.webp,.mp4,.mov,.avi,.mkv,.webm";
+
+// ─── Icon ────────────────────────────────────────────────────────────────────
+const ICON_PATHS = {
+  calendar:
+    "M8 2v3M16 2v3M3.5 9.09h17M21 8.5V17c0 3-1.5 4-4 4H7c-2.5 0-4-1-4-4V8.5c0-3 1.5-4 4-4h10c2.5 0 4 1 4 4z",
+  robot:
+    "M12 8V4M8.56 3.69a4 4 0 00-2.87 2.86M15.44 3.69a4 4 0 012.87 2.86M3 14v-2a9 9 0 0118 0v2M3 14a2 2 0 002 2h14a2 2 0 002-2v-1a9 9 0 00-18 0v1zM9 17v1a3 3 0 006 0v-1M9 12h.01M15 12h.01",
+  users:
+    "M16 11c1.66 0 3-1.34 3-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z",
+  "brand-whatsapp":
+    "M3 21l1.65-3.8a9 9 0 113.4 2.9L3 21M9 10c0 .55.45 1 1 1h.01M12 10c0 .55.45 1 1 1h.01M15 10c0 .55.45 1 1 1h.01",
+  send: "M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z",
+  plus: "M12 5v14M5 12h14",
+  x: "M18 6L6 18M6 6l12 12",
+  sparkles:
+    "M9.937 15.5A2 2 0 008.5 14.063l-6.135-1.582a.5.5 0 010-.962L8.5 9.936A2 2 0 009.937 8.5l1.582-6.135a.5.5 0 01.963 0L14.063 8.5A2 2 0 0015.5 9.937l6.135 1.581a.5.5 0 010 .963L15.5 14.063a2 2 0 00-1.437 1.437l-1.582 6.135a.5.5 0 01-.963 0z",
+  refresh:
+    "M1 4v6h6M23 20v-6h-6M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15",
+  check: "M20 6L9 17l-5-5",
+  eye: "M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 9a3 3 0 100 6 3 3 0 000-6z",
+  list: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",
+  dashboard: "M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z",
+  warning:
+    "M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01",
+  csv: "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8",
+  image:
+    "M21 15a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h14a2 2 0 012 2zM8.5 10a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM21 15l-5-5L5 15",
+  video:
+    "M15 10l4.553-2.276A1 1 0 0121 8.724v6.552a1 1 0 01-1.447.894L15 14zM3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z",
+  doc: "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M9 13h6M9 17h4",
+  arrow_right: "M5 12h14M12 5l7 7-7 7",
+};
+
+function Icon({ name, size = 16, color = "currentColor", style = {} }) {
+  const d = ICON_PATHS[name] || ICON_PATHS.sparkles;
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 24 24"
       fill="none"
-      stroke="currentColor"
+      stroke={color}
       strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
-      style={{ flexShrink: 0, ...style }}
+      style={{ flexShrink: 0, display: "block", ...style }}
     >
-      {(icons[name] || "")
+      {d
         .split("M")
         .filter(Boolean)
-        .map((d, i) => (
-          <path key={i} d={"M" + d} />
+        .map((seg, i) => (
+          <path key={i} d={"M" + seg} />
         ))}
     </svg>
   );
 }
 
+// ─── FileTypeIcon ─────────────────────────────────────────────────────────────
+function FileTypeIcon({ ext }) {
+  const map = {
+    csv: { name: "csv", color: "#6ee7b7" },
+    xlsx: { name: "csv", color: "#4ade80" },
+    xls: { name: "csv", color: "#4ade80" },
+    pdf: { name: "doc", color: "#f87171" },
+    doc: { name: "doc", color: "#60a5fa" },
+    docx: { name: "doc", color: "#60a5fa" },
+    txt: { name: "doc", color: "#888" },
+    jpg: { name: "image", color: "#f472b6" },
+    jpeg: { name: "image", color: "#f472b6" },
+    png: { name: "image", color: "#f472b6" },
+    gif: { name: "image", color: "#f472b6" },
+    webp: { name: "image", color: "#f472b6" },
+    mp4: { name: "video", color: "#c084fc" },
+    mov: { name: "video", color: "#c084fc" },
+    avi: { name: "video", color: "#c084fc" },
+    mkv: { name: "video", color: "#c084fc" },
+    webm: { name: "video", color: "#c084fc" },
+  };
+  const t = map[ext?.toLowerCase()] || { name: "doc", color: "#888" };
+  return <Icon name={t.name} size={14} color={t.color} />;
+}
+
+// ─── TypingDots ───────────────────────────────────────────────────────────────
 function TypingDots() {
   return (
-    <div style={{ display: "flex", gap: 4, padding: "4px 2px" }}>
+    <div
+      style={{
+        display: "flex",
+        gap: 4,
+        padding: "4px 2px",
+        alignItems: "center",
+      }}
+    >
       {[0, 1, 2].map((i) => (
         <span
           key={i}
@@ -91,10 +176,10 @@ function TypingDots() {
             width: 6,
             height: 6,
             borderRadius: "50%",
-            backgroundColor: "#666",
+            background: "#555",
+            display: "inline-block",
             animation: "sa-dot 1.4s ease-in-out infinite",
             animationDelay: `${i * 0.16}s`,
-            display: "inline-block",
           }}
         />
       ))}
@@ -102,206 +187,8 @@ function TypingDots() {
   );
 }
 
-function renderMarkdown(text) {
-  const lines = text.split("\n");
-  const elements = [];
-  let i = 0;
-
-  while (i < lines.length) {
-    const line = lines[i];
-
-    // Empty line
-    if (line.trim() === "") {
-      elements.push(<div key={i} style={{ height: 6 }} />);
-      i++;
-      continue;
-    }
-
-    // Table detection: line with | characters
-    if (line.trim().startsWith("|") && line.includes("|")) {
-      const tableRows = [];
-      while (i < lines.length && lines[i].trim().startsWith("|")) {
-        const cells = lines[i]
-          .split("|")
-          .filter((_, ci) => ci !== 0 && ci !== lines[i].split("|").length - 1);
-        const isSeparator = cells.every((c) => /^[-:\s]+$/.test(c));
-        if (!isSeparator) {
-          tableRows.push({ cells, isHeader: tableRows.length === 0 });
-        }
-        i++;
-      }
-      elements.push(
-        <div key={`t${i}`} style={{ overflowX: "auto", margin: "8px 0" }}>
-          <table
-            style={{
-              borderCollapse: "collapse",
-              width: "100%",
-              fontSize: 12.5,
-              minWidth: 0,
-            }}
-          >
-            <tbody>
-              {tableRows.map((row, ri) => (
-                <tr key={ri} style={{ borderBottom: "1px solid #1e1e1e" }}>
-                  {row.cells.map((cell, ci) => {
-                    const Tag = row.isHeader ? "th" : "td";
-                    return (
-                      <Tag
-                        key={ci}
-                        style={{
-                          padding: "6px 10px",
-                          textAlign: "left",
-                          color: row.isHeader ? "#888" : "#c0c0c0",
-                          fontWeight: row.isHeader ? 500 : 400,
-                          background: row.isHeader ? "#0f0f0f" : "transparent",
-                          whiteSpace: "nowrap",
-                          fontSize: row.isHeader ? 11 : 12.5,
-                          letterSpacing: row.isHeader ? "0.06em" : 0,
-                          textTransform: row.isHeader ? "uppercase" : "none",
-                          borderBottom: row.isHeader
-                            ? "1px solid #222"
-                            : "none",
-                        }}
-                      >
-                        {inlineFormat(cell.trim())}
-                      </Tag>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>,
-      );
-      continue;
-    }
-
-    // Heading ##
-    if (line.startsWith("## ")) {
-      elements.push(
-        <div
-          key={i}
-          style={{
-            fontSize: 13,
-            fontWeight: 600,
-            color: "#e0e0e0",
-            margin: "12px 0 6px",
-            letterSpacing: "-0.01em",
-          }}
-        >
-          {line.slice(3)}
-        </div>,
-      );
-      i++;
-      continue;
-    }
-    if (line.startsWith("# ")) {
-      elements.push(
-        <div
-          key={i}
-          style={{
-            fontSize: 14,
-            fontWeight: 600,
-            color: "#e8e8e8",
-            margin: "12px 0 6px",
-          }}
-        >
-          {line.slice(2)}
-        </div>,
-      );
-      i++;
-      continue;
-    }
-
-    // Numbered list: "1. item" or "1 | ..."
-    if (/^\d+[.)\s]/.test(line.trim())) {
-      const num = line.trim().match(/^(\d+)/)?.[1];
-      const text = line.trim().replace(/^\d+[.)\s]+/, "");
-      elements.push(
-        <div
-          key={i}
-          style={{
-            display: "flex",
-            gap: 8,
-            marginBottom: 4,
-            alignItems: "flex-start",
-          }}
-        >
-          <span
-            style={{
-              color: "#555",
-              fontSize: 12,
-              minWidth: 16,
-              paddingTop: 1,
-              flexShrink: 0,
-              fontVariantNumeric: "tabular-nums",
-            }}
-          >
-            {num}.
-          </span>
-          <span style={{ color: "#c0c0c0", fontSize: 13, lineHeight: 1.6 }}>
-            {inlineFormat(text)}
-          </span>
-        </div>,
-      );
-      i++;
-      continue;
-    }
-
-    // Bullet: "- item" or "• item" or "· item"
-    if (/^[-•·*]\s/.test(line.trim())) {
-      const text = line.trim().replace(/^[-•·*]\s+/, "");
-      elements.push(
-        <div
-          key={i}
-          style={{
-            display: "flex",
-            gap: 8,
-            marginBottom: 4,
-            alignItems: "flex-start",
-          }}
-        >
-          <span
-            style={{
-              color: "#444",
-              fontSize: 14,
-              lineHeight: 1.6,
-              flexShrink: 0,
-              marginTop: 1,
-            }}
-          >
-            ·
-          </span>
-          <span style={{ color: "#c0c0c0", fontSize: 13, lineHeight: 1.6 }}>
-            {inlineFormat(text)}
-          </span>
-        </div>,
-      );
-      i++;
-      continue;
-    }
-
-    // Regular paragraph
-    elements.push(
-      <div
-        key={i}
-        style={{
-          color: "#c0c0c0",
-          fontSize: 13.5,
-          lineHeight: 1.65,
-          marginBottom: 2,
-        }}
-      >
-        {inlineFormat(line)}
-      </div>,
-    );
-    i++;
-  }
-  return elements;
-}
-
+// ─── Markdown renderer ────────────────────────────────────────────────────────
 function inlineFormat(text) {
-  // Handle **bold**, *italic*, `code` inline
   const parts = [];
   const regex = /\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`/g;
   let last = 0,
@@ -320,16 +207,16 @@ function inlineFormat(text) {
           {match[2]}
         </em>,
       );
-    else if (match[3] !== undefined)
+    else
       parts.push(
         <code
           key={match.index}
           style={{
-            background: "#1a1a1a",
+            background: "#1e1e1e",
             color: "#a78bfa",
             padding: "1px 5px",
             borderRadius: 4,
-            fontSize: "0.9em",
+            fontSize: "0.88em",
             fontFamily: "monospace",
           }}
         >
@@ -342,204 +229,269 @@ function inlineFormat(text) {
   return parts.length > 0 ? parts : text;
 }
 
-// ── Action Cards rendered inside assistant messages ───────────────────────────
-function ActionCard({ action, navigate }) {
-  if (!action) return null;
-
-  if (action.type === "redirect") {
-    return (
-      <div
-        style={{
-          marginTop: 12,
-          background: "#0f0f0f",
-          border: "1px solid #222",
-          borderRadius: 12,
-          padding: "14px 16px",
-          animation: "sa-fadein 0.25s ease-out",
-        }}
-      >
-        {/* Samvaadik not connected card */}
+function renderMarkdown(text) {
+  const lines = text.split("\n");
+  const els = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (line.trim() === "") {
+      els.push(<div key={i} style={{ height: 6 }} />);
+      i++;
+      continue;
+    }
+    // Table
+    if (line.trim().startsWith("|") && line.includes("|")) {
+      const rows = [];
+      while (i < lines.length && lines[i].trim().startsWith("|")) {
+        const cells = lines[i]
+          .split("|")
+          .filter((_, ci) => ci !== 0 && ci !== lines[i].split("|").length - 1);
+        if (!cells.every((c) => /^[-:\s]+$/.test(c)))
+          rows.push({ cells, isHeader: rows.length === 0 });
+        i++;
+      }
+      els.push(
         <div
+          key={`t${i}`}
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginBottom: 12,
+            overflowX: "auto",
+            margin: "8px 0",
+            WebkitOverflowScrolling: "touch",
           }}
         >
-          <div
+          <table
             style={{
-              width: 34,
-              height: 34,
-              borderRadius: 9,
-              background: "#1a1a0a",
-              border: "1px solid #2a2800",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              borderCollapse: "collapse",
+              width: "100%",
+              fontSize: 12.5,
+            }}
+          >
+            <tbody>
+              {rows.map((row, ri) => (
+                <tr key={ri} style={{ borderBottom: "1px solid #1e1e1e" }}>
+                  {row.cells.map((cell, ci) => {
+                    const Tag = row.isHeader ? "th" : "td";
+                    return (
+                      <Tag
+                        key={ci}
+                        style={{
+                          padding: "6px 10px",
+                          textAlign: "left",
+                          color: row.isHeader ? "#666" : "#c0c0c0",
+                          fontWeight: row.isHeader ? 600 : 400,
+                          background: row.isHeader ? "#0f0f0f" : "transparent",
+                          fontSize: row.isHeader ? 10.5 : 12.5,
+                          textTransform: row.isHeader ? "uppercase" : "none",
+                          letterSpacing: row.isHeader ? "0.06em" : 0,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {inlineFormat(cell.trim())}
+                      </Tag>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>,
+      );
+      continue;
+    }
+    if (line.startsWith("## ")) {
+      els.push(
+        <div
+          key={i}
+          style={{
+            fontSize: 13,
+            fontWeight: 600,
+            color: "#e0e0e0",
+            margin: "10px 0 5px",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          {inlineFormat(line.slice(3))}
+        </div>,
+      );
+      i++;
+      continue;
+    }
+    if (line.startsWith("# ")) {
+      els.push(
+        <div
+          key={i}
+          style={{
+            fontSize: 14,
+            fontWeight: 600,
+            color: "#e8e8e8",
+            margin: "10px 0 5px",
+          }}
+        >
+          {inlineFormat(line.slice(2))}
+        </div>,
+      );
+      i++;
+      continue;
+    }
+    if (/^\d+[.)]\s/.test(line.trim())) {
+      const num = line.trim().match(/^(\d+)/)?.[1];
+      const txt = line.trim().replace(/^\d+[.)]\s+/, "");
+      els.push(
+        <div key={i} style={{ display: "flex", gap: 8, marginBottom: 4 }}>
+          <span
+            style={{
+              color: "#555",
+              fontSize: 12,
+              minWidth: 16,
+              flexShrink: 0,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {num}.
+          </span>
+          <span style={{ color: "#c0c0c0", fontSize: 13.5, lineHeight: 1.6 }}>
+            {inlineFormat(txt)}
+          </span>
+        </div>,
+      );
+      i++;
+      continue;
+    }
+    if (/^[-•·*]\s/.test(line.trim())) {
+      const txt = line.trim().replace(/^[-•·*]\s+/, "");
+      els.push(
+        <div key={i} style={{ display: "flex", gap: 8, marginBottom: 4 }}>
+          <span
+            style={{
+              color: "#444",
+              fontSize: 15,
+              lineHeight: 1.4,
               flexShrink: 0,
             }}
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#f59e0b"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-              <line x1="12" y1="9" x2="12" y2="13" />
-              <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
-          </div>
-          <div>
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 500,
-                color: "#e0e0e0",
-                marginBottom: 2,
-              }}
-            >
-              Samvaadik not connected
-            </div>
-            <div style={{ fontSize: 11.5, color: "#555" }}>
-              Connect your account to use WhatsApp features
-            </div>
-          </div>
-        </div>
-
-        {/* Steps */}
-        <div style={{ marginBottom: 14 }}>
-          {[
-            "Click the button below to go to the connection page",
-            "Enter your Samvaadik API key",
-            "Verify and save — you're done",
-          ].map((step, i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                gap: 9,
-                marginBottom: 6,
-                alignItems: "flex-start",
-              }}
-            >
-              <div
-                style={{
-                  width: 18,
-                  height: 18,
-                  borderRadius: "50%",
-                  flexShrink: 0,
-                  background: "#1c1c1c",
-                  border: "1px solid #2a2a2a",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 10,
-                  color: "#555",
-                  fontWeight: 600,
-                  marginTop: 1,
-                }}
-              >
-                {i + 1}
-              </div>
-              <span style={{ fontSize: 12, color: "#888", lineHeight: 1.5 }}>
-                {step}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* CTA Button */}
-        <button
-          onClick={() => navigate(action.route)}
-          style={{
-            width: "100%",
-            padding: "9px 0",
-            borderRadius: 9,
-            background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
-            border: "none",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 7,
-            fontSize: 13,
-            fontWeight: 500,
-            color: "#fff",
-            transition: "opacity 0.15s",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.88")}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M3 21l1.65-3.8a9 9 0 113.4 2.9L3 21" />
-          </svg>
-          {action.label}
-          <svg
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            strokeWidth="2"
-            strokeLinecap="round"
-          >
-            <path d="M5 12h14M12 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
+            ·
+          </span>
+          <span style={{ color: "#c0c0c0", fontSize: 13.5, lineHeight: 1.6 }}>
+            {inlineFormat(txt)}
+          </span>
+        </div>,
+      );
+      i++;
+      continue;
+    }
+    els.push(
+      <div
+        key={i}
+        style={{
+          color: "#c0c0c0",
+          fontSize: 13.5,
+          lineHeight: 1.65,
+          marginBottom: 2,
+        }}
+      >
+        {inlineFormat(line)}
+      </div>,
     );
+    i++;
   }
-
-  return null;
+  return els;
 }
 
-// ── Connected summary card ─────────────────────────────────────────────────────
-function ConnectedCard({ data }) {
-  const fields = [
-    { label: "Phone", value: data.business_phone || "—", full: false },
-    { label: "Status", value: data.status || "active", full: false },
-    { label: "Connected on", value: data.connected_at || "—", full: false },
-    {
-      label: "Webhook",
-      value: data.webhook_set ? "Set ✓" : "Not set",
-      full: false,
-    },
-    // WhatsApp ID gets its own full-width row since it can be long
-    { label: "WhatsApp ID", value: data.wa_id || "—", full: true },
-  ];
+// ─── FileChip ─────────────────────────────────────────────────────────────────
+function FileChip({ file, onRemove }) {
+  const ext = file.name.split(".").pop().toLowerCase();
+  const colorMap = {
+    csv: "#6ee7b7",
+    xlsx: "#4ade80",
+    xls: "#4ade80",
+    pdf: "#f87171",
+    doc: "#60a5fa",
+    docx: "#60a5fa",
+    txt: "#888",
+    jpg: "#f472b6",
+    jpeg: "#f472b6",
+    png: "#f472b6",
+    gif: "#f472b6",
+    webp: "#f472b6",
+    mp4: "#c084fc",
+    mov: "#c084fc",
+    avi: "#c084fc",
+    mkv: "#c084fc",
+    webm: "#c084fc",
+  };
+  const size =
+    file.size < 1024
+      ? file.size + " B"
+      : file.size < 1024 * 1024
+        ? Math.round(file.size / 1024) + " KB"
+        : (file.size / 1024 / 1024).toFixed(1) + " MB";
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 7,
+        padding: "5px 8px 5px 9px",
+        borderRadius: 9,
+        background: "#111",
+        border: "1px solid #222",
+        maxWidth: 200,
+        flexShrink: 0,
+      }}
+    >
+      <FileTypeIcon ext={ext} />
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div
+          style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            color: "#ccc",
+            fontSize: 12,
+          }}
+        >
+          {file.name}
+        </div>
+        <div style={{ fontSize: 10, color: "#444", marginTop: 1 }}>{size}</div>
+      </div>
+      <button
+        onClick={onRemove}
+        onTouchEnd={(e) => {
+          e.preventDefault();
+          onRemove();
+        }}
+        style={{
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          color: "#444",
+          padding: 4,
+          display: "flex",
+          borderRadius: 4,
+          WebkitTapHighlightColor: "transparent",
+        }}
+      >
+        <Icon name="x" size={11} />
+      </button>
+    </div>
+  );
+}
 
+// ─── Action Cards ─────────────────────────────────────────────────────────────
+function ActionCard({ action, navigate }) {
+  if (!action || action.type !== "redirect") return null;
   return (
     <div
       style={{
         marginTop: 12,
-        background: "#0a120d",
-        border: "1px solid #1a2e1f",
+        background: "#0f0f0f",
+        border: "1px solid #222",
         borderRadius: 12,
         padding: "14px 16px",
-        animation: "sa-fadein 0.25s ease-out",
-        // Critical: constrain width so nothing bleeds out
         overflow: "hidden",
-        minWidth: 0,
-        maxWidth: "100%",
-        boxSizing: "border-box",
       }}
     >
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -554,25 +506,140 @@ function ConnectedCard({ data }) {
             height: 34,
             borderRadius: 9,
             flexShrink: 0,
-            background: "#0d1f13",
-            border: "1px solid #1a3a1f",
+            background: "#1a1200",
+            border: "1px solid #2a2000",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#3ecf8e"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+          <Icon name="warning" size={16} color="#f59e0b" />
+        </div>
+        <div>
+          <div
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: "#e0e0e0",
+              marginBottom: 2,
+            }}
           >
-            <path d="M3 21l1.65-3.8a9 9 0 113.4 2.9L3 21" />
-          </svg>
+            Samvaadik not connected
+          </div>
+          <div style={{ fontSize: 11.5, color: "#555" }}>
+            Connect your account to use WhatsApp features
+          </div>
+        </div>
+      </div>
+      <div style={{ marginBottom: 14 }}>
+        {[
+          "Click the button below to go to the connection page",
+          "Enter your Samvaadik API key",
+          "Verify and save — you're done",
+        ].map((s, i) => (
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              gap: 9,
+              marginBottom: 6,
+              alignItems: "flex-start",
+            }}
+          >
+            <div
+              style={{
+                width: 18,
+                height: 18,
+                borderRadius: "50%",
+                flexShrink: 0,
+                background: "#1c1c1c",
+                border: "1px solid #2a2a2a",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 10,
+                color: "#555",
+                fontWeight: 600,
+                marginTop: 1,
+              }}
+            >
+              {i + 1}
+            </div>
+            <span style={{ fontSize: 12, color: "#888", lineHeight: 1.5 }}>
+              {s}
+            </span>
+          </div>
+        ))}
+      </div>
+      <button
+        onClick={() => navigate(action.route)}
+        style={{
+          width: "100%",
+          padding: "10px 0",
+          borderRadius: 9,
+          background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+          border: "none",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 7,
+          fontSize: 13,
+          fontWeight: 500,
+          color: "#fff",
+          WebkitTapHighlightColor: "transparent",
+        }}
+      >
+        <Icon name="brand-whatsapp" size={14} color="white" />
+        {action.label}
+        <Icon name="arrow_right" size={13} color="white" />
+      </button>
+    </div>
+  );
+}
+
+function ConnectedCard({ data }) {
+  const fields = [
+    { label: "Phone", value: data.business_phone || "—" },
+    { label: "Status", value: data.status || "active" },
+    { label: "Connected on", value: data.connected_at || "—" },
+    { label: "Webhook", value: data.webhook_set ? "Set ✓" : "Not set" },
+    { label: "WhatsApp ID", value: data.wa_id || "—", full: true },
+  ];
+  return (
+    <div
+      style={{
+        marginTop: 12,
+        background: "#080f0a",
+        border: "1px solid #152010",
+        borderRadius: 12,
+        padding: "14px 16px",
+        overflow: "hidden",
+        minWidth: 0,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 12,
+        }}
+      >
+        <div
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 9,
+            flexShrink: 0,
+            background: "#0a1a0d",
+            border: "1px solid #152918",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Icon name="brand-whatsapp" size={16} color="#3ecf8e" />
         </div>
         <div style={{ minWidth: 0 }}>
           <div
@@ -591,22 +658,20 @@ function ConnectedCard({ data }) {
                 fontSize: 10,
                 padding: "1px 7px",
                 borderRadius: 20,
-                flexShrink: 0,
-                background: "#0d2a1a",
+                background: "#0a2218",
                 color: "#3ecf8e",
-                border: "1px solid #1a3a22",
+                border: "1px solid #12301e",
+                flexShrink: 0,
               }}
             >
               Active
             </span>
           </div>
-          <div style={{ fontSize: 11.5, color: "#3a5a44", marginTop: 2 }}>
-            Your WhatsApp account is ready
+          <div style={{ fontSize: 11.5, color: "#2a4a30", marginTop: 2 }}>
+            WhatsApp account ready
           </div>
         </div>
       </div>
-
-      {/* 2-col grid for short fields */}
       <div
         style={{
           display: "grid",
@@ -621,17 +686,17 @@ function ConnectedCard({ data }) {
             <div
               key={label}
               style={{
-                background: "#0d1a10",
+                background: "#0a150c",
                 borderRadius: 8,
                 padding: "8px 10px",
                 minWidth: 0,
-                overflow: "hidden", // critical — grid cell must be able to shrink
+                overflow: "hidden",
               }}
             >
               <div
                 style={{
                   fontSize: 10,
-                  color: "#2a4a30",
+                  color: "#1e3a22",
                   textTransform: "uppercase",
                   letterSpacing: "0.07em",
                   marginBottom: 3,
@@ -642,7 +707,7 @@ function ConnectedCard({ data }) {
               <div
                 style={{
                   fontSize: 12,
-                  color: "#7ecfa0",
+                  color: "#6ecf90",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
@@ -653,15 +718,13 @@ function ConnectedCard({ data }) {
             </div>
           ))}
       </div>
-
-      {/* Full-width row for WhatsApp ID (can be long) */}
       {fields
         .filter((f) => f.full)
         .map(({ label, value }) => (
           <div
             key={label}
             style={{
-              background: "#0d1a10",
+              background: "#0a150c",
               borderRadius: 8,
               padding: "8px 10px",
               minWidth: 0,
@@ -671,7 +734,7 @@ function ConnectedCard({ data }) {
             <div
               style={{
                 fontSize: 10,
-                color: "#2a4a30",
+                color: "#1e3a22",
                 textTransform: "uppercase",
                 letterSpacing: "0.07em",
                 marginBottom: 3,
@@ -682,8 +745,7 @@ function ConnectedCard({ data }) {
             <div
               style={{
                 fontSize: 12,
-                color: "#7ecfa0",
-                // Word-break instead of ellipsis — shows full ID without overflow
+                color: "#6ecf90",
                 wordBreak: "break-all",
                 lineHeight: 1.5,
               }}
@@ -696,16 +758,359 @@ function ConnectedCard({ data }) {
   );
 }
 
-function Message({ msg, navigate }) {
+function AgentCreatedCard({ action, navigate }) {
+  const isSmart = action.field_mode === "smart_fields";
+  return (
+    <div
+      style={{
+        marginTop: 12,
+        background: "#080a14",
+        border: "1px solid #141a30",
+        borderRadius: 12,
+        padding: "14px 16px",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 12,
+        }}
+      >
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            flexShrink: 0,
+            background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Icon name="check" size={17} color="white" />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: 13.5,
+              fontWeight: 600,
+              color: "#e8e8e8",
+              marginBottom: 2,
+            }}
+          >
+            Agent Created!
+          </div>
+          <div style={{ fontSize: 11.5, color: "#2a3a5a" }}>
+            Your agent is ready to use
+          </div>
+        </div>
+        <span
+          style={{
+            fontSize: 10,
+            padding: "2px 8px",
+            borderRadius: 20,
+            flexShrink: 0,
+            background: isSmart ? "#14082a" : "#08142a",
+            color: isSmart ? "#a78bfa" : "#60a5fa",
+            border: `1px solid ${isSmart ? "#1e1040" : "#102040"}`,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {isSmart ? "Smart Fields" : "Classic"}
+        </span>
+      </div>
+      <div
+        style={{
+          background: "#0c1020",
+          border: "1px solid #1a2440",
+          borderRadius: 9,
+          padding: "10px 14px",
+          marginBottom: 12,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          minWidth: 0,
+          overflow: "hidden",
+        }}
+      >
+        <Icon name="robot" size={14} color="#6366f1" />
+        <span
+          style={{
+            fontSize: 13,
+            color: "#c0cce0",
+            fontWeight: 500,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {action.agent_name}
+        </span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
+        <button
+          onClick={() => navigate(`/agents/${action.agent_id}`)}
+          style={{
+            padding: "9px 0",
+            borderRadius: 9,
+            background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+            border: "none",
+            cursor: "pointer",
+            fontSize: 12.5,
+            fontWeight: 500,
+            color: "#fff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 5,
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <Icon name="eye" size={13} color="white" /> View Agent
+        </button>
+        <button
+          onClick={() => navigate("/agents")}
+          style={{
+            padding: "9px 0",
+            borderRadius: 9,
+            background: "#0c1020",
+            border: "1px solid #1a2440",
+            cursor: "pointer",
+            fontSize: 12.5,
+            color: "#6a80aa",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 5,
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <Icon name="list" size={13} /> All Agents
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EventCreatedCard({ action, navigate, onUploadCsv }) {
+  const [uploading, setUploading] = useState(false);
+  const [uploaded, setUploaded] = useState(false);
+  return (
+    <div
+      style={{
+        marginTop: 12,
+        background: "#080f0a",
+        border: "1px solid #102018",
+        borderRadius: 12,
+        padding: "14px 16px",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 12,
+        }}
+      >
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            flexShrink: 0,
+            background: "linear-gradient(135deg,#059669,#10b981)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Icon name="check" size={17} color="white" />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: 13.5,
+              fontWeight: 600,
+              color: "#e8e8e8",
+              marginBottom: 2,
+            }}
+          >
+            Event Created!
+          </div>
+          <div style={{ fontSize: 11.5, color: "#1e3a28" }}>Ready to go</div>
+        </div>
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 6,
+          marginBottom: 12,
+        }}
+      >
+        {[
+          { label: "Event", value: action.event_name },
+          { label: "Date", value: action.event_date },
+          { label: "Agent", value: action.agent_name || "None assigned" },
+          {
+            label: "CSV",
+            value:
+              uploaded || action._csvUploaded
+                ? "✓ Uploaded"
+                : action.csv_file_name || "Not uploaded",
+          },
+        ].map(({ label, value }) => (
+          <div
+            key={label}
+            style={{
+              background: "#0a1510",
+              borderRadius: 8,
+              padding: "8px 10px",
+              minWidth: 0,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                color: "#1a3020",
+                textTransform: "uppercase",
+                letterSpacing: "0.07em",
+                marginBottom: 3,
+              }}
+            >
+              {label}
+            </div>
+            <div
+              style={{
+                fontSize: 12,
+                color: uploaded && label === "CSV" ? "#3ecf8e" : "#6ecf90",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {value}
+            </div>
+          </div>
+        ))}
+      </div>
+      {action.needs_csv_upload && !uploaded && !action._csvUploaded && (
+        <div
+          style={{
+            background: "#0c1a10",
+            border: "1px solid #152818",
+            borderRadius: 9,
+            padding: "9px 12px",
+            marginBottom: 10,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            minWidth: 0,
+            overflow: "hidden",
+          }}
+        >
+          <Icon name="csv" size={14} color="#6ee7b7" />
+          <span
+            style={{
+              fontSize: 12,
+              color: "#3a6a48",
+              flex: 1,
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {action.csv_file_name}
+          </span>
+          <button
+            onClick={async () => {
+              setUploading(true);
+              const ok = await onUploadCsv(action.event_id);
+              setUploading(false);
+              if (ok) setUploaded(true);
+            }}
+            disabled={uploading}
+            style={{
+              padding: "5px 12px",
+              borderRadius: 7,
+              border: "none",
+              background: uploading ? "#1a3020" : "#3ecf8e",
+              color: uploading ? "#4a8a60" : "#001a0a",
+              fontSize: 11.5,
+              fontWeight: 600,
+              cursor: uploading ? "not-allowed" : "pointer",
+              flexShrink: 0,
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            {uploading ? "Uploading…" : "Upload now"}
+          </button>
+        </div>
+      )}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
+        {/* call-batch page = the pre-call page where user can start calls / send WhatsApp */}
+        <button
+          onClick={() => navigate(`/call-batch/${action.event_id}`)}
+          style={{
+            padding: "9px 0",
+            borderRadius: 9,
+            background: "linear-gradient(135deg,#059669,#10b981)",
+            border: "none",
+            cursor: "pointer",
+            fontSize: 12.5,
+            fontWeight: 500,
+            color: "#fff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 5,
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <Icon name="dashboard" size={13} color="white" /> Open Event
+        </button>
+        <button
+          onClick={() => navigate("/events")}
+          style={{
+            padding: "9px 0",
+            borderRadius: 9,
+            background: "#0a1510",
+            border: "1px solid #152818",
+            cursor: "pointer",
+            fontSize: 12.5,
+            color: "#3a6a48",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 5,
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <Icon name="list" size={13} /> All Events
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Message ──────────────────────────────────────────────────────────────────
+function Message({ msg, navigate, uploadCsvAfterEvent }) {
   const isUser = msg.role === "user";
   return (
     <div
+      className={isUser ? "sa-msg-user" : "sa-msg-ai"}
       style={{
         display: "flex",
         flexDirection: isUser ? "row-reverse" : "row",
         gap: 10,
-        marginBottom: 22,
-        animation: "sa-fadein 0.2s ease-out",
+        marginBottom: 20,
         alignItems: "flex-start",
       }}
     >
@@ -724,7 +1129,7 @@ function Message({ msg, navigate }) {
             marginTop: 1,
           }}
         >
-          <Icon name="sparkles" size={13} style={{ color: "#a78bfa" }} />
+          <Icon name="sparkles" size={13} color="#a78bfa" />
         </div>
       )}
       <div
@@ -738,6 +1143,7 @@ function Message({ msg, navigate }) {
           fontSize: 13.5,
           lineHeight: 1.65,
           wordBreak: "break-word",
+          overflowWrap: "anywhere",
           width: isUser ? "auto" : "100%",
           minWidth: 0,
           overflow: "hidden",
@@ -750,12 +1156,20 @@ function Message({ msg, navigate }) {
         ) : (
           <div>
             {renderMarkdown(msg.content)}
-            {/* Render action card if backend sent one */}
-            {msg.action && msg.action.type === "redirect" && (
+            {msg.action?.type === "redirect" && (
               <ActionCard action={msg.action} navigate={navigate} />
             )}
-            {/* Render connected summary card if tool returned connected:true */}
-            {msg.connectionData && msg.connectionData.connected && (
+            {msg.action?.type === "agent_created" && (
+              <AgentCreatedCard action={msg.action} navigate={navigate} />
+            )}
+            {msg.action?.type === "event_created" && (
+              <EventCreatedCard
+                action={msg.action}
+                navigate={navigate}
+                onUploadCsv={uploadCsvAfterEvent}
+              />
+            )}
+            {msg.connectionData?.connected && (
               <ConnectedCard data={msg.connectionData} />
             )}
           </div>
@@ -765,216 +1179,286 @@ function Message({ msg, navigate }) {
   );
 }
 
-function FileTypeIcon({ ext }) {
-  const icons = {
-    csv: {
-      d: "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8",
-      color: "#6ee7b7",
-    },
-    xlsx: {
-      d: "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M8 13l2 2 2-2M8 17l2-2 2 2",
-      color: "#4ade80",
-    },
-    xls: {
-      d: "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M8 13l2 2 2-2M8 17l2-2 2 2",
-      color: "#4ade80",
-    },
-    pdf: {
-      d: "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M9 13h1a1 1 0 001-1v-1a1 1 0 00-1-1H9v6M15 13a2 2 0 010 4h-1v-4h1",
-      color: "#f87171",
-    },
-    doc: {
-      d: "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M9 13h6M9 17h4",
-      color: "#60a5fa",
-    },
-    docx: {
-      d: "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M9 13h6M9 17h4",
-      color: "#60a5fa",
-    },
-    txt: {
-      d: "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M9 13h6M9 17h4",
-      color: "#888",
-    },
-  };
-  const e = ext.toLowerCase();
-  const icon = icons[e] || icons.txt;
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={icon.color}
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{ flexShrink: 0 }}
-    >
-      {icon.d
-        .split("M")
-        .filter(Boolean)
-        .map((d, i) => (
-          <path key={i} d={"M" + d} />
-        ))}
-    </svg>
-  );
-}
-
-function FileChip({ file, onRemove }) {
-  const ext = file.name.split(".").pop().toLowerCase();
-  const colors = {
-    csv: "#6ee7b7",
-    xlsx: "#4ade80",
-    xls: "#4ade80",
-    pdf: "#f87171",
-    doc: "#60a5fa",
-    docx: "#60a5fa",
-    txt: "#888",
-  };
-  const color = colors[ext] || "#a78bfa";
-  const sizeStr =
-    file.size < 1024
-      ? file.size + " B"
-      : file.size < 1024 * 1024
-        ? Math.round(file.size / 1024) + " KB"
-        : (file.size / 1024 / 1024).toFixed(1) + " MB";
+// ─── PlusMenu ─────────────────────────────────────────────────────────────────
+// Positioned using CSS only — sits above the input area inside the panel flow.
+// No getBoundingClientRect, no useEffect, no timing issues.
+// The panel itself is position:fixed so this just needs to sit above the toolbar.
+function PlusMenu({ menuRef, fileInputRef, onClose, onQuickAction }) {
   return (
     <div
+      ref={menuRef}
       style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 7,
-        padding: "5px 8px 5px 9px",
-        borderRadius: 9,
+        position: "absolute",
+        bottom: "calc(100% + 6px)",
+        left: 0,
+        right: 0,
         background: "#111",
         border: "1px solid #222",
-        fontSize: 12,
-        color: "#aaa",
-        maxWidth: 220,
+        borderRadius: 14,
+        padding: 10,
+        zIndex: 100,
+        boxShadow: "0 -4px 32px rgba(0,0,0,0.9), 0 4px 16px rgba(0,0,0,0.5)",
+        boxSizing: "border-box",
+        overflow: "hidden",
+        animation: "sa-fadein 0.15s ease-out",
       }}
     >
-      <FileTypeIcon ext={ext} />
-      <div style={{ minWidth: 0, flex: 1 }}>
-        <div
-          style={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            color: "#ccc",
-            fontSize: 12,
-          }}
-        >
-          {file.name}
-        </div>
-        <div style={{ fontSize: 10, color: "#444", marginTop: 1 }}>
-          {sizeStr}
-        </div>
-      </div>
-      <button
-        onClick={onRemove}
+      <div
         style={{
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          color: "#444",
-          padding: "2px",
-          display: "flex",
-          alignItems: "center",
-          flexShrink: 0,
-          borderRadius: 4,
-          transition: "color 0.15s",
+          fontSize: 10,
+          color: "#3a3a3a",
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          fontWeight: 600,
+          padding: "2px 4px 8px",
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.color = "#888")}
-        onMouseLeave={(e) => (e.currentTarget.style.color = "#444")}
       >
-        <svg
-          width="11"
-          height="11"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-        >
-          <path d="M18 6L6 18M6 6l12 12" />
-        </svg>
-      </button>
+        Attach file
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit,minmax(85px,1fr))",
+          gap: 5,
+          marginBottom: 8,
+        }}
+      >
+        {FILE_TYPES.map((ft) => (
+          <button
+            key={ft.ext}
+            onClick={() => {
+              fileInputRef.current?.click();
+              onClose();
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              fileInputRef.current?.click();
+              onClose();
+            }}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+              gap: 6,
+              padding: "9px 10px",
+              borderRadius: 10,
+              background: "#0d0d0d",
+              border: "1px solid #1c1c1c",
+              cursor: "pointer",
+              width: "100%",
+              WebkitTapHighlightColor: "transparent",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "#161616";
+              e.currentTarget.style.borderColor = "#2a2a2a";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "#0d0d0d";
+              e.currentTarget.style.borderColor = "#1c1c1c";
+            }}
+          >
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                flexShrink: 0,
+                background: ft.bg,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <FileTypeIcon ext={ft.ext} />
+            </div>
+            <div style={{ textAlign: "left", minWidth: 0, width: "100%" }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: "#d0d0d0",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {ft.label}
+              </div>
+              <div
+                style={{
+                  fontSize: 10.5,
+                  color: "#444",
+                  marginTop: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {ft.sub}
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+      <div style={{ height: 1, background: "#1c1c1c", margin: "4px 0 8px" }} />
+      <div
+        style={{
+          fontSize: 10,
+          color: "#3a3a3a",
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          fontWeight: 600,
+          padding: "2px 4px 8px",
+        }}
+      >
+        Quick actions
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))",
+          gap: 5,
+        }}
+      >
+        {QUICK_ACTIONS.map((a) => (
+          <button
+            key={a.label}
+            onClick={() => onQuickAction(a.prompt)}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              onQuickAction(a.prompt);
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 10px",
+              borderRadius: 9,
+              background: "#0d0d0d",
+              border: "1px solid #1c1c1c",
+              cursor: "pointer",
+              width: "100%",
+              WebkitTapHighlightColor: "transparent",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "#161616";
+              e.currentTarget.style.borderColor = "#2a2a2a";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "#0d0d0d";
+              e.currentTarget.style.borderColor = "#1c1c1c";
+            }}
+          >
+            <Icon name={a.icon} size={14} color="#555" />
+            <span
+              style={{
+                fontSize: 12,
+                color: "#999",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {a.label}
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
 
-/* ── Main component ─────────────────────────────────────────────────────────── */
+// ─── Main Component ───────────────────────────────────────────────────────────
 export default function SutrakAssistant() {
   const { getToken } = useKindeAuth();
   const navigate = useNavigate();
 
+  // ── State ──────────────────────────────────────────────────────────────────
   const [isOpen, setIsOpen] = useState(false);
+  const [panelKey, setPanelKey] = useState(0); // increments on open to re-trigger panel animations
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [conversationHistory, setConversationHistory] = useState([]);
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
-  const [error, setError] = useState(null);
   const [showWelcome, setShowWelcome] = useState(true);
+  const [error, setError] = useState(null);
+  const [pendingEventId, setPendingEventId] = useState(null);
+  const [ripple, setRipple] = useState(false); // trigger button ripple
 
-  const messagesEndRef = useRef(null);
-  const inputRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const plusMenuRef = useRef(null);
-
-  // Drag state for the trigger button
+  // Drag state
   const [pos, setPos] = useState({ x: null, y: null });
   const [dragging, setDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
   const dragStart = useRef({ x: 0, y: 0 });
   const hasMoved = useRef(false);
-  const bubbleRef = useRef(null);
 
+  // Refs
+  const bubbleRef = useRef(null);
+  const panelRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
+  const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const plusMenuRef = useRef(null);
+  const plusBtnRef = useRef(null);
+  // Holds the CSV file object after sendMessage clears attachedFiles state.
+  // uploadCsvAfterEvent reads from here, not from attachedFiles state.
+  const pendingCsvRef = useRef(null);
+
+  // ── Scroll to bottom ───────────────────────────────────────────────────────
   useEffect(() => {
-    if (isOpen && messages.length > 0) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
+    if (isOpen) messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading, isOpen]);
 
+  // ── Focus input when opened ────────────────────────────────────────────────
   useEffect(() => {
     if (isOpen) setTimeout(() => inputRef.current?.focus(), 300);
   }, [isOpen]);
 
-  // Close plus menu on outside click
+  // ── Close plus menu on outside click / touch ───────────────────────────────
   useEffect(() => {
     if (!showPlusMenu) return;
     const handler = (e) => {
-      // Close if clicked outside the menu AND outside the + button
-      const menu = plusMenuRef.current;
-      const btn = document.getElementById("sa-plus-btn");
-      if (menu && !menu.contains(e.target) && btn && !btn.contains(e.target)) {
+      const target = e.target || e.touches?.[0]?.target;
+      if (
+        plusMenuRef.current &&
+        !plusMenuRef.current.contains(target) &&
+        plusBtnRef.current &&
+        !plusBtnRef.current.contains(target)
+      ) {
         setShowPlusMenu(false);
       }
     };
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("touchstart", handler);
+    };
   }, [showPlusMenu]);
 
-  // ── Drag ──────────────────────────────────────────────────────────────────
-  const onPointerDown = useCallback((e) => {
-    if (e.button !== 0) return;
+  // ── Drag — pointer events (works on desktop + mobile via pointer API) ──────
+  const startDrag = useCallback((e) => {
+    // Accept both mouse (button 0) and touch/stylus (no button check)
+    if (e.pointerType === "mouse" && e.button !== 0) return;
     e.preventDefault();
+    e.stopPropagation();
     const rect = bubbleRef.current.getBoundingClientRect();
     dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     dragStart.current = { x: e.clientX, y: e.clientY };
     hasMoved.current = false;
+    bubbleRef.current.setPointerCapture(e.pointerId); // keeps tracking even off-element
     setDragging(true);
   }, []);
 
-  useEffect(() => {
-    if (!dragging) return;
-    const onMove = (e) => {
-      if (
-        Math.abs(e.clientX - dragStart.current.x) > 4 ||
-        Math.abs(e.clientY - dragStart.current.y) > 4
-      )
-        hasMoved.current = true;
+  const onPointerMove = useCallback(
+    (e) => {
+      if (!dragging) return;
+      const dx = Math.abs(e.clientX - dragStart.current.x);
+      const dy = Math.abs(e.clientY - dragStart.current.y);
+      if (dx > 4 || dy > 4) hasMoved.current = true;
       const bw = bubbleRef.current?.offsetWidth || 44;
       const bh = bubbleRef.current?.offsetHeight || 44;
       setPos({
@@ -993,30 +1477,33 @@ export default function SutrakAssistant() {
           ),
         ),
       });
-    };
-    const onUp = () => setDragging(false);
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    return () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-    };
-  }, [dragging]);
+    },
+    [dragging],
+  );
+
+  const onPointerUp = useCallback(() => {
+    setDragging(false);
+  }, []);
 
   const handleBubbleClick = () => {
-    if (!hasMoved.current) setIsOpen((o) => !o);
+    if (hasMoved.current) return;
+    setRipple(true);
+    setTimeout(() => setRipple(false), 500);
+    const opening = !isOpen;
+    setIsOpen(opening);
+    if (opening) setPanelKey((k) => k + 1); // re-trigger panel entry animations
   };
 
-  // ── File upload ───────────────────────────────────────────────────────────
-  const ACCEPTED = ".csv,.xlsx,.xls,.doc,.docx,.pdf,.txt";
-
+  // ── File handling ──────────────────────────────────────────────────────────
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     setAttachedFiles((prev) => {
       const existing = new Set(prev.map((f) => f.name));
-      const newFiles = files.filter((f) => !existing.has(f.name));
-      return [...prev, ...newFiles].slice(0, 5); // max 5 files
+      return [...prev, ...files.filter((f) => !existing.has(f.name))].slice(
+        0,
+        5,
+      );
     });
     setShowPlusMenu(false);
     e.target.value = "";
@@ -1025,27 +1512,55 @@ export default function SutrakAssistant() {
   const removeFile = (name) =>
     setAttachedFiles((prev) => prev.filter((f) => f.name !== name));
 
-  const getFileType = (file) => {
-    const ext = file.name.split(".").pop().toLowerCase();
-    if (ext === "csv") return { label: "CSV", color: "#6ee7b7", bg: "#0d2a1e" };
-    if (["xlsx", "xls"].includes(ext))
-      return { label: "Excel", color: "#4ade80", bg: "#0a2010" };
-    if (["doc", "docx"].includes(ext))
-      return { label: "Word", color: "#60a5fa", bg: "#0d1a2e" };
-    if (ext === "pdf") return { label: "PDF", color: "#f87171", bg: "#2a0d0d" };
-    return { label: ext.toUpperCase(), color: "#a78bfa", bg: "#1a0d2a" };
+  // ── CSV upload after event creation ────────────────────────────────────────
+  // Reads the file from pendingCsvRef (saved before attachedFiles state was cleared).
+  // Calls POST /api/events/:eventId/upload-csv — identical logic to createEventWithCsv.
+  const uploadCsvAfterEvent = async (eventId) => {
+    const csv = pendingCsvRef.current;
+    if (!csv || !eventId) {
+      console.warn("[uploadCsvAfterEvent] No pending CSV file or eventId");
+      return false;
+    }
+    try {
+      const token = await getToken();
+      const form = new FormData();
+      form.append("dataset", csv); // multer field name must match: upload.single("dataset")
+      console.log(
+        "[uploadCsvAfterEvent] Uploading",
+        csv.name,
+        "to event",
+        eventId,
+      );
+      const res = await fetch(
+        `${BACKEND_URL}/api/events/${eventId}/upload-csv`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: form,
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.error("[uploadCsvAfterEvent] Server error:", data.error);
+        return false;
+      }
+      console.log("[uploadCsvAfterEvent] Success:", data.message);
+      pendingCsvRef.current = null; // clear after success
+      return data.success === true;
+    } catch (err) {
+      console.error("[uploadCsvAfterEvent] Fetch error:", err);
+      return false;
+    }
   };
 
-  // ── Send message ──────────────────────────────────────────────────────────
+  // ── Send message ───────────────────────────────────────────────────────────
   const sendMessage = async (text) => {
     const msg = (text || input).trim();
-    if (!msg || isLoading) return;
+    if ((!msg && attachedFiles.length === 0) || isLoading) return;
     setInput("");
     setError(null);
     setShowWelcome(false);
-    if (inputRef.current) {
-      inputRef.current.style.height = "auto";
-    }
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
 
     const fileNames = attachedFiles.map((f) => f.name);
     const userContent =
@@ -1053,9 +1568,13 @@ export default function SutrakAssistant() {
         ? `${msg}${msg ? "\n\n" : ""}[Attached: ${fileNames.join(", ")}]`
         : msg;
 
-    if (!msg && fileNames.length === 0) return;
     setMessages((prev) => [...prev, { role: "user", content: userContent }]);
     const filesSnapshot = [...attachedFiles];
+    // Save CSV file to ref so uploadCsvAfterEvent can access it after state is cleared
+    const csvFile = filesSnapshot.find((f) =>
+      ["csv", "xlsx", "xls"].includes(f.name.split(".").pop().toLowerCase()),
+    );
+    if (csvFile) pendingCsvRef.current = csvFile;
     setAttachedFiles([]);
     setIsLoading(true);
 
@@ -1078,12 +1597,32 @@ export default function SutrakAssistant() {
           }),
         }),
       });
-
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || `Error ${res.status}`);
       }
       const data = await res.json();
+      if (
+        data.action?.type === "event_created" &&
+        data.action?.needs_csv_upload
+      ) {
+        const eventId = data.action.event_id;
+        setPendingEventId(eventId);
+        // Auto-upload immediately — don't rely on user clicking the button
+        // Small delay so the success message renders first
+        setTimeout(async () => {
+          const ok = await uploadCsvAfterEvent(eventId);
+          if (ok) {
+            setMessages((prev) =>
+              prev.map((m, idx) =>
+                idx === prev.length - 1 && m.action?.type === "event_created"
+                  ? { ...m, action: { ...m.action, _csvUploaded: true } }
+                  : m,
+              ),
+            );
+          }
+        }, 800);
+      }
       setMessages((prev) => [
         ...prev,
         {
@@ -1095,12 +1634,12 @@ export default function SutrakAssistant() {
       ]);
       setConversationHistory(data.updatedHistory || []);
     } catch (err) {
-      setError(err.message || "Something went wrong");
+      setError(err.message || "Something went wrong. Please try again.");
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: "Sorry, I ran into an issue. Please try again.",
+          content: "Sorry, I ran into an issue. Could you try again?",
         },
       ]);
     } finally {
@@ -1120,80 +1659,175 @@ export default function SutrakAssistant() {
     setConversationHistory([]);
     setError(null);
     setShowWelcome(true);
-    setCsvFile(null);
+    setAttachedFiles([]);
+    setPendingEventId(null);
   };
 
   const canSend =
     (input.trim().length > 0 || attachedFiles.length > 0) && !isLoading;
 
-  const bubbleStyle =
-    pos.x !== null
-      ? {
-          position: "fixed",
-          left: pos.x,
-          top: pos.y,
-          bottom: "auto",
-          right: "auto",
-        }
-      : { position: "fixed", bottom: 28, right: 28 };
+  // Bubble position
+  const bubbleStyle = useMemo(
+    () =>
+      pos.x !== null
+        ? {
+            position: "fixed",
+            left: pos.x,
+            top: pos.y,
+            bottom: "auto",
+            right: "auto",
+          }
+        : {
+            position: "fixed",
+            bottom: "max(28px, env(safe-area-inset-bottom, 28px))",
+            right: 20,
+          },
+    [pos],
+  );
 
   return (
     <>
+      {/* ── Global styles ─────────────────────────────────────────────────── */}
       <style>{`
-        @keyframes sa-dot {
-          0%, 80%, 100% { opacity: .3; transform: scale(.85); }
-          40% { opacity: 1; transform: scale(1); }
+        /* ── Keyframes ─────────────────────────────────────────────── */
+        @keyframes sa-dot        { 0%,80%,100%{opacity:.3;transform:scale(.85);}40%{opacity:1;transform:scale(1);} }
+        @keyframes sa-fadein     { from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);} }
+        @keyframes sa-msg-user   { from{opacity:0;transform:translateX(12px) scale(.97);}to{opacity:1;transform:translateX(0) scale(1);} }
+        @keyframes sa-msg-ai     { from{opacity:0;transform:translateX(-8px) scale(.97);}to{opacity:1;transform:translateX(0) scale(1);} }
+        @keyframes sa-pulse      { 0%,100%{box-shadow:0 0 0 0 rgba(139,92,246,.5),0 4px 24px rgba(99,102,241,.35);}50%{box-shadow:0 0 0 10px rgba(139,92,246,0),0 4px 24px rgba(99,102,241,.35);} }
+        @keyframes sa-ripple     { 0%{transform:scale(0);opacity:.7;}100%{transform:scale(2.8);opacity:0;} }
+        @keyframes sa-icon-in    { from{opacity:0;transform:scale(.5) rotate(-90deg);}to{opacity:1;transform:scale(1) rotate(0deg);} }
+        @keyframes sa-icon-out   { from{opacity:0;transform:scale(.5) rotate(90deg);}to{opacity:1;transform:scale(1) rotate(0deg);} }
+        @keyframes sa-panel-hdr  { from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);} }
+        @keyframes sa-panel-body { from{opacity:0;}to{opacity:1;} }
+        @keyframes sa-panel-foot { from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);} }
+        @keyframes sa-welcome-card { from{opacity:0;transform:translateY(10px) scale(.97);}to{opacity:1;transform:translateY(0) scale(1);} }
+        @keyframes sa-dot-online { 0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.3);opacity:.6;} }
+        @keyframes sa-gradient-spin { 0%{background-position:0% 50%;}50%{background-position:100% 50%;}100%{background-position:0% 50%;} }
+        @keyframes sa-label-in  { from{opacity:0;transform:translateX(8px);}to{opacity:1;transform:translateX(0);} }
+        @keyframes sa-float     { 0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);} }
+
+        /* ── Base classes ───────────────────────────────────────────── */
+        .sa-messages { scrollbar-width:thin; scrollbar-color:#1e1e1e transparent; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+        .sa-messages::-webkit-scrollbar { width:3px; }
+        .sa-messages::-webkit-scrollbar-thumb { background:#1e1e1e; border-radius:3px; }
+        .sa-hdr-btn { background:none; border:none; cursor:pointer; color:#444; padding:6px; border-radius:7px; display:flex; align-items:center; transition:background .15s,color .15s; -webkit-tap-highlight-color:transparent; }
+        .sa-hdr-btn:hover { background:#1a1a1a; color:#e8e8e8; }
+        .sa-hdr-btn:active { background:#222; }
+        .sa-send-btn { border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .2s,transform .1s; -webkit-tap-highlight-color:transparent; }
+        .sa-send-btn:active { transform:scale(0.9); }
+        .sa-send-btn:disabled { opacity:.35; cursor:not-allowed; }
+        .sa-overlay { pointer-events:none; }
+        .sa-overlay.open { pointer-events:auto; }
+        .sa-msg-user { animation: sa-msg-user .22s cubic-bezier(.34,1.56,.64,1); }
+        .sa-msg-ai   { animation: sa-msg-ai   .22s cubic-bezier(.34,1.56,.64,1); }
+        .sa-panel-hdr  { animation: sa-panel-hdr  .28s ease-out both; }
+        .sa-panel-body { animation: sa-panel-body .35s ease-out .08s both; }
+        .sa-panel-foot { animation: sa-panel-foot .28s ease-out .12s both; }
+
+        /* ── Bubble ─────────────────────────────────────────────────── */
+        .sa-bubble-wrap {
+          position: relative;
+          width: 52px; height: 52px;
+          border-radius: 50%;
+          cursor: pointer;
+          -webkit-tap-highlight-color: transparent;
         }
-        @keyframes sa-fadein {
-          from { opacity: 0; transform: translateY(5px); }
-          to   { opacity: 1; transform: translateY(0); }
+        /* Outer glow ring — animated */
+        .sa-bubble-wrap::before {
+          content: "";
+          position: absolute;
+          inset: -3px;
+          border-radius: 50%;
+          background: conic-gradient(from 0deg, #6366f1, #8b5cf6, #a78bfa, #6366f1);
+          animation: sa-gradient-spin 3s linear infinite;
+          opacity: .7;
+          z-index: 0;
         }
-        @keyframes sa-slide-in {
-          from { transform: translateX(100%); opacity: 0; }
-          to   { transform: translateX(0);   opacity: 1; }
+        .sa-bubble-wrap::after {
+          content: "";
+          position: absolute;
+          inset: -3px;
+          border-radius: 50%;
+          background: conic-gradient(from 0deg, #6366f1, #8b5cf6, #a78bfa, #6366f1);
+          animation: sa-gradient-spin 3s linear infinite;
+          filter: blur(6px);
+          opacity: .5;
+          z-index: 0;
         }
-        @keyframes sa-slide-out {
-          from { transform: translateX(0);   opacity: 1; }
-          to   { transform: translateX(100%); opacity: 0; }
+        .sa-bubble-wrap.is-open::before,
+        .sa-bubble-wrap.is-open::after { display: none; }
+
+        .sa-bubble-btn {
+          position: relative; z-index: 1;
+          width: 52px; height: 52px; border-radius: 50%;
+          border: none; cursor: pointer; padding: 0;
+          background: #0f0f10;
+          display: flex; align-items: center; justify-content: center;
+          overflow: hidden;
+          transition: transform .18s cubic-bezier(.34,1.56,.64,1), background .2s;
+          -webkit-tap-highlight-color: transparent;
         }
-        @keyframes sa-pulse-ring {
-          0%,100% { box-shadow: 0 0 0 0 rgba(167,139,250,.4); }
-          50% { box-shadow: 0 0 0 7px rgba(167,139,250,0); }
+        .sa-bubble-btn.is-open { background: #1a1a1a; }
+        .sa-bubble-btn:hover:not(.is-open) { transform: scale(1.07); }
+        .sa-bubble-btn:active { transform: scale(.88) !important; }
+
+        /* Gradient fill inside the button — shows through ring */
+        .sa-bubble-icon-wrap {
+          position: absolute; inset: 0; border-radius: 50%;
+          background: linear-gradient(145deg, #6366f1 0%, #7c3aed 60%, #a78bfa 100%);
+          display: flex; align-items: center; justify-content: center;
+          transition: opacity .25s;
         }
-        .sa-trigger:hover { transform: scale(1.07) !important; }
-        .sa-trigger:active { transform: scale(0.95) !important; }
-        .sa-chip-btn:hover { background: #1e1e1e !important; border-color: #333 !important; }
-        .sa-plus-item:hover { background: #1a1a1a !important; }
-        .sa-hdr-btn:hover { background: #1a1a1a !important; color: #e8e8e8 !important; }
-        .sa-qa-btn:hover { background: #1a1a1a !important; border-color: #333 !important; }
-        .sa-overlay { pointer-events: none; }
-        .sa-overlay.visible { pointer-events: auto; }
-        @media (max-width: 768px) {
-          .sa-panel { width: 100vw !important; border-left: none !important; }
-          .sa-overlay.visible { background: rgba(0,0,0,0.6) !important; pointer-events: auto; }
+        .sa-bubble-btn.is-open .sa-bubble-icon-wrap { opacity: 0; }
+        .sa-bubble-close-wrap {
+          position: absolute; inset: 0; border-radius: 50%;
+          background: #1a1a1a;
+          display: flex; align-items: center; justify-content: center;
+          opacity: 0; transition: opacity .25s;
+          border: 1px solid #2a2a2a;
         }
-        .sa-input:focus { outline: none; }
-        .sa-input::placeholder { color: #444; }
-        .sa-messages { scrollbar-width: thin; scrollbar-color: #2a2a2a transparent; }
-        .sa-messages::-webkit-scrollbar { width: 3px; }
-        .sa-messages::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+        .sa-bubble-btn.is-open .sa-bubble-close-wrap { opacity: 1; }
+
+        @media (max-width:768px) {
+          .sa-panel { width:100vw !important; border-left:none !important; border-radius:0 !important; }
+          .sa-overlay.open { background:rgba(0,0,0,.55) !important; }
+        }
+        @media (max-width:480px) { .sa-panel { width:100vw !important; } }
+        @media (prefers-reduced-motion: reduce) {
+          .sa-msg-user,.sa-msg-ai,.sa-panel-hdr,.sa-panel-body,.sa-panel-foot,
+          .sa-bubble-wrap::before,.sa-bubble-wrap::after,.sa-bubble-btn { animation:none !important; transition:none !important; }
+        }
+
+        @media (max-width:768px) {
+          .sa-panel { width:100vw !important; border-left:none !important; border-radius:0 !important; }
+          .sa-overlay.open { background:rgba(0,0,0,.55) !important; }
+        }
+        @media (max-width:480px) {
+          .sa-panel { width:100vw !important; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .sa-msg-user,.sa-msg-ai,.sa-panel-hdr,.sa-panel-body,.sa-panel-foot,.sa-bubble-inner { animation:none !important; transition:none !important; }
+        }
       `}</style>
 
-      {/* ── Background overlay (mobile only) ─────────────────────────────── */}
+      {/* ── Overlay (mobile backdrop) ──────────────────────────────────────── */}
       <div
-        className={`sa-overlay${isOpen ? " visible" : ""}`}
+        className={`sa-overlay${isOpen ? " open" : ""}`}
         onClick={() => setIsOpen(false)}
         style={{
           position: "fixed",
           inset: 0,
-          zIndex: 9997,
+          zIndex: 9996,
           background: "transparent",
-          transition: "background 0.25s",
+          transition: "background .3s cubic-bezier(.4,0,.2,1)",
         }}
       />
 
-      {/* ── Side panel ───────────────────────────────────────────────────── */}
+      {/* ── Side panel ────────────────────────────────────────────────────── */}
       <div
+        ref={panelRef}
+        key={panelKey}
         className="sa-panel"
         style={{
           position: "fixed",
@@ -1201,27 +1835,28 @@ export default function SutrakAssistant() {
           right: 0,
           bottom: 0,
           width: "min(420px, 32vw)",
-          minWidth: 340,
+          minWidth: 320,
           background: "#0a0a0a",
           borderLeft: "1px solid #1c1c1c",
-          zIndex: 9998,
           display: "flex",
           flexDirection: "column",
+          zIndex: 9997,
           transform: isOpen ? "translateX(0)" : "translateX(100%)",
           opacity: isOpen ? 1 : 0,
-          transition:
-            "transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease",
+          transition: "transform .3s cubic-bezier(.4,0,.2,1), opacity .3s ease",
           fontFamily:
-            "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif",
+            "-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif",
+          willChange: "transform",
         }}
       >
         {/* Header */}
         <div
+          className="sa-panel-hdr"
           style={{
             display: "flex",
             alignItems: "center",
             gap: 10,
-            padding: "16px 18px",
+            padding: "14px 16px",
             borderBottom: "1px solid #161616",
             flexShrink: 0,
           }}
@@ -1233,29 +1868,22 @@ export default function SutrakAssistant() {
               borderRadius: "50%",
               flexShrink: 0,
               background: "#111",
-              border: "1px solid #2a2a2a",
+              border: "1px solid #222",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            <Icon name="sparkles" size={14} style={{ color: "#a78bfa" }} />
+            <Icon name="sparkles" size={14} color="#a78bfa" />
           </div>
-          <div style={{ flex: 1 }}>
-            <div
-              style={{
-                fontSize: 13.5,
-                fontWeight: 500,
-                color: "#e8e8e8",
-                letterSpacing: "0.01em",
-              }}
-            >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 500, color: "#e8e8e8" }}>
               Sutrak Assistant
             </div>
             <div
               style={{
                 fontSize: 11,
-                color: "#3a3a3a",
+                color: "#2a2a2a",
                 marginTop: 1,
                 display: "flex",
                 alignItems: "center",
@@ -1271,72 +1899,44 @@ export default function SutrakAssistant() {
                   display: "inline-block",
                 }}
               />
-              <span style={{ color: "#555" }}>Ready</span>
+              <span style={{ color: "#555" }}>Online</span>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 2 }}>
-            {messages.length > 0 && (
-              <button
-                className="sa-hdr-btn"
-                onClick={clearChat}
-                title="New chat"
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "#444",
-                  padding: "6px",
-                  borderRadius: 7,
-                  display: "flex",
-                  alignItems: "center",
-                  transition: "background 0.15s, color 0.15s",
-                }}
-              >
-                <Icon name="refresh" size={14} />
-              </button>
-            )}
+          {messages.length > 0 && (
             <button
               className="sa-hdr-btn"
-              onClick={() => setIsOpen(false)}
-              title="Close"
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                color: "#444",
-                padding: "6px",
-                borderRadius: 7,
-                display: "flex",
-                alignItems: "center",
-                transition: "background 0.15s, color 0.15s",
-              }}
+              onClick={clearChat}
+              title="New chat"
+              aria-label="New chat"
             >
-              <Icon name="x" size={15} />
+              <Icon name="refresh" size={14} />
             </button>
-          </div>
+          )}
+          <button
+            className="sa-hdr-btn"
+            onClick={() => setIsOpen(false)}
+            title="Close"
+            aria-label="Close assistant"
+          >
+            <Icon name="x" size={15} />
+          </button>
         </div>
 
-        {/* Messages / Welcome */}
+        {/* Messages */}
         <div
-          className="sa-messages"
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            overflowX: "hidden",
-            padding: "20px 18px 8px",
-            minWidth: 0,
-          }}
+          className="sa-messages sa-panel-body"
+          style={{ flex: 1, padding: "18px 16px 8px", overflowX: "hidden" }}
         >
           {showWelcome && messages.length === 0 && (
-            <div style={{ animation: "sa-fadein 0.3s ease-out" }}>
-              <div style={{ marginBottom: 28 }}>
+            <div style={{ animation: "sa-fadein .3s ease-out" }}>
+              <div style={{ marginBottom: 24 }}>
                 <div
                   style={{
                     fontSize: 18,
                     fontWeight: 500,
                     color: "#e8e8e8",
                     marginBottom: 6,
-                    letterSpacing: "-0.01em",
+                    letterSpacing: "-.01em",
                   }}
                 >
                   How can I help?
@@ -1346,40 +1946,50 @@ export default function SutrakAssistant() {
                   more.
                 </div>
               </div>
-
-              {/* Quick action grid */}
               <div
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
                   gap: 8,
-                  marginBottom: 24,
                 }}
               >
-                {QUICK_ACTIONS.map((a) => (
+                {QUICK_ACTIONS.map((a, i) => (
                   <button
                     key={a.label}
-                    className="sa-qa-btn"
-                    onClick={() => {
-                      setShowWelcome(false);
+                    onClick={() => sendMessage(a.prompt)}
+                    onTouchEnd={(e) => {
+                      e.preventDefault();
                       sendMessage(a.prompt);
                     }}
                     style={{
                       background: "#0f0f0f",
                       border: "1px solid #1e1e1e",
                       borderRadius: 10,
-                      padding: "12px 14px",
+                      padding: "12px",
                       cursor: "pointer",
                       textAlign: "left",
-                      transition: "background 0.15s, border-color 0.15s",
+                      WebkitTapHighlightColor: "transparent",
+                      animation:
+                        "sa-welcome-card .35s cubic-bezier(.34,1.2,.64,1) both",
+                      animationDelay: `${i * 0.07}s`,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "#161616";
+                      e.currentTarget.style.borderColor = "#2a2a2a";
+                      e.currentTarget.style.transform = "translateY(-1px)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "#0f0f0f";
+                      e.currentTarget.style.borderColor = "#1e1e1e";
+                      e.currentTarget.style.transform = "translateY(0)";
                     }}
                   >
-                    <div style={{ marginBottom: 6 }}>
-                      <Icon name={a.icon} size={15} style={{ color: "#555" }} />
-                    </div>
                     <div
-                      style={{ fontSize: 12.5, color: "#aaa", fontWeight: 400 }}
+                      style={{ marginBottom: 7, transition: "transform .15s" }}
                     >
+                      <Icon name={a.icon} size={15} color="#555" />
+                    </div>
+                    <div style={{ fontSize: 12.5, color: "#aaa" }}>
                       {a.label}
                     </div>
                   </button>
@@ -1389,7 +1999,12 @@ export default function SutrakAssistant() {
           )}
 
           {messages.map((msg, i) => (
-            <Message key={i} msg={msg} navigate={navigate} />
+            <Message
+              key={i}
+              msg={msg}
+              navigate={navigate}
+              uploadCsvAfterEvent={uploadCsvAfterEvent}
+            />
           ))}
 
           {isLoading && (
@@ -1398,26 +2013,26 @@ export default function SutrakAssistant() {
                 display: "flex",
                 gap: 10,
                 marginBottom: 20,
-                animation: "sa-fadein 0.2s ease-out",
+                animation: "sa-fadein .2s ease-out",
                 alignItems: "flex-start",
               }}
             >
               <div
                 style={{
-                  width: 28,
-                  height: 28,
+                  width: 26,
+                  height: 26,
                   borderRadius: "50%",
                   flexShrink: 0,
                   background: "#111",
-                  border: "1px solid #222",
+                  border: "1px solid #1e1e1e",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                <Icon name="sparkles" size={14} style={{ color: "#a78bfa" }} />
+                <Icon name="sparkles" size={13} color="#a78bfa" />
               </div>
-              <div style={{ padding: "8px 0" }}>
+              <div style={{ paddingTop: 6 }}>
                 <TypingDots />
               </div>
             </div>
@@ -1429,9 +2044,9 @@ export default function SutrakAssistant() {
                 fontSize: 12,
                 color: "#f87171",
                 padding: "8px 12px",
-                background: "rgba(248,113,113,0.07)",
+                background: "rgba(248,113,113,.07)",
                 borderRadius: 8,
-                border: "1px solid rgba(248,113,113,0.15)",
+                border: "1px solid rgba(248,113,113,.15)",
                 marginBottom: 12,
               }}
             >
@@ -1442,15 +2057,20 @@ export default function SutrakAssistant() {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* ── PlusMenu (rendered inside panel but above everything) ─────────── */}
+        {/* PlusMenu sits inside a relative wrapper in the input area — see below */}
+
         {/* Input area */}
         <div
+          className="sa-panel-foot"
           style={{
             padding: "10px 12px 14px",
             borderTop: "1px solid #161616",
             flexShrink: 0,
+            paddingBottom: "max(14px, env(safe-area-inset-bottom, 14px))",
           }}
         >
-          {/* Attached files chips */}
+          {/* Attached file chips */}
           {attachedFiles.length > 0 && (
             <div
               style={{
@@ -1470,7 +2090,6 @@ export default function SutrakAssistant() {
             </div>
           )}
 
-          {/* Hidden file input */}
           <input
             type="file"
             accept={ACCEPTED}
@@ -1480,369 +2099,168 @@ export default function SutrakAssistant() {
             style={{ display: "none" }}
           />
 
-          {/* Plus menu — rendered at panel level so overflow never clips it */}
-          {showPlusMenu && (
-            <div
-              ref={plusMenuRef}
-              style={{
-                position: "fixed",
-                bottom: 90,
-                right: 12,
-                width: "min(396px, 32vw - 24px)",
-                background: "#111",
-                border: "1px solid #252525",
-                borderRadius: 14,
-                padding: "8px",
-                zIndex: 200,
-                boxShadow: "0 -8px 40px rgba(0,0,0,0.7)",
-                animation: "sa-fadein 0.15s ease-out",
-              }}
-            >
-              {/* Attach files section */}
-              <div
-                style={{
-                  padding: "4px 8px 6px",
-                  fontSize: 10,
-                  color: "#3a3a3a",
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  fontWeight: 500,
-                }}
-              >
-                Attach file
-              </div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 4,
-                  marginBottom: 6,
-                }}
-              >
-                {[
-                  {
-                    ext: "csv",
-                    color: "#6ee7b7",
-                    bg: "#0b2218",
-                    label: "CSV",
-                    sub: "Guest list",
-                  },
-                  {
-                    ext: "xlsx",
-                    color: "#4ade80",
-                    bg: "#081c0e",
-                    label: "Excel",
-                    sub: "Spreadsheet",
-                  },
-                  {
-                    ext: "docx",
-                    color: "#60a5fa",
-                    bg: "#0a1628",
-                    label: "Word",
-                    sub: "Document",
-                  },
-                  {
-                    ext: "pdf",
-                    color: "#f87171",
-                    bg: "#280a0a",
-                    label: "PDF",
-                    sub: "Any PDF",
-                  },
-                ].map((ft) => (
-                  <button
-                    key={ft.ext}
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      padding: "8px 10px",
-                      borderRadius: 9,
-                      background: "#0d0d0d",
-                      border: "1px solid #1c1c1c",
-                      cursor: "pointer",
-                      transition: "background 0.15s, border-color 0.15s",
-                      textAlign: "left",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "#161616";
-                      e.currentTarget.style.borderColor = "#2a2a2a";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "#0d0d0d";
-                      e.currentTarget.style.borderColor = "#1c1c1c";
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: 7,
-                        flexShrink: 0,
-                        background: ft.bg,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <FileTypeIcon ext={ft.ext} />
-                    </div>
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 500,
-                          color: "#d0d0d0",
-                        }}
-                      >
-                        {ft.label}
-                      </div>
-                      <div
-                        style={{ fontSize: 10.5, color: "#444", marginTop: 1 }}
-                      >
-                        {ft.sub}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              {/* Divider */}
-              <div
-                style={{
-                  height: "1px",
-                  background: "#1c1c1c",
-                  margin: "4px 0 8px",
+          {/* Relative wrapper — PlusMenu anchors to this, matching input box width exactly */}
+          <div style={{ position: "relative" }}>
+            {/* PlusMenu sits above the input box, same width */}
+            {showPlusMenu && (
+              <PlusMenu
+                menuRef={plusMenuRef}
+                fileInputRef={fileInputRef}
+                onClose={() => setShowPlusMenu(false)}
+                onQuickAction={(p) => {
+                  setShowPlusMenu(false);
+                  setShowWelcome(false);
+                  sendMessage(p);
                 }}
               />
+            )}
 
-              {/* Quick actions section */}
-              <div
-                style={{
-                  padding: "0 8px 6px",
-                  fontSize: 10,
-                  color: "#3a3a3a",
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  fontWeight: 500,
+            {/* Input box */}
+            <div
+              style={{
+                background: "#0f0f0f",
+                border: "1px solid #1e1e1e",
+                borderRadius: 13,
+                overflow: "hidden",
+                transition: "border-color .15s",
+              }}
+              onFocusCapture={(e) =>
+                (e.currentTarget.style.borderColor = "#333")
+              }
+              onBlurCapture={(e) => {
+                if (!showPlusMenu)
+                  e.currentTarget.style.borderColor = "#1e1e1e";
+              }}
+            >
+              <textarea
+                ref={(e) => {
+                  inputRef.current = e;
+                  textareaRef.current = e;
                 }}
-              >
-                Quick actions
-              </div>
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask anything..."
+                rows={1}
+                disabled={isLoading}
+                aria-label="Message input"
+                style={{
+                  width: "100%",
+                  border: "none",
+                  background: "transparent",
+                  padding: "12px 14px 6px",
+                  /* CRITICAL: 16px minimum prevents iOS Safari auto-zoom */
+                  fontSize: 16,
+                  lineHeight: 1.45,
+                  resize: "none",
+                  color: "#e0e0e0",
+                  fontFamily: "inherit",
+                  maxHeight: 110,
+                  overflowY: "auto",
+                  outline: "none",
+                  boxSizing: "border-box",
+                  WebkitAppearance: "none",
+                }}
+                onInput={(e) => {
+                  e.target.style.height = "auto";
+                  e.target.style.height =
+                    Math.min(e.target.scrollHeight, 110) + "px";
+                }}
+              />
+              {/* Toolbar */}
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "4px 8px 9px",
                   gap: 4,
                 }}
               >
-                {QUICK_ACTIONS.map((a) => (
-                  <button
-                    key={a.label}
-                    onClick={() => {
-                      setShowPlusMenu(false);
-                      setShowWelcome(false);
-                      sendMessage(a.prompt);
-                    }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      padding: "8px 10px",
-                      borderRadius: 9,
-                      background: "#0d0d0d",
-                      border: "1px solid #1c1c1c",
-                      cursor: "pointer",
-                      transition: "background 0.15s, border-color 0.15s",
-                      textAlign: "left",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "#161616";
-                      e.currentTarget.style.borderColor = "#2a2a2a";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "#0d0d0d";
-                      e.currentTarget.style.borderColor = "#1c1c1c";
-                    }}
-                  >
-                    <Icon
-                      name={a.icon}
-                      size={14}
-                      style={{ color: "#555", flexShrink: 0 }}
-                    />
-                    <span style={{ fontSize: 12, color: "#999" }}>
-                      {a.label}
-                    </span>
-                  </button>
-                ))}
+                {/* + button */}
+                <button
+                  ref={plusBtnRef}
+                  id="sa-plus-btn"
+                  onClick={() => setShowPlusMenu((p) => !p)}
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    setShowPlusMenu((p) => !p);
+                  }}
+                  aria-label="Attach file or quick action"
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 8,
+                    background: showPlusMenu ? "#1e1e1e" : "transparent",
+                    border: `1px solid ${showPlusMenu ? "#333" : "transparent"}`,
+                    cursor: "pointer",
+                    color: showPlusMenu ? "#a78bfa" : "#555",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all .15s",
+                    flexShrink: 0,
+                    WebkitTapHighlightColor: "transparent",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!showPlusMenu) {
+                      e.currentTarget.style.color = "#aaa";
+                      e.currentTarget.style.background = "#181818";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!showPlusMenu) {
+                      e.currentTarget.style.color = "#555";
+                      e.currentTarget.style.background = "transparent";
+                    }
+                  }}
+                >
+                  <Icon name="plus" size={15} />
+                </button>
+
+                <div style={{ flex: 1 }} />
+
+                <span
+                  style={{ fontSize: 10.5, color: "#2a2a2a", marginRight: 4 }}
+                >
+                  {input.length > 0 ? `${input.length}` : "⏎"}
+                </span>
+
+                {/* Send button */}
+                <button
+                  className="sa-send-btn"
+                  onClick={() => sendMessage()}
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    sendMessage();
+                  }}
+                  disabled={!canSend}
+                  aria-label="Send message"
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 8,
+                    background: canSend ? "#a78bfa" : "#1a1a1a",
+                    flexShrink: 0,
+                    marginLeft: 2,
+                  }}
+                >
+                  <Icon
+                    name="send"
+                    size={12}
+                    color={canSend ? "#fff" : "#333"}
+                  />
+                </button>
               </div>
             </div>
-          )}
-
-          {/* Input box — NO overflow:hidden so the menu above is separate */}
-          <div
-            style={{
-              background: "#0f0f0f",
-              border: "1px solid " + (showPlusMenu ? "#2a2a2a" : "#1e1e1e"),
-              borderRadius: 13,
-              transition: "border-color 0.2s",
-            }}
-          >
-            <textarea
-              ref={inputRef}
-              className="sa-input"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask anything..."
-              rows={1}
-              disabled={isLoading}
-              style={{
-                width: "100%",
-                border: "none",
-                background: "transparent",
-                padding: "12px 14px 6px",
-                fontSize: 13.5,
-                lineHeight: 1.55,
-                resize: "none",
-                color: "#e0e0e0",
-                fontFamily: "inherit",
-                maxHeight: 110,
-                overflowY: "auto",
-                boxSizing: "border-box",
-                outline: "none",
-              }}
-              onInput={(e) => {
-                e.target.style.height = "auto";
-                e.target.style.height =
-                  Math.min(e.target.scrollHeight, 110) + "px";
-              }}
-              onFocus={(e) => {
-                e.target.closest("div").style.borderColor = "#333";
-              }}
-              onBlur={(e) => {
-                if (!showPlusMenu)
-                  e.target.closest("div").style.borderColor = "#1e1e1e";
-              }}
-            />
-
-            {/* Toolbar */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                padding: "4px 8px 9px",
-                gap: 4,
-              }}
-            >
-              {/* + button */}
-              <button
-                id="sa-plus-btn"
-                onClick={() => setShowPlusMenu((p) => !p)}
-                title="Attach files or quick actions"
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 7,
-                  background: showPlusMenu ? "#1e1e1e" : "transparent",
-                  border:
-                    "1px solid " + (showPlusMenu ? "#333" : "transparent"),
-                  cursor: "pointer",
-                  color: showPlusMenu ? "#a78bfa" : "#555",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "all 0.15s",
-                  flexShrink: 0,
-                }}
-                onMouseEnter={(e) => {
-                  if (!showPlusMenu) {
-                    e.currentTarget.style.color = "#aaa";
-                    e.currentTarget.style.background = "#181818";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!showPlusMenu) {
-                    e.currentTarget.style.color = "#555";
-                    e.currentTarget.style.background = "transparent";
-                  }
-                }}
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                >
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-              </button>
-
-              <div style={{ flex: 1 }} />
-
-              {/* Hint text */}
-              <span style={{ fontSize: 10.5, color: "#2e2e2e" }}>
-                {input.length > 0 ? `${input.length} chars` : "⏎ send"}
-              </span>
-
-              {/* Send button */}
-              <button
-                onClick={() => sendMessage()}
-                disabled={!canSend}
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 7,
-                  border: "none",
-                  background: canSend ? "#a78bfa" : "#1a1a1a",
-                  cursor: canSend ? "pointer" : "not-allowed",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  marginLeft: 4,
-                  transition: "background 0.2s, transform 0.1s",
-                }}
-                onMouseEnter={(e) => {
-                  if (canSend) e.currentTarget.style.background = "#9061f9";
-                }}
-                onMouseLeave={(e) => {
-                  if (canSend) e.currentTarget.style.background = "#a78bfa";
-                }}
-                onMouseDown={(e) => {
-                  if (canSend) e.currentTarget.style.transform = "scale(0.9)";
-                }}
-                onMouseUp={(e) => {
-                  e.currentTarget.style.transform = "scale(1)";
-                }}
-              >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke={canSend ? "#fff" : "#333"}
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="22" y1="2" x2="11" y2="13" />
-                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </svg>
-              </button>
-            </div>
           </div>
+          {/* end position:relative wrapper */}
 
           <div
             style={{
               fontSize: 10.5,
-              color: "#252525",
+              color: "#222",
               textAlign: "center",
-              marginTop: 9,
+              marginTop: 8,
             }}
           >
             Sutrak Assistant · Shift+Enter for new line
@@ -1850,58 +2268,103 @@ export default function SutrakAssistant() {
         </div>
       </div>
 
-      {/* ── Trigger button (draggable) ───────────────────────────────────── */}
+      {/* ── Draggable trigger bubble ───────────────────────────────────────── */}
       <div
         ref={bubbleRef}
         style={{
           ...bubbleStyle,
           zIndex: 9999,
           userSelect: "none",
+          touchAction: "none",
+          WebkitUserSelect: "none",
           cursor: dragging ? "grabbing" : "pointer",
         }}
-        onPointerDown={onPointerDown}
+        onPointerDown={startDrag}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
         onClick={handleBubbleClick}
       >
-        <button
-          className="sa-trigger"
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: "50%",
-            background: isOpen ? "#1a1a1a" : "#111",
-            border: "1px solid " + (isOpen ? "#333" : "#222"),
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "transform 0.15s ease, background 0.2s",
-            animation: isOpen
-              ? "none"
-              : "sa-pulse-ring 2.5s ease-in-out infinite",
-            boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
-            position: "relative",
-          }}
-        >
-          {!isOpen && (
-            <div
-              style={{
-                position: "absolute",
-                top: 1,
-                right: 1,
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: "#3ecf8e",
-                border: "1.5px solid #0a0a0a",
-              }}
-            />
-          )}
-          {isOpen ? (
-            <Icon name="x" size={16} style={{ color: "#777" }} />
-          ) : (
-            <Icon name="sparkles" size={17} style={{ color: "#a78bfa" }} />
-          )}
-        </button>
+        <div className={`sa-bubble-wrap${isOpen ? " is-open" : ""}`}>
+          <button
+            className={`sa-bubble-btn${isOpen ? " is-open" : ""}`}
+            tabIndex={-1}
+            aria-label={isOpen ? "Close assistant" : "Open Sutrak Assistant"}
+          >
+            {/* Ripple */}
+            {ripple && (
+              <span
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  borderRadius: "50%",
+                  background: "rgba(255,255,255,.3)",
+                  animation: "sa-ripple .5s ease-out forwards",
+                  pointerEvents: "none",
+                  zIndex: 3,
+                }}
+              />
+            )}
+
+            {/* Gradient fill — visible when closed */}
+            <div className="sa-bubble-icon-wrap">
+              {/* Shimmer */}
+              <span
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  borderRadius: "50%",
+                  background:
+                    "linear-gradient(145deg,rgba(255,255,255,.22) 0%,transparent 55%)",
+                  pointerEvents: "none",
+                }}
+              />
+              {/* Online dot */}
+              <span
+                style={{
+                  position: "absolute",
+                  top: 4,
+                  right: 4,
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: "#3ecf8e",
+                  border: "1.5px solid #7c3aed",
+                  animation: "sa-dot-online 2s ease-in-out infinite",
+                  zIndex: 2,
+                }}
+              />
+              <div
+                key="open-icon"
+                style={{
+                  animation: "sa-icon-out .22s cubic-bezier(.34,1.56,.64,1)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  position: "relative",
+                  zIndex: 1,
+                }}
+              >
+                <Icon name="sparkles" size={21} color="#fff" />
+              </div>
+            </div>
+
+            {/* Dark fill — visible when open */}
+            <div className="sa-bubble-close-wrap">
+              <div
+                key="close-icon"
+                style={{
+                  animation: "sa-icon-in .22s cubic-bezier(.34,1.56,.64,1)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Icon name="x" size={17} color="#888" />
+              </div>
+            </div>
+          </button>
+        </div>
       </div>
     </>
   );
