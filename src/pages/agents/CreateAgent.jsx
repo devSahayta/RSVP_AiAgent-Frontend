@@ -24,7 +24,9 @@ import {
   Hash,
   List,
   Type,
+  Mic,
 } from "lucide-react";
+import VoiceSelector from "../../components/VoiceSelector";
 
 // ─── Smart Field Type Config ──────────────────────────────────────────────────
 const FIELD_TYPES = [
@@ -269,6 +271,7 @@ const CreateAgent = () => {
     eventTitle: "",
     firstMessage: "",
     smartFields: [defaultSmartField()],
+    selectedVoice: null,
   });
 
   const [templates, setTemplates] = useState([]);
@@ -335,7 +338,8 @@ const CreateAgent = () => {
     { number: 2, title: "Basic Info", icon: Target },
     { number: 3, title: "Template", icon: Sparkles },
     { number: 4, title: "Knowledge Base", icon: Brain },
-    { number: 5, title: "Review", icon: CheckCircle2 },
+    { number: 5, title: "Voice", icon: Mic },
+    { number: 6, title: "Review", icon: CheckCircle2 },
   ];
 
   const stepsSmart = [
@@ -343,7 +347,8 @@ const CreateAgent = () => {
     { number: 2, title: "Basic Info", icon: Target },
     { number: 3, title: "Smart Fields", icon: Wand2 },
     { number: 4, title: "Knowledge Base", icon: Brain },
-    { number: 5, title: "Review", icon: CheckCircle2 },
+    { number: 5, title: "Voice", icon: Mic },
+    { number: 6, title: "Review", icon: CheckCircle2 },
   ];
 
   const steps = fieldMode === "smart_fields" ? stepsSmart : stepsClassic;
@@ -410,7 +415,7 @@ const CreateAgent = () => {
       }
     }
 
-    if (currentStep < 5) setCurrentStep(currentStep + 1);
+    if (currentStep < 6) setCurrentStep(currentStep + 1);
   };
 
   const handleBack = () => {
@@ -454,6 +459,9 @@ const CreateAgent = () => {
           knowledge_base_id: kbData.data.id,
           event_title: eventTitle,
           field_mode: "classic",
+          voice_id: formData.selectedVoice?.voice_id || null,
+          voice_name: formData.selectedVoice?.name || null,
+          public_owner_id: formData.selectedVoice?.public_owner_id || null,
         }),
       },
     );
@@ -504,6 +512,9 @@ const CreateAgent = () => {
             "Hello {{guest_name}}! I'm calling on behalf of {{event_name}}. I'm here to confirm your RSVP and I'm also happy to answer any questions you have about the event. Is now a good time?",
           field_mode: "smart_fields",
           smart_fields: cleanFields,
+          voice_id: formData.selectedVoice?.voice_id || null,
+          voice_name: formData.selectedVoice?.name || null,
+          public_owner_id: formData.selectedVoice?.public_owner_id || null,
         }),
       },
     );
@@ -1129,14 +1140,55 @@ const CreateAgent = () => {
             </div>
           )}
 
-          {/* ── STEP 5: Review ── */}
+          {/* ── STEP 5: Voice Selection ── */}
           {currentStep === 5 && (
+            <div className="space-y-7">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-3">
+                  <Mic className="w-4 h-4 text-blue-400" />
+                  <span className="text-xs font-medium text-blue-300">
+                    Step 5 of {steps.length}
+                  </span>
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  Choose a Voice
+                </h2>
+                <p className="text-gray-400">
+                  Pick an Indian voice for your agent. Hit play to preview
+                  before selecting. You can skip this and assign a voice later.
+                </p>
+              </div>
+
+              <VoiceSelector
+                selectedVoice={formData.selectedVoice}
+                onSelect={(voice) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    selectedVoice:
+                      prev.selectedVoice?.voice_id === voice.voice_id
+                        ? null // clicking selected voice deselects it
+                        : voice,
+                  }))
+                }
+              />
+
+              {!formData.selectedVoice && (
+                <p className="text-center text-xs text-gray-600">
+                  No voice selected — the agent will use the default ElevenLabs
+                  voice.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* ── STEP 6: Review ── */}
+          {currentStep === 6 && (
             <div className="space-y-7">
               <div>
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg mb-3">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                   <span className="text-xs font-medium text-emerald-300">
-                    Step 5 of {steps.length} — Review
+                    Step 6 of {steps.length} — Review
                   </span>
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-2">
@@ -1178,6 +1230,17 @@ const CreateAgent = () => {
                         <span className="text-gray-400">Description</span>
                         <span className="text-gray-300 max-w-xs text-right">
                           {formData.agentDescription}
+                        </span>
+                      </div>
+                    )}
+                    {formData.selectedVoice && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Voice</span>
+                        <span className="font-semibold text-white capitalize">
+                          {formData.selectedVoice.name}
+                          <span className="ml-1.5 text-xs text-gray-500">
+                            ({formData.selectedVoice.gender})
+                          </span>
                         </span>
                       </div>
                     )}
@@ -1276,7 +1339,7 @@ const CreateAgent = () => {
             Back
           </button>
 
-          {currentStep < 5 ? (
+          {currentStep < 6 ? (
             <button
               onClick={handleNext}
               className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-700 px-7 py-3 font-semibold text-sm shadow-lg shadow-blue-500/25 transition hover:shadow-blue-500/40 hover:scale-[1.02]"
