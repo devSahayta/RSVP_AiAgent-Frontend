@@ -9,6 +9,10 @@ export const fetchUserAgents = (userId) =>
 export const fetchAgentById = (agentId) =>
   api.get(`/api/agent-system/${agentId}`);
 
+// Update agent
+export const updateAgentById = (agentId, payload) =>
+  api.put(`/api/agent-system/${agentId}`, payload);
+
 // Delete agent
 export const deleteAgentById = (agentId) =>
   api.delete(`/api/agent-system/${agentId}`);

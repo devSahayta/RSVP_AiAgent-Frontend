@@ -24,6 +24,7 @@ import {
   Zap,
   Info,
   Check,
+  Pencil,
 } from "lucide-react";
 
 import { fetchAgentById } from "../../api/agents";
@@ -227,6 +228,13 @@ const SingleAgent = () => {
             >
               <ArrowLeft size={16} />
               Back
+            </button>
+            <button
+              onClick={() => navigate(`/agents/${agent.agent_id}/edit`)}
+              className="flex items-center gap-2 rounded-xl border border-[#2A2A3E] bg-[#0E0E14] px-4 py-2.5 text-gray-200 transition hover:bg-[#161620]"
+            >
+              <Pencil size={16} />
+              Edit
             </button>
             <button
               onClick={() => navigate(`/agents/${agent.agent_id}/test`)}

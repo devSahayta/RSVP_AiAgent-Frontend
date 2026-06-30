@@ -289,9 +289,11 @@ const VoiceSelector = ({ selectedVoice, onSelect }) => {
             <span className="font-semibold text-white">
               {selectedVoice.name}
             </span>
-            <span className="ml-2 text-xs text-gray-500 capitalize">
-              ({selectedVoice.gender} · {selectedVoice.accent})
-            </span>
+            {(selectedVoice.gender || selectedVoice.accent) && (
+              <span className="ml-2 text-xs text-gray-500 capitalize">
+                ({selectedVoice.gender || "—"} · {selectedVoice.accent || "—"})
+              </span>
+            )}
           </p>
         </div>
       )}
