@@ -93,6 +93,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [followupByParticipant, setFollowupByParticipant] = useState({});
   const [fetchError, setFetchError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -141,13 +142,43 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
     }
   };
 
+  const mapFollowupData = (rows) => {
+    const map = {};
+    (rows || []).forEach((d) => {
+      map[d.participant_id] = d;
+    });
+    return map;
+  };
+
+  const fetchFollowupStatus = async () => {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/followup-status`,
+      );
+      const json = await res.json();
+      if (json.success) setFollowupByParticipant(mapFollowupData(json.data));
+    } catch (err) {
+      console.error("Failed to fetch follow-up status:", err);
+    }
+  };
+
   const syncBatch = async () => {
     try {
       setSyncing(true);
-      await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/sync-batch-status`,
-        { method: "POST" },
-      );
+      const [, followupRes] = await Promise.all([
+        fetch(
+          `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/sync-batch-status`,
+          { method: "POST" },
+        ),
+        fetch(
+          `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/followup-status/sync`,
+          { method: "POST" },
+        ),
+      ]);
+      const followupJson = await followupRes.json().catch(() => null);
+      if (followupJson?.success) {
+        setFollowupByParticipant(mapFollowupData(followupJson.data));
+      }
       await fetchData(true);
     } catch (err) {
       console.error(err);
@@ -159,6 +190,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
   useEffect(() => {
     if (!eventId) return;
     fetchData();
+    fetchFollowupStatus();
     const iv = setInterval(() => {
       // Pause auto-refresh while drawer is open to avoid interrupting audio
       if (drawerOpenRef.current) return;
@@ -621,6 +653,15 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
                       Call Status
                     </div>
                   </Th>
+                  {/* Follow-up column */}
+                  <Th>
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 5 }}
+                    >
+                      <MessageSquare size={12} style={{ color: "#c9a97a" }} />
+                      Follow-up
+                    </div>
+                  </Th>
                   <Th>Timestamp</Th>
                 </tr>
               </thead>
@@ -750,7 +791,14 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
 
                       {/* Call Status cell */}
                       <Td>
-                        <CallStatusBadge status={row.call_outcome} />
+                        <CallStatusBadge status={row.recipient_status} />
+                      </Td>
+
+                      {/* Follow-up cell */}
+                      <Td>
+                        <FollowUpStatusBadge
+                          entry={followupByParticipant[row.id]}
+                        />
                       </Td>
 
                       <Td>
@@ -1144,6 +1192,46 @@ const CallStatusBadge = ({ status }) => {
       }}
     >
       {status}
+    </span>
+  );
+};
+
+const FOLLOWUP_BADGE_STYLES = {
+  scheduled: { background: "#1c1a08", border: "#3d3207", color: "#fbbf24" },
+  sent: { background: "#064e3b", border: "#065f46", color: "#34d399" },
+  delivered: { background: "#064e3b", border: "#065f46", color: "#34d399" },
+  read: { background: "#0a1628", border: "#1e3a5f", color: "#60a5fa" },
+  failed: { background: "#450a0a", border: "#7f1d1d", color: "#f87171" },
+  skipped: { background: "#1a1a1a", border: "#2a2a2a", color: "#6b7280" },
+  pending: { background: "#1c1a08", border: "#3d3207", color: "#fbbf24" },
+};
+
+// entry = a row from event_followup_dispatches (see fetchFollowupStatus), or
+// undefined if no follow-up rule fired for this participant yet.
+const FollowUpStatusBadge = ({ entry }) => {
+  if (!entry) {
+    return <span style={{ color: "#374151", fontSize: 12 }}>—</span>;
+  }
+  const label = entry.provider_status || entry.status || "pending";
+  const style =
+    FOLLOWUP_BADGE_STYLES[label.toLowerCase()] || FOLLOWUP_BADGE_STYLES.skipped;
+  return (
+    <span
+      title={entry.error_message || ""}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        padding: "3px 9px",
+        borderRadius: 20,
+        background: style.background,
+        border: `1px solid ${style.border}`,
+        color: style.color,
+        fontSize: 11,
+        fontWeight: 600,
+      }}
+    >
+      {label}
     </span>
   );
 };
