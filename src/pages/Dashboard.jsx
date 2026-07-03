@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import RSVPTable from "../components/RSVPTable";
 import SmartRSVPTable from "../components/SmartRSVPTable";
+import FollowupRuleSummary from "../components/FollowupRuleSummary";
 import "../styles/pages.css";
 
 const Dashboard = () => {
@@ -154,6 +155,8 @@ const Dashboard = () => {
             : "Monitor your event responses and guest data"}
         </p>
       </div>
+
+      {isSmartFields && <FollowupRuleSummary eventId={eventId} />}
 
       {/* ── Render the right table based on mode ── */}
       {isSmartFields ? (

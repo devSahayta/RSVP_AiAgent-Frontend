@@ -39,6 +39,7 @@ import ContactPage from "./components/landing/sections/ContactPage";
 import ListAgents from "./pages/agents/ListAgents";
 import SingleAgent from "./pages/agents/SingleAgent";
 import CreateAgent from "./pages/agents/CreateAgent";
+import UpdateAgent from "./pages/agents/UpdateAgent";
 import TestAgent from "./pages/agents/test/TestAgent";
 import TestHistory from "./pages/agents/test/TestHistory";
 import Welcome from "./pages/HomeDashboard.jsx";
@@ -241,6 +242,7 @@ function AppContent() {
           <Route path="/agents" element={<ListAgents />} />
           <Route path="/agents/:agentId" element={<SingleAgent />} />
           <Route path="/agents/create" element={<CreateAgent />} />
+          <Route path="/agents/:agentId/edit" element={<UpdateAgent />} />
           {/* Test Agents */}
           <Route path="/agents/:agent_id/test" element={<TestAgent />} />
           <Route path="/agents/test-history" element={<TestHistory />} />

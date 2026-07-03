@@ -29,6 +29,11 @@ const QUICK_ACTIONS = [
   },
   { icon: "users", label: "My events", prompt: "Show me all my events" },
   {
+    icon: "doc",
+    label: "Create template",
+    prompt: "I want to create a new WhatsApp template",
+  },
+  {
     icon: "brand-whatsapp",
     label: "Send template",
     prompt: "I want to send a WhatsApp template to my guests",
@@ -76,6 +81,20 @@ const FILE_TYPES = [
 
 const ACCEPTED =
   ".csv,.xlsx,.xls,.doc,.docx,.pdf,.txt,.jpg,.jpeg,.png,.gif,.webp,.mp4,.mov,.avi,.mkv,.webm";
+
+// Meta's WhatsApp template media limits.
+const MAX_FILE_SIZE = {
+  image: 5 * 1024 * 1024,
+  video: 16 * 1024 * 1024,
+  document: 40 * 1024 * 1024,
+};
+
+function getFileCategory(name) {
+  const ext = name.split(".").pop().toLowerCase();
+  if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) return "image";
+  if (["mp4", "mov", "avi", "mkv", "webm"].includes(ext)) return "video";
+  return "document";
+}
 
 // ─── Icon ────────────────────────────────────────────────────────────────────
 const ICON_PATHS = {
@@ -1100,6 +1119,219 @@ function EventCreatedCard({ action, navigate, onUploadCsv }) {
   );
 }
 
+// ─── Template cards ───────────────────────────────────────────────────────────
+const TEMPLATE_STATUS_COLORS = {
+  PENDING: { color: "#f59e0b", bg: "#1a1200", border: "#2a2000" },
+  APPROVED: { color: "#3ecf8e", bg: "#0a2218", border: "#12301e" },
+  REJECTED: { color: "#f87171", bg: "#280a0a", border: "#3a1010" },
+};
+
+// The backend doesn't always flatten the template fields onto the action —
+// sometimes only the nested `template`/`data` object is populated. Merge both,
+// preferring flattened top-level fields when present.
+function normalizeTemplateData(raw) {
+  const nested = raw?.template || raw?.data || {};
+  return {
+    name: raw?.name ?? nested.name,
+    category: raw?.category ?? nested.category,
+    language: raw?.language ?? nested.language,
+    status: raw?.status ?? nested.status,
+    header_format: raw?.header_format ?? nested.header_format,
+    media_id: raw?.media_id ?? nested.media_id,
+    wt_id: raw?.wt_id ?? nested.wt_id,
+  };
+}
+
+function TemplateCreatedCard({ data: raw }) {
+  const data = normalizeTemplateData(raw);
+  const status = (data.status || "PENDING").toUpperCase();
+  const statusStyle =
+    TEMPLATE_STATUS_COLORS[status] || TEMPLATE_STATUS_COLORS.PENDING;
+  const fields = [
+    { label: "Category", value: data.category || "—" },
+    { label: "Language", value: data.language || "—" },
+    { label: "Header", value: data.header_format || "TEXT" },
+  ];
+  return (
+    <div
+      style={{
+        marginTop: 12,
+        background: "#080f0a",
+        border: "1px solid #102018",
+        borderRadius: 12,
+        padding: "14px 16px",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 12,
+        }}
+      >
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            flexShrink: 0,
+            background: "linear-gradient(135deg,#059669,#10b981)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Icon name="brand-whatsapp" size={17} color="white" />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: 13.5,
+              fontWeight: 600,
+              color: "#e8e8e8",
+              marginBottom: 2,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {data.name || "Template"}
+          </div>
+          <div style={{ fontSize: 11.5, color: "#5a9c78" }}>
+            Submitted to Meta for approval
+          </div>
+        </div>
+        <span
+          style={{
+            fontSize: 10,
+            padding: "2px 8px",
+            borderRadius: 20,
+            flexShrink: 0,
+            background: statusStyle.bg,
+            color: statusStyle.color,
+            border: `1px solid ${statusStyle.border}`,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {status}
+        </span>
+      </div>
+      <div
+        style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}
+      >
+        {fields.map(({ label, value }) => (
+          <div
+            key={label}
+            style={{
+              background: "#0a1510",
+              borderRadius: 8,
+              padding: "8px 10px",
+              minWidth: 0,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                color: "#d9d9d9",
+                textTransform: "uppercase",
+                letterSpacing: "0.07em",
+                marginBottom: 3,
+              }}
+            >
+              {label}
+            </div>
+            <div
+              style={{
+                fontSize: 12,
+                color: "#8fe0ac",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {value}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Purely presentational — the actual upload is kicked off once, directly from
+// sendMessage's response handler (same pattern as the CSV auto-upload after
+// event_created), not from a child-component effect. That avoids any
+// component-mount-timing dependency for a side effect that must run exactly once.
+function TemplateMediaUploadCard({ action }) {
+  const state = action._uploadState || "uploading";
+
+  if (state === "done")
+    return <TemplateCreatedCard data={action._uploadResult} />;
+
+  return (
+    <div
+      style={{
+        marginTop: 12,
+        background: state === "error" ? "#1a0a0a" : "#080f0a",
+        border: `1px solid ${state === "error" ? "#3a1010" : "#102018"}`,
+        borderRadius: 12,
+        padding: "14px 16px",
+        overflow: "hidden",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            flexShrink: 0,
+            background: state === "error" ? "#280a0a" : "#0a1a0d",
+            border: `1px solid ${state === "error" ? "#3a1010" : "#152918"}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Icon
+            name="brand-whatsapp"
+            size={16}
+            color={state === "error" ? "#f87171" : "#3ecf8e"}
+          />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: "#e0e0e0",
+              marginBottom: 2,
+            }}
+          >
+            {state === "error"
+              ? "Template upload failed"
+              : `Uploading ${action.file_name || "media"}…`}
+          </div>
+          <div
+            style={{
+              fontSize: 11.5,
+              color: state === "error" ? "#7a3030" : "#555",
+            }}
+          >
+            {state === "error"
+              ? action._uploadError || "Upload failed"
+              : "Uploading media and submitting template to Meta"}
+          </div>
+        </div>
+        {state === "uploading" && <TypingDots />}
+      </div>
+    </div>
+  );
+}
+
 // ─── Message ──────────────────────────────────────────────────────────────────
 function Message({ msg, navigate, uploadCsvAfterEvent }) {
   const isUser = msg.role === "user";
@@ -1168,6 +1400,12 @@ function Message({ msg, navigate, uploadCsvAfterEvent }) {
                 navigate={navigate}
                 onUploadCsv={uploadCsvAfterEvent}
               />
+            )}
+            {msg.action?.type === "template_media_upload_required" && (
+              <TemplateMediaUploadCard action={msg.action} />
+            )}
+            {msg.action?.type === "template_created" && (
+              <TemplateCreatedCard data={msg.action} />
             )}
             {msg.connectionData?.connected && (
               <ConnectedCard data={msg.connectionData} />
@@ -1406,6 +1644,12 @@ export default function SutrakAssistant() {
   // Holds the CSV file object after sendMessage clears attachedFiles state.
   // uploadCsvAfterEvent reads from here, not from attachedFiles state.
   const pendingCsvRef = useRef(null);
+  // Accumulates every attached file (by name) across turns. The backend may
+  // ask for confirmation in one turn and only return
+  // template_media_upload_required several turns later — by then
+  // attachedFiles/filesSnapshot for that turn is empty, so uploadTemplateMedia
+  // looks the original File object up here instead.
+  const pendingMediaFilesRef = useRef(new Map());
 
   // ── Scroll to bottom ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -1498,13 +1742,32 @@ export default function SutrakAssistant() {
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    setAttachedFiles((prev) => {
-      const existing = new Set(prev.map((f) => f.name));
-      return [...prev, ...files.filter((f) => !existing.has(f.name))].slice(
-        0,
-        5,
-      );
+
+    const oversized = [];
+    const validFiles = files.filter((f) => {
+      const category = getFileCategory(f.name);
+      const max = MAX_FILE_SIZE[category];
+      if (f.size > max) {
+        oversized.push(`${f.name} (max ${Math.round(max / (1024 * 1024))}MB for ${category})`);
+        return false;
+      }
+      return true;
     });
+
+    if (oversized.length > 0) {
+      setError(`File too large — ${oversized.join(", ")}`);
+    }
+
+    if (validFiles.length > 0) {
+      setAttachedFiles((prev) => {
+        const existing = new Set(prev.map((f) => f.name));
+        return [
+          ...prev,
+          ...validFiles.filter((f) => !existing.has(f.name)),
+        ].slice(0, 5);
+      });
+    }
+
     setShowPlusMenu(false);
     e.target.value = "";
   };
@@ -1553,6 +1816,57 @@ export default function SutrakAssistant() {
     }
   };
 
+  // ── Template media upload (signed URL flow) ────────────────────────────────
+  // Called once from sendMessage right after a template_media_upload_required
+  // action is received. PUTs the attached file to the Samvaadik signed URL,
+  // then asks the backend to finalize template creation.
+  const uploadTemplateMedia = async (action) => {
+    const file = action._file;
+    if (!file) {
+      return {
+        ok: false,
+        error: "Attached file not found. Please re-attach and try again.",
+      };
+    }
+    try {
+      const putRes = await fetch(action.signed_url, {
+        method: "PUT",
+        body: file,
+      });
+      if (!putRes.ok) {
+        return { ok: false, error: `Media upload failed (${putRes.status})` };
+      }
+      const token = await getToken();
+      const res = await fetch(
+        `${BACKEND_URL}/api/samvaadik/templates/complete-media-upload`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            storage_path: action.storage_path,
+            file_name: action.file_name,
+            file_type: action.file_type,
+            ...action.template,
+          }),
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        return { ok: false, error: data.error || `Error ${res.status}` };
+      }
+      pendingMediaFilesRef.current.delete(action.file_name); // consumed
+      return { ok: true, data: data.data || data };
+    } catch (err) {
+      return {
+        ok: false,
+        error: err.message || "Upload failed. Please try again.",
+      };
+    }
+  };
+
   // ── Send message ───────────────────────────────────────────────────────────
   const sendMessage = async (text) => {
     const msg = (text || input).trim();
@@ -1570,6 +1884,9 @@ export default function SutrakAssistant() {
 
     setMessages((prev) => [...prev, { role: "user", content: userContent }]);
     const filesSnapshot = [...attachedFiles];
+    // Remember every attached file by name in case a later turn (not this one)
+    // is the one that comes back needing it for a media upload.
+    filesSnapshot.forEach((f) => pendingMediaFilesRef.current.set(f.name, f));
     // Save CSV file to ref so uploadCsvAfterEvent can access it after state is cleared
     const csvFile = filesSnapshot.find((f) =>
       ["csv", "xlsx", "xls"].includes(f.name.split(".").pop().toLowerCase()),
@@ -1623,16 +1940,57 @@ export default function SutrakAssistant() {
           }
         }, 800);
       }
+      // template_media_upload_required needs the original File object (not
+      // serializable through the API) to PUT to the signed URL. The file may
+      // have been attached several turns earlier, so look it up from the
+      // cross-turn map rather than this turn's filesSnapshot.
+      let actionToStore = data.action || null;
+      if (actionToStore?.type === "template_media_upload_required") {
+        const matchedFile = pendingMediaFilesRef.current.get(
+          actionToStore.file_name,
+        );
+        actionToStore = {
+          ...actionToStore,
+          _file: matchedFile || null,
+          _uploadState: "uploading",
+        };
+      }
+
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
           content: data.reply,
-          action: data.action || null,
+          action: actionToStore,
           connectionData: data.connectionData || null,
         },
       ]);
       setConversationHistory(data.updatedHistory || []);
+
+      // Kick off the upload directly here — same pattern as the CSV
+      // auto-upload above — instead of from a child component's effect, so
+      // it's guaranteed to run exactly once regardless of render timing.
+      if (actionToStore?.type === "template_media_upload_required") {
+        const thisAction = actionToStore;
+        setTimeout(async () => {
+          const res = await uploadTemplateMedia(thisAction);
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.action === thisAction
+                ? {
+                    ...m,
+                    action: {
+                      ...m.action,
+                      _uploadState: res.ok ? "done" : "error",
+                      _uploadResult: res.ok ? res.data : null,
+                      _uploadError: res.ok ? null : res.error,
+                    },
+                  }
+                : m,
+            ),
+          );
+        }, 300);
+      }
     } catch (err) {
       setError(err.message || "Something went wrong. Please try again.");
       setMessages((prev) => [
@@ -1661,6 +2019,7 @@ export default function SutrakAssistant() {
     setShowWelcome(true);
     setAttachedFiles([]);
     setPendingEventId(null);
+    pendingMediaFilesRef.current.clear();
   };
 
   const canSend =

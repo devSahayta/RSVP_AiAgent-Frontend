@@ -20,6 +20,12 @@ export const fetchKnowledgeBases = (userId) =>
 export const fetchKnowledgeBaseById = (kbId) =>
   api.get(`/api/knowledge-bases/${kbId}`);
 
+/**
+ * Update Knowledge Base name/content
+ */
+export const updateKnowledgeBase = (kbId, payload) =>
+  api.put(`/api/knowledge-bases/${kbId}`, payload);
+
 export const deleteKnowledgeBase = (kbId, userId) =>
   api.delete(`/api/knowledge-bases/${kbId}`, {
     data: { user_id: userId },

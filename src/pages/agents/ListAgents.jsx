@@ -13,6 +13,7 @@ import {
   Layers,
   Wand2,
   Calendar,
+  Pencil,
 } from "lucide-react";
 
 import { deleteAgentById, fetchUserAgents } from "../../api/agents";
@@ -459,6 +460,17 @@ const ListAgents = () => {
                         >
                           <Trash2 size={12} />
                           {deletingId === agent.agent_id ? "..." : "Delete"}
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/agents/${agent.agent_id}/edit`);
+                          }}
+                          className="flex items-center gap-1 rounded-lg border border-[#2A2A3E] bg-[#0E0E14] px-2.5 py-1.5 text-xs font-medium text-gray-300 transition hover:bg-[#161620]"
+                        >
+                          <Pencil size={12} />
+                          Edit
                         </button>
 
                         <button

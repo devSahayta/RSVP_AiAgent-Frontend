@@ -7,11 +7,21 @@ import {
   Check,
   AlertCircle,
   Download,
+  MessageSquarePlus,
+  Pencil,
+  X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import "../styles/form.css";
 import { fetchUserAgents } from "../api/agents";
+import FollowupRulePicker from "./FollowupRulePicker";
+
+const TRIGGER_LABELS = {
+  always: "Always",
+  answered: "Only if answered",
+  unanswered: "Only if unanswered",
+};
 
 const EventForm = ({ user }) => {
   // const [formData, setFormData] = useState({
@@ -31,6 +41,8 @@ const EventForm = ({ user }) => {
   const [submitStatus, setSubmitStatus] = useState(null);
   const [message, setMessage] = useState("");
   const [agents, setAgents] = useState([]);
+  const [followup, setFollowup] = useState(null);
+  const [showFollowupPicker, setShowFollowupPicker] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -40,6 +52,17 @@ const EventForm = ({ user }) => {
       .then((res) => setAgents(res.data.data))
       .catch((err) => console.error("Failed to load Agents", err));
   }, [user]);
+
+  const selectedAgent = agents.find((a) => a.agent_id === formData.agents);
+  const isSmartFieldsAgent = selectedAgent?.field_mode === "smart_fields";
+
+  // Follow-up dispatch only works for smart_fields agents (see event_call_logs
+  // tracking) — clear any configured rule if the user switches to a classic agent.
+  useEffect(() => {
+    if (!isSmartFieldsAgent && followup) {
+      setFollowup(null);
+    }
+  }, [isSmartFieldsAgent]);
 
   // console.log({ formData });
 
@@ -99,12 +122,42 @@ const EventForm = ({ user }) => {
       setSubmitStatus("success");
       setMessage("Event created successfully!");
 
+      // Best-effort — event is already created, so a failure here shouldn't
+      // block the success redirect.
+      if (followup && data.event?.event_id) {
+        try {
+          const ruleRes = await fetch(
+            `${import.meta.env.VITE_BACKEND_URL}/api/events/${data.event.event_id}/followup-rule`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                user_id: user.id,
+                is_active: true,
+                trigger_on: followup.trigger_on,
+                wt_id: followup.wt_id,
+                variable_mapping: followup.variable_mapping,
+                delay_minutes: followup.delay_minutes,
+                media_id: followup.media_id || null,
+              }),
+            },
+          );
+          if (!ruleRes.ok) throw new Error("Failed to save follow-up rule");
+        } catch (followupError) {
+          console.error("Error saving follow-up rule:", followupError);
+          setMessage(
+            "Event created! Follow-up rule couldn't be saved — please set it up again later.",
+          );
+        }
+      }
+
       // Reset form
       setFormData({
         eventName: "",
         eventDate: "",
         dataset: null,
       });
+      setFollowup(null);
       const fileInput = document.getElementById("dataset");
       if (fileInput) fileInput.value = "";
 
@@ -218,6 +271,94 @@ const EventForm = ({ user }) => {
           )}
         </div>
 
+        {formData.agents && !isSmartFieldsAgent && (
+          <div className="form-group">
+            <label className="form-label">
+              <MessageSquarePlus size={20} />
+              Follow-up WhatsApp Message (optional)
+            </label>
+            <p style={{ fontSize: "0.8rem", color: "#8a8a8a", margin: 0 }}>
+              Only available for Smart RSVP agents — this agent uses classic
+              mode.
+            </p>
+          </div>
+        )}
+
+        {isSmartFieldsAgent && (
+          <div className="form-group">
+            <label className="form-label">
+              <MessageSquarePlus size={20} />
+              Follow-up WhatsApp Message (optional)
+            </label>
+
+            {!followup ? (
+              <button
+                type="button"
+                onClick={() => setShowFollowupPicker(true)}
+                className="template-download-btn"
+              >
+                <MessageSquarePlus size={16} />
+                Add Follow-up Template
+              </button>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                  padding: "12px 14px",
+                  border: "1px solid #2a2a2a",
+                  borderRadius: "8px",
+                  background: "#1a1a1a",
+                }}
+              >
+                <div style={{ fontSize: "0.85rem", color: "#ffffff" }}>
+                  <strong>{followup.template_name}</strong>
+                  <div style={{ color: "#9ca3af", marginTop: "2px" }}>
+                    {TRIGGER_LABELS[followup.trigger_on]} · delay{" "}
+                    {followup.delay_minutes} min
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowFollowupPicker(true)}
+                    title="Edit"
+                    style={{
+                      background: "#111111",
+                      border: "1px solid #3a3a3a",
+                      borderRadius: "6px",
+                      padding: "6px",
+                      cursor: "pointer",
+                      display: "flex",
+                      color: "#ffffff",
+                    }}
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFollowup(null)}
+                    title="Remove"
+                    style={{
+                      background: "#111111",
+                      border: "1px solid #3a3a3a",
+                      borderRadius: "6px",
+                      padding: "6px",
+                      cursor: "pointer",
+                      display: "flex",
+                      color: "#ffffff",
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <AnimatePresence>
           {submitStatus && (
             <motion.div
@@ -274,6 +415,14 @@ const EventForm = ({ user }) => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {showFollowupPicker && (
+        <FollowupRulePicker
+          initialConfig={followup}
+          onClose={() => setShowFollowupPicker(false)}
+          onSave={(config) => setFollowup(config)}
+        />
+      )}
     </div>
   );
 };
