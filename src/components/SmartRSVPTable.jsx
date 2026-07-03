@@ -18,10 +18,17 @@ import {
   PhoneCall,
   MessageSquare,
   Mic,
+  UserPlus,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import TranscriptDrawer from "./TranscriptDrawer";
+import TemplatePickerModal from "./TemplatePickerModal";
+import SelectionToolbar from "./SelectionToolbar";
+import EditParticipantModal from "./EditParticipantModal";
+import DeleteConfirmModal from "./DeleteConfirmModal";
+import AddParticipantModal from "./AddParticipantModal";
+import { useEventActivityLock } from "../hooks/useEventActivityLock";
 
 const FIELD_ICONS = {
   yes_no: ToggleLeft,
@@ -106,6 +113,25 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
   const [isRetrying, setIsRetrying] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState({ success: true, text: "" });
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+
+  // ── NEW: Selection state ──────────────────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [operationInProgress, setOperationInProgress] = useState(false);
+  const [operationType, setOperationType] = useState(null); // 'call'|'whatsapp'|'delete'|'edit'
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingPart, setDeletingPart] = useState(false);
+  const [editParticipant, setEditParticipant] = useState(null);
+  const [selectedParticipantIds, setSelectedParticipantIds] = useState([]);
+
+  // ── NEW: Add participant ──────────────────────────────────────────────────
+  const [showAddParticipant, setShowAddParticipant] = useState(false);
+
+  // ── NEW: Realtime activity lock — polls backend every 8s for in-flight
+  //         call batches / whatsapp batches so edit/delete stay disabled
+  //         even across page refresh while a batch is genuinely running.
+  const { locked: activityLocked, reason: activityLockReason } =
+    useEventActivityLock(eventId);
 
   // Track whether drawer is open to pause auto-refresh
   const drawerOpenRef = React.useRef(false);
@@ -300,6 +326,107 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
   );
   const allResponded = data.length > 0 && notRespondedRows.length === 0;
 
+  // ── NEW: Selection helpers ──────────────────────────────────────────────────
+  const toggleSelect = (id) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const toggleSelectAll = () =>
+    setSelectedIds((prev) =>
+      prev.size === paginated.length
+        ? new Set()
+        : new Set(paginated.map((r) => r.id || r.participant_id)),
+    );
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const getSelectedRows = () =>
+    data.filter((r) => selectedIds.has(r.id || r.participant_id));
+
+  // ── NEW: Retry call for selected participants only ─────────────────────────
+  const handleRetrySelected = async () => {
+    if (!selectedIds.size) return;
+    setOperationInProgress(true);
+    setOperationType("call");
+    try {
+      const ids = [...selectedIds];
+      const res = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/retry-batch-selected`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ participant_ids: ids }),
+        },
+      );
+      const d = await res.json();
+      if (res.status === 402) {
+        toast(
+          false,
+          `❌ Insufficient credits (need ${d.estimated_credits}, have ${d.current_balance})`,
+        );
+        return;
+      }
+      if (!res.ok) throw new Error(d.error || "Retry failed");
+      toast(true, `✅ Retry started for ${ids.length} participant(s)`);
+      clearSelection();
+      await fetchData(true);
+    } catch (e) {
+      toast(false, `❌ ${e.message || "Failed to start retry call"}`);
+    } finally {
+      setOperationInProgress(false);
+      setOperationType(null);
+    }
+  };
+
+  // ── NEW: WhatsApp send for selected (opens modal scoped to selection) ──────
+  const handleWhatsAppSelected = () => {
+    setSelectedParticipantIds([...selectedIds]);
+    setShowTemplatePicker(true);
+  };
+
+  // ── NEW: Delete selected participants ───────────────────────────────────────
+  const handleDeleteSelected = async () => {
+    const ids = [...selectedIds];
+    setDeletingPart(true);
+    setOperationInProgress(true);
+    setOperationType("delete");
+    try {
+      const token = await getToken();
+      const res = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/participants`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ participant_ids: ids }),
+        },
+      );
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Delete failed");
+      toast(true, `✅ Deleted ${d.deleted} participant(s)`);
+      setShowDeleteConfirm(false);
+      clearSelection();
+      await fetchData();
+    } catch (e) {
+      toast(false, `❌ ${e.message}`);
+    } finally {
+      setDeletingPart(false);
+      setOperationInProgress(false);
+      setOperationType(null);
+    }
+  };
+
+  // ── NEW: After edit success ─────────────────────────────────────────────────
+  const handleEditSuccess = () => {
+    clearSelection();
+    fetchData(true);
+  };
+
   // ── Loading / error / empty ────────────────────────────────────────────────
   if (loading)
     return (
@@ -369,24 +496,57 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
 
   if (data.length === 0)
     return (
-      <div
-        style={{
-          background: "#111",
-          borderRadius: 12,
-          padding: "3rem",
-          border: "1px solid #2a2a2a",
-          textAlign: "center",
-          color: "#6b7280",
-        }}
-      >
-        <Users size={32} style={{ margin: "0 auto 1rem", opacity: 0.4 }} />
-        <p style={{ fontWeight: 600, color: "#9ca3af" }}>
-          No participants found
-        </p>
-        <p style={{ fontSize: 13, marginTop: 4 }}>
-          Upload a CSV when creating the event to add participants.
-        </p>
-      </div>
+      <>
+        <div
+          style={{
+            background: "#111",
+            borderRadius: 12,
+            padding: "3rem",
+            border: "1px solid #2a2a2a",
+            textAlign: "center",
+            color: "#6b7280",
+          }}
+        >
+          <Users size={32} style={{ margin: "0 auto 1rem", opacity: 0.4 }} />
+          <p style={{ fontWeight: 600, color: "#9ca3af" }}>
+            No participants found
+          </p>
+          <p style={{ fontSize: 13, marginTop: 4 }}>
+            Upload a CSV when creating the event to add participants.
+          </p>
+          {/* NEW: Add participant from empty state too */}
+          <button
+            onClick={() => setShowAddParticipant(true)}
+            style={{
+              marginTop: 16,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "9px 18px",
+              borderRadius: 8,
+              border: "1px solid #1e3a5f",
+              background: "#0a1628",
+              color: "#60a5fa",
+              cursor: "pointer",
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            <UserPlus size={14} /> Add Participant
+          </button>
+        </div>
+        {showAddParticipant && (
+          <AddParticipantModal
+            eventId={eventId}
+            smartFields={fields}
+            onClose={() => setShowAddParticipant(false)}
+            onSuccess={() => {
+              setShowAddParticipant(false);
+              fetchData();
+            }}
+          />
+        )}
+      </>
     );
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -439,7 +599,33 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
               }}
             />
           </div>
-          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <div
+            style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap" }}
+          >
+            {/* NEW: Add Participant button */}
+            <button
+              onClick={() => setShowAddParticipant(true)}
+              disabled={activityLocked}
+              title={
+                activityLocked ? activityLockReason : "Add a new participant"
+              }
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 13px",
+                borderRadius: 8,
+                border: "1px solid #1e3a5f",
+                background: activityLocked ? "#0a1018" : "#0a1628",
+                color: activityLocked ? "#374151" : "#60a5fa",
+                cursor: activityLocked ? "not-allowed" : "pointer",
+                fontSize: 13,
+                fontWeight: 600,
+                opacity: activityLocked ? 0.5 : 1,
+              }}
+            >
+              <UserPlus size={13} /> Add Participant
+            </button>
             <button
               onClick={syncBatch}
               disabled={syncing}
@@ -484,6 +670,37 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
             </button>
           </div>
         </div>
+
+        {/* NEW: Activity-locked banner */}
+        {activityLocked && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              background: "#1c1608",
+              border: "1px solid #3d3207",
+              borderRadius: 8,
+              padding: "10px 14px",
+              marginBottom: 14,
+              fontSize: "0.82rem",
+              color: "#fbbf24",
+            }}
+          >
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "#fbbf24",
+                animation: "smartTablePulse 1.4s ease-in-out infinite",
+                flexShrink: 0,
+              }}
+            />
+            {activityLockReason}
+            <style>{`@keyframes smartTablePulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
+          </div>
+        )}
 
         {/* Field legend */}
         {fields.length > 0 && (
@@ -577,6 +794,25 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
                     borderBottom: "1px solid #2a2a2a",
                   }}
                 >
+                  {/* NEW: select-all checkbox column */}
+                  <th style={{ padding: "10px 14px", width: 36 }}>
+                    <input
+                      type="checkbox"
+                      checked={
+                        paginated.length > 0 &&
+                        paginated.every((r) =>
+                          selectedIds.has(r.id || r.participant_id),
+                        )
+                      }
+                      onChange={toggleSelectAll}
+                      disabled={activityLocked}
+                      style={{
+                        cursor: activityLocked ? "not-allowed" : "pointer",
+                        accentColor: "#1d4ed8",
+                        opacity: activityLocked ? 0.4 : 1,
+                      }}
+                    />
+                  </th>
                   <Th>#</Th>
                   <Th>Full Name</Th>
                   <Th>Phone</Th>
@@ -632,20 +868,40 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
                       row[f.field_key] !== null &&
                       row[f.field_key] !== undefined,
                   );
+                  const rowId = row.id || row.participant_id;
                   return (
                     <tr
                       key={row.id}
                       style={{
                         borderBottom: "1px solid #1a1a1a",
                         transition: "background 0.15s",
+                        background: selectedIds.has(rowId)
+                          ? "#101a2e"
+                          : "transparent",
                       }}
                       onMouseEnter={(e) =>
+                        !selectedIds.has(rowId) &&
                         (e.currentTarget.style.background = "#141420")
                       }
                       onMouseLeave={(e) =>
+                        !selectedIds.has(rowId) &&
                         (e.currentTarget.style.background = "transparent")
                       }
                     >
+                      {/* NEW: row checkbox */}
+                      <Td>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(rowId)}
+                          onChange={() => toggleSelect(rowId)}
+                          disabled={activityLocked}
+                          style={{
+                            cursor: activityLocked ? "not-allowed" : "pointer",
+                            accentColor: "#1d4ed8",
+                            opacity: activityLocked ? 0.4 : 1,
+                          }}
+                        />
+                      </Td>
                       <Td>
                         <span style={{ color: "#4b5563", fontSize: 12 }}>
                           {rowNum}
@@ -876,10 +1132,10 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
               : `⚠️ ${notRespondedRows.length} participant(s) haven't responded — Retry available`}
           </HintText>
           <ActionButton
-            onClick={handleBatchMessage}
-            disabled={allResponded}
+            onClick={() => setShowTemplatePicker(true)}
+            disabled={false}
             icon={<MessageSquare size={15} />}
-            label="Start Batch Message"
+            label="Send WhatsApp Message"
           />
           <HintText success={allResponded}>
             {allResponded
@@ -1035,6 +1291,77 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
           />
         )}
       </AnimatePresence>
+
+      {/* ── Template Picker Modal ── */}
+      {showTemplatePicker && (
+        <TemplatePickerModal
+          eventId={eventId}
+          participantCount={selectedParticipantIds.length || data.length}
+          participantIds={
+            selectedParticipantIds.length ? selectedParticipantIds : null
+          }
+          onClose={() => {
+            setShowTemplatePicker(false);
+            setSelectedParticipantIds([]);
+          }}
+          onSuccess={({ sent, failed, total }) => {
+            setShowTemplatePicker(false);
+            setSelectedParticipantIds([]);
+            clearSelection();
+            toast(
+              true,
+              `Sent to ${sent}/${total} participants. Chatbot is now active!`,
+            );
+          }}
+        />
+      )}
+
+      {/* ── NEW: Selection toolbar ── */}
+      <SelectionToolbar
+        selectedCount={selectedIds.size}
+        onClearSelection={clearSelection}
+        onRetryCall={handleRetrySelected}
+        onSendWhatsApp={handleWhatsAppSelected}
+        onEdit={() => setEditParticipant(getSelectedRows()[0])}
+        onDelete={() => setShowDeleteConfirm(true)}
+        operationInProgress={operationInProgress || activityLocked}
+        operationType={operationType}
+      />
+
+      {/* ── NEW: Edit modal ── */}
+      {editParticipant && (
+        <EditParticipantModal
+          participant={editParticipant}
+          eventId={eventId}
+          smartFields={fields}
+          onClose={() => setEditParticipant(null)}
+          onSuccess={handleEditSuccess}
+        />
+      )}
+
+      {/* ── NEW: Delete confirm ── */}
+      {showDeleteConfirm && (
+        <DeleteConfirmModal
+          count={selectedIds.size}
+          names={getSelectedRows().map((r) => r.fullName)}
+          onConfirm={handleDeleteSelected}
+          onCancel={() => setShowDeleteConfirm(false)}
+          deleting={deletingPart}
+        />
+      )}
+
+      {/* ── NEW: Add participant modal ── */}
+      {showAddParticipant && (
+        <AddParticipantModal
+          eventId={eventId}
+          smartFields={fields}
+          onClose={() => setShowAddParticipant(false)}
+          onSuccess={() => {
+            setShowAddParticipant(false);
+            fetchData();
+          }}
+        />
+      )}
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }

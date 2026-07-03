@@ -11,6 +11,7 @@ import {
   Clock,
   Search,
   FileText,
+  UserPlus,
 } from "lucide-react";
 import "../styles/table.css";
 
@@ -21,6 +22,12 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { Download } from "lucide-react";
 import { Truck } from "lucide-react";
+import TemplatePickerModal from "../components/TemplatePickerModal";
+import SelectionToolbar from "../components/SelectionToolbar";
+import EditParticipantModal from "../components/EditParticipantModal";
+import DeleteConfirmModal from "../components/DeleteConfirmModal";
+import AddParticipantModal from "../components/AddParticipantModal";
+import { useEventActivityLock } from "../hooks/useEventActivityLock";
 
 const RSVPTable = ({ eventId: propEventId }) => {
   const [rsvpData, setRsvpData] = useState([]);
@@ -43,6 +50,25 @@ const RSVPTable = ({ eventId: propEventId }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const { getToken } = useKindeAuth();
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+
+  // ── NEW: Selection state ──────────────────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [operationInProgress, setOperationInProgress] = useState(false);
+  const [operationType, setOperationType] = useState(null); // 'call'|'whatsapp'|'delete'|'edit'
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingPart, setDeletingPart] = useState(false);
+  const [editParticipant, setEditParticipant] = useState(null);
+  const [selectedParticipantIds, setSelectedParticipantIds] = useState([]);
+
+  // ── NEW: Add participant ──────────────────────────────────────────────────
+  const [showAddParticipant, setShowAddParticipant] = useState(false);
+
+  // ── NEW: Realtime activity lock — polls backend every 8s for in-flight
+  //         call batches / whatsapp batches so edit/delete stay disabled
+  //         even across page refresh while a batch is genuinely running.
+  const { locked: activityLocked, reason: activityLockReason } =
+    useEventActivityLock(eventId);
 
   useEffect(() => {
     if (!eventId) return;
@@ -257,6 +283,119 @@ const RSVPTable = ({ eventId: propEventId }) => {
     setCurrentPage(page);
   };
 
+  // ── NEW: Selection helpers ──────────────────────────────────────────────────
+  const toggleSelect = (id) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const toggleSelectAll = () =>
+    setSelectedIds((prev) =>
+      prev.size === paginatedData.length
+        ? new Set()
+        : new Set(paginatedData.map((r) => r.participant_id || r.id)),
+    );
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const getSelectedRows = () =>
+    filteredData.filter((r) => selectedIds.has(r.participant_id || r.id));
+
+  // ── NEW: Retry call for selected participants only ─────────────────────────
+  const handleRetrySelected = async () => {
+    if (!selectedIds.size) return;
+    setOperationInProgress(true);
+    setOperationType("call");
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/retry-batch-selected`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ participant_ids: [...selectedIds] }),
+        },
+      );
+      const d = await res.json();
+      if (res.status === 402) {
+        setRetryStatus({
+          success: false,
+          message: `❌ Insufficient credits (need ${d.estimated_credits}, have ${d.current_balance})`,
+        });
+        setShowStatusPopup(true);
+        setTimeout(() => setShowStatusPopup(false), 4000);
+        return;
+      }
+      if (!res.ok) throw new Error(d.error || "Retry failed");
+      setRetryStatus({
+        success: true,
+        message: `✅ Retry started for ${selectedIds.size} participant(s)`,
+      });
+      setShowStatusPopup(true);
+      setTimeout(() => setShowStatusPopup(false), 3000);
+      clearSelection();
+      await fetchRSVPData();
+    } catch (e) {
+      setRetryStatus({
+        success: false,
+        message: `❌ ${e.message || "Failed to start retry call"}`,
+      });
+      setShowStatusPopup(true);
+      setTimeout(() => setShowStatusPopup(false), 3000);
+    } finally {
+      setOperationInProgress(false);
+      setOperationType(null);
+    }
+  };
+
+  // ── NEW: WhatsApp send for selected (opens modal scoped to selection) ──────
+  const handleWhatsAppSelected = () => {
+    setSelectedParticipantIds([...selectedIds]);
+    setShowTemplatePicker(true);
+  };
+
+  // ── NEW: Delete selected participants ───────────────────────────────────────
+  const handleDeleteSelected = async () => {
+    const ids = [...selectedIds];
+    setDeletingPart(true);
+    setOperationInProgress(true);
+    setOperationType("delete");
+    try {
+      const token = await getToken();
+      const res = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/participants`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ participant_ids: ids }),
+        },
+      );
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Delete failed");
+      setRetryStatus({
+        success: true,
+        message: `✅ Deleted ${d.deleted} participant(s)`,
+      });
+      setShowStatusPopup(true);
+      setTimeout(() => setShowStatusPopup(false), 3000);
+      setShowDeleteConfirm(false);
+      clearSelection();
+      await fetchRSVPData();
+    } catch (e) {
+      setRetryStatus({ success: false, message: `❌ ${e.message}` });
+      setShowStatusPopup(true);
+      setTimeout(() => setShowStatusPopup(false), 3000);
+    } finally {
+      setDeletingPart(false);
+      setOperationInProgress(false);
+      setOperationType(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="table-container">
@@ -303,14 +442,70 @@ const RSVPTable = ({ eventId: propEventId }) => {
         </select>
       </div>
 
+      {/* NEW: Activity-locked banner */}
+      {activityLocked && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            background: "#1c1608",
+            border: "1px solid #3d3207",
+            borderRadius: 8,
+            padding: "10px 14px",
+            marginBottom: 14,
+            fontSize: "0.82rem",
+            color: "#fbbf24",
+          }}
+        >
+          <span
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: "#fbbf24",
+              animation: "rsvpTablePulse 1.4s ease-in-out infinite",
+              flexShrink: 0,
+            }}
+          />
+          {activityLockReason}
+          <style>{`@keyframes rsvpTablePulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
+        </div>
+      )}
+
       <div
         style={{
           display: "flex",
           justifyContent: "flex-end",
           marginBottom: "12px",
           gap: "12px",
+          flexWrap: "wrap",
         }}
       >
+        {/* NEW: Add Participant button */}
+        <button
+          onClick={() => setShowAddParticipant(true)}
+          disabled={activityLocked}
+          title={activityLocked ? activityLockReason : "Add a new participant"}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "10px 16px",
+            borderRadius: "8px",
+            border: "1px solid #ddd",
+            background: activityLocked ? "#1a1a1a" : "#000",
+            color: activityLocked ? "#4b5563" : "#fff",
+            cursor: activityLocked ? "not-allowed" : "pointer",
+            fontSize: "14px",
+            fontWeight: "600",
+            opacity: activityLocked ? 0.6 : 1,
+          }}
+        >
+          <UserPlus size={16} />
+          Add Participant
+        </button>
+
         <button
           onClick={exportToExcel}
           style={{
@@ -406,6 +601,25 @@ const RSVPTable = ({ eventId: propEventId }) => {
         <table className="rsvp-table">
           <thead>
             <tr>
+              {/* NEW: select-all checkbox column */}
+              <th style={{ padding: "10px 14px", width: 36 }}>
+                <input
+                  type="checkbox"
+                  checked={
+                    paginatedData.length > 0 &&
+                    paginatedData.every((r) =>
+                      selectedIds.has(r.participant_id || r.id),
+                    )
+                  }
+                  onChange={toggleSelectAll}
+                  disabled={activityLocked}
+                  style={{
+                    cursor: activityLocked ? "not-allowed" : "pointer",
+                    accentColor: "#1d4ed8",
+                    opacity: activityLocked ? 0.4 : 1,
+                  }}
+                />
+              </th>
               <th>Full Name</th>
               <th>Phone Number</th>
               <th>RSVP Status</th>
@@ -426,81 +640,100 @@ const RSVPTable = ({ eventId: propEventId }) => {
           <tbody>
             {filteredData.length === 0 ? (
               <tr>
-                <td colSpan={9} className="no-data">
+                <td colSpan={10} className="no-data">
                   No RSVP data found
                 </td>
               </tr>
             ) : (
-              paginatedData.map((item) => (
-                <tr key={item.id}>
-                  <td>
-                    <div className="name-cell">
-                      <Users size={16} />
-                      {item.fullName}
-                    </div>
-                  </td>
-                  <td>
-                    <div className="phone-cell">
-                      <Phone size={14} />
-                      {item.phoneNumber}
-                    </div>
-                  </td>
-                  <td>
-                    <div
-                      className={`status-cell ${item.rsvpStatus.toLowerCase()}`}
-                    >
-                      {getStatusIcon(item.rsvpStatus)}
-                      {item.rsvpStatus}
-                    </div>
-                  </td>
-                  <td className="guests-cell">{item.numberOfGuests}</td>
-                  <td>
-                    {item.proofUploaded ? (
-                      <button
-                        className="doc-link"
-                        onClick={() => navigate(`/document-viewer/${item.id}`)}
+              paginatedData.map((item) => {
+                const rowId = item.participant_id || item.id;
+                return (
+                  <tr key={item.id}>
+                    {/* NEW: row checkbox */}
+                    <td style={{ padding: "11px 14px" }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(rowId)}
+                        onChange={() => toggleSelect(rowId)}
+                        disabled={activityLocked}
+                        style={{
+                          cursor: activityLocked ? "not-allowed" : "pointer",
+                          accentColor: "#1d4ed8",
+                          opacity: activityLocked ? 0.4 : 1,
+                        }}
+                      />
+                    </td>
+                    <td>
+                      <div className="name-cell">
+                        <Users size={16} />
+                        {item.fullName}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="phone-cell">
+                        <Phone size={14} />
+                        {item.phoneNumber}
+                      </div>
+                    </td>
+                    <td>
+                      <div
+                        className={`status-cell ${item.rsvpStatus.toLowerCase()}`}
                       >
-                        <FileText size={14} />
-                        View
-                      </button>
-                    ) : (
-                      <span className="no-doc">No file</span>
-                    )}
-                  </td>
-                  {/* <td className="event-cell" title={item.event_name}>
+                        {getStatusIcon(item.rsvpStatus)}
+                        {item.rsvpStatus}
+                      </div>
+                    </td>
+                    <td className="guests-cell">{item.numberOfGuests}</td>
+                    <td>
+                      {item.proofUploaded ? (
+                        <button
+                          className="doc-link"
+                          onClick={() =>
+                            navigate(`/document-viewer/${item.id}`)
+                          }
+                        >
+                          <FileText size={14} />
+                          View
+                        </button>
+                      ) : (
+                        <span className="no-doc">No file</span>
+                      )}
+                    </td>
+                    {/* <td className="event-cell" title={item.event_name}>
   {item.event_name}
 </td> */}
 
-                  <td className="date-cell">
-                    <Calendar size={14} />
-                    {formatDate(item.timestamp)}
-                  </td>
-                  <td className="notes-cell">
-                    {item.notes && item.notes !== "-" ? (
-                      <div className="notes-text" title={item.notes}>
-                        {item.notes}
-                      </div>
-                    ) : (
-                      <span className="no-notes">—</span>
-                    )}
-                  </td>
-                  <td>
-                    <span
-                      className={`call-status-cell ${item.callStatus?.toLowerCase()}`}
-                    >
-                      {item.callStatus ? item.callStatus : "pending"}
-                    </span>
-                  </td>
+                    <td className="date-cell">
+                      <Calendar size={14} />
+                      {formatDate(item.timestamp)}
+                    </td>
+                    <td className="notes-cell">
+                      {item.notes && item.notes !== "-" ? (
+                        <div className="notes-text" title={item.notes}>
+                          {item.notes}
+                        </div>
+                      ) : (
+                        <span className="no-notes">—</span>
+                      )}
+                    </td>
+                    <td>
+                      <span
+                        className={`call-status-cell ${item.callStatus?.toLowerCase()}`}
+                      >
+                        {item.callStatus ? item.callStatus : "pending"}
+                      </span>
+                    </td>
 
-                  <td>{item.arrival_date || "—"}</td>
-                  <td>{item.arrival_time || "—"}</td>
-                  <td>{item.arrival_transport_no || "—"}</td>
+                    <td>{item.arrival_date || "—"}</td>
+                    <td>{item.arrival_time || "—"}</td>
+                    <td>{item.arrival_transport_no || "—"}</td>
 
-                  <td>{item.return_date || "—"}</td>
-                  <td>{item.return_time || "—"}</td>
-                  <td>{item.return_transport_no || "—"}</td>
-                </tr>
-              ))
+                    <td>{item.return_date || "—"}</td>
+                    <td>{item.return_time || "—"}</td>
+                    <td>{item.return_transport_no || "—"}</td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -793,41 +1026,9 @@ const RSVPTable = ({ eventId: propEventId }) => {
                 ? 0.6
                 : 1,
           }}
-          onClick={async () => {
-            const pendingParticipants = filteredData.filter(
-              (item) =>
-                !item.rsvpStatus ||
-                item.rsvpStatus === null ||
-                item.rsvpStatus === "NULL" ||
-                item.rsvpStatus.toLowerCase() === "pending",
-            );
-
-            console.log("Pending:", pendingParticipants.length);
-
-            const token = await getToken();
-
-            await fetch(
-              `${import.meta.env.VITE_BACKEND_URL}/whatsapp/send-batch`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ event_id: eventId }),
-              },
-            );
-
-            setRetryStatus({
-              success: true,
-              message: `Sending messages to ${pendingParticipants.length} participant(s)!`,
-            });
-            setShowStatusPopup(true);
-            setTimeout(() => setShowStatusPopup(false), 3000);
-            await fetchRSVPData();
-          }}
+          onClick={() => setShowTemplatePicker(true)}
         >
-          Start Batch Message
+          Send WhatsApp Message
         </button>
 
         {/* Optional hint below */}
@@ -1066,18 +1267,83 @@ const RSVPTable = ({ eventId: propEventId }) => {
         </div>
       )}
 
-      <style>{`
-        @keyframes slideDown {
-          from {
-            opacity: 0;
-            transform: translateX(-50%) translateY(-20px);
+      {showTemplatePicker && (
+        <TemplatePickerModal
+          eventId={eventId}
+          participantCount={
+            selectedParticipantIds.length || filteredData.length
           }
-          to {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
+          participantIds={
+            selectedParticipantIds.length ? selectedParticipantIds : null
           }
-        }
-      `}</style>
+          onClose={() => {
+            setShowTemplatePicker(false);
+            setSelectedParticipantIds([]);
+          }}
+          onSuccess={({ sent, failed, total }) => {
+            setShowTemplatePicker(false);
+            setSelectedParticipantIds([]);
+            clearSelection();
+            setRetryStatus({
+              success: true,
+              message: `Sent to ${sent}/${total} participants. Chatbot is now active!`,
+            });
+            setShowStatusPopup(true);
+            setTimeout(() => setShowStatusPopup(false), 3500);
+          }}
+        />
+      )}
+
+      {/* ── NEW: Selection toolbar ── */}
+      <SelectionToolbar
+        selectedCount={selectedIds.size}
+        onClearSelection={clearSelection}
+        onRetryCall={handleRetrySelected}
+        onSendWhatsApp={handleWhatsAppSelected}
+        onEdit={() => setEditParticipant(getSelectedRows()[0])}
+        onDelete={() => setShowDeleteConfirm(true)}
+        operationInProgress={operationInProgress || activityLocked}
+        operationType={operationType}
+      />
+
+      {/* ── NEW: Edit modal ── */}
+      {editParticipant && (
+        <EditParticipantModal
+          participant={editParticipant}
+          eventId={eventId}
+          smartFields={[]}
+          onClose={() => setEditParticipant(null)}
+          onSuccess={() => {
+            clearSelection();
+            setEditParticipant(null);
+            fetchRSVPData();
+          }}
+        />
+      )}
+
+      {/* ── NEW: Delete confirm ── */}
+      {showDeleteConfirm && (
+        <DeleteConfirmModal
+          count={selectedIds.size}
+          names={getSelectedRows().map((r) => r.fullName)}
+          onConfirm={handleDeleteSelected}
+          onCancel={() => setShowDeleteConfirm(false)}
+          deleting={deletingPart}
+        />
+      )}
+
+      {/* ── NEW: Add participant modal (classic event — no smart fields) ── */}
+      {showAddParticipant && (
+        <AddParticipantModal
+          eventId={eventId}
+          smartFields={[]}
+          onClose={() => setShowAddParticipant(false)}
+          onSuccess={() => {
+            setShowAddParticipant(false);
+            fetchRSVPData();
+          }}
+        />
+      )}
     </div>
   );
 };

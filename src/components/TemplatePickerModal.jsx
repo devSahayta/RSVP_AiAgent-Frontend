@@ -269,6 +269,7 @@ function extractBody(t) {
 export default function TemplatePickerModal({
   eventId,
   participantCount = null,
+  participantIds = null, // if provided, only send to these participants
   onClose,
   onSuccess,
 }) {
@@ -355,6 +356,9 @@ export default function TemplatePickerModal({
           event_id: eventId,
           template_name: selected.name,
           language_code: selected.language || selected.language_code || "en",
+          ...(participantIds?.length
+            ? { participant_ids: participantIds }
+            : {}),
         }),
       });
       const data = await res.json();
