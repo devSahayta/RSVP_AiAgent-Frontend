@@ -7,7 +7,7 @@ const USE_CASES = [
   { value: "narrative_story", label: "Narration" },
   { value: "informative_educational", label: "Educational" },
   { value: "social_media", label: "Social Media" },
-  { value: "advertisement", label: "Advertisement" },
+  // { value: "advertisement", label: "Advertisement" },
 ];
 
 const GENDERS = [
@@ -15,6 +15,50 @@ const GENDERS = [
   { value: "male", label: "Male" },
   { value: "female", label: "Female" },
 ];
+
+const INDIAN_ACCENTS = new Set([
+  "indian",
+  "tamil",
+  "telugu",
+  "hindi",
+  "bengali",
+  "malayalam",
+  "kannada",
+  "marathi",
+  "punjabi",
+  "gujarati",
+  "standard", // "standard" covers hi-IN voices
+]);
+
+const INDIAN_LOCALES = new Set([
+  "en-IN",
+  "hi-IN",
+  "ta-IN",
+  "te-IN",
+  "bn-IN",
+  "ml-IN",
+  "kn-IN",
+  "mr-IN",
+  "pa-IN",
+  "gu-IN",
+]);
+
+const isIndianVoice = (voice) => {
+  // Check accent
+  if (INDIAN_ACCENTS.has(voice.accent?.toLowerCase())) return true;
+  // Check verified languages for Indian locales
+  if (voice.verified_languages?.some((vl) => INDIAN_LOCALES.has(vl.locale)))
+    return true;
+  // Check description/name for Indian keywords
+  const text = `${voice.name} ${voice.description}`.toLowerCase();
+  if (
+    text.includes("indian") ||
+    text.includes("hindi") ||
+    text.includes("hinglish")
+  )
+    return true;
+  return false;
+};
 
 // Single voice card with inline audio preview
 const VoiceCard = ({ voice, isSelected, onSelect }) => {
@@ -189,15 +233,50 @@ const VoiceSelector = ({ selectedVoice, onSelect }) => {
       );
       const data = await res.json();
       if (data.success) {
-        setVoices((prev) => (append ? [...prev, ...data.data] : data.data));
+        // When searching, client-side filter to keep only Indian voices
+        // since locale filter is relaxed on the backend for search queries
+        const filtered = debouncedSearch
+          ? data.data.filter(isIndianVoice)
+          : data.data;
+
+        // setVoices((prev) => (append ? [...prev, ...filtered] : filtered));
+        // // setVoices((prev) => (append ? [...prev, ...data.data] : data.data));
+        // setPage(pageNum);
+        // setHasMore(
+        //   typeof data.total === "number"
+        //     ? pageNum * PAGE_SIZE < data.total
+        //     : typeof data.has_more === "boolean"
+        //       ? data.has_more
+        //       : data.data.length === PAGE_SIZE,
+        // );
+
+        if (append) {
+          setVoices((prev) => {
+            // Deduplicate by voice_id to prevent same voices appearing on load more
+            const existingIds = new Set(prev.map((v) => v.voice_id));
+            const newVoices = filtered.filter(
+              (v) => !existingIds.has(v.voice_id),
+            );
+            return [...prev, ...newVoices];
+          });
+        } else {
+          setVoices(filtered);
+        }
+
         setPage(pageNum);
-        setHasMore(
-          typeof data.total === "number"
-            ? pageNum * PAGE_SIZE < data.total
-            : typeof data.has_more === "boolean"
-              ? data.has_more
-              : data.data.length === PAGE_SIZE,
-        );
+
+        // During search: has_more is unreliable after client-side filtering.
+        // Only show load more if ElevenLabs says there's more AND we actually
+        // got new voices after filtering (avoids infinite empty pages).
+        if (debouncedSearch) {
+          setHasMore(data.has_more && filtered.length > 0);
+        } else {
+          setHasMore(
+            typeof data.total_count === "number"
+              ? pageNum * PAGE_SIZE < data.total_count
+              : (data.has_more ?? data.data.length === PAGE_SIZE),
+          );
+        }
       }
     } catch (err) {
       console.error("Failed to fetch voices:", err);
