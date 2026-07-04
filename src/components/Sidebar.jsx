@@ -23,12 +23,16 @@ import "../styles/sidebar.css";
 
 const NAV_LINKS = [
   { name: "Events", path: "/events", icon: Calendar },
-  { name: "Create Event", path: "/createEvent", icon: Plus },
+  // { name: "Create Event", path: "/createEvent", icon: Plus },
   { name: "Agents", path: "/agents", icon: Bot },
   { name: "Chatbot", path: "/chatbot", icon: MessageSquare },
-  { name: "Templates", path: "/templates", icon: LayersIcon },
-  { name: "Create Template", path: "/template/create", icon: FileText },
-  { name: "WA Templates", path: "/templates/whatsapp", icon: MessageSquare },
+  // { name: "Templates", path: "/templates", icon: LayersIcon },
+  // { name: "Create Template", path: "/template/create", icon: FileText },
+  {
+    name: "Whatsapp Templates",
+    path: "/templates/whatsapp",
+    icon: MessageSquare,
+  },
   ,
 ];
 
@@ -296,7 +300,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 </div>
               </div>
               <div className="sb-profile-popup__divider" />
-              <button
+              {/* <button
                 className="sb-profile-popup__item"
                 onClick={() => {
                   setProfileOpen(false);
@@ -305,7 +309,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 }}
               >
                 WhatsApp Account
-              </button>
+              </button> */}
               <button
                 className="sb-profile-popup__item"
                 onClick={() => {

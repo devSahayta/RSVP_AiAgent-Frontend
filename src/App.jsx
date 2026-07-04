@@ -190,7 +190,7 @@ function AppContent() {
               </PrivateRoute>
             }
           />
-          <Route path="/whatsapp-account" element={<WAccountPage />} />
+          {/* <Route path="/whatsapp-account" element={<WAccountPage />} />
           <Route
             path="/templates"
             element={
@@ -220,7 +220,7 @@ function AppContent() {
                 </WhatsappAccountRoute>
               </PrivateRoute>
             }
-          />
+          /> */}
           <Route
             path="/document-upload/:participantId"
             element={<DocumentUpload />}
