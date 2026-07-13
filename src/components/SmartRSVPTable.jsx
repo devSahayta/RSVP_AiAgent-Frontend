@@ -378,15 +378,15 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
   const getSelectedRows = () =>
     data.filter((r) => selectedIds.has(r.id || r.participant_id));
 
-  // ── NEW: Retry call for selected participants only ─────────────────────────
-  const handleRetrySelected = async () => {
+  // ── NEW: Start batch call for selected participants only ───────────────────
+  const handleStartBatchCall = async () => {
     if (!selectedIds.size) return;
     setOperationInProgress(true);
     setOperationType("call");
     try {
       const ids = [...selectedIds];
       const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/retry-batch-selected`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/start-batch-selected`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -401,12 +401,12 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
         );
         return;
       }
-      if (!res.ok) throw new Error(d.error || "Retry failed");
-      toast(true, `✅ Retry started for ${ids.length} participant(s)`);
+      if (!res.ok) throw new Error(d.error || "Failed to start batch call");
+      toast(true, `✅ Batch call started for ${ids.length} participant(s)`);
       clearSelection();
       await fetchData(true);
     } catch (e) {
-      toast(false, `❌ ${e.message || "Failed to start retry call"}`);
+      toast(false, `❌ ${e.message || "Failed to start batch call"}`);
     } finally {
       setOperationInProgress(false);
       setOperationType(null);
@@ -1368,7 +1368,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
       <SelectionToolbar
         selectedCount={selectedIds.size}
         onClearSelection={clearSelection}
-        onRetryCall={handleRetrySelected}
+        onStartBatchCall={handleStartBatchCall}
         onSendWhatsApp={handleWhatsAppSelected}
         onEdit={() => setEditParticipant(getSelectedRows()[0])}
         onDelete={() => setShowDeleteConfirm(true)}
