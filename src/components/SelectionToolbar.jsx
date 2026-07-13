@@ -6,7 +6,7 @@
 // Props:
 //   selectedCount       — number of selected rows
 //   onClearSelection    — () => void
-//   onRetryCall         — () => void
+//   onStartBatchCall    — () => void
 //   onSendWhatsApp      — () => void  (opens TemplatePickerModal)
 //   onEdit              — () => void  (only when exactly 1 selected)
 //   onDelete            — () => void
@@ -92,7 +92,7 @@ const icons = {
 export default function SelectionToolbar({
   selectedCount = 0,
   onClearSelection,
-  onRetryCall,
+  onStartBatchCall,
   onSendWhatsApp,
   onEdit,
   onDelete,
@@ -106,7 +106,7 @@ export default function SelectionToolbar({
 
   const opLabel =
     {
-      call: "Calling...",
+      call: "Starting...",
       whatsapp: "Sending...",
       delete: "Deleting...",
       edit: "Saving...",
@@ -145,16 +145,16 @@ export default function SelectionToolbar({
         <div className="stb-group">
           <button
             className="stb-btn stb-btn-call"
-            onClick={onRetryCall}
+            onClick={onStartBatchCall}
             disabled={locked}
-            title="Retry batch call for selected"
+            title="Start batch call for selected"
           >
             {operationType === "call" ? (
               <span className="stb-spinner" />
             ) : (
               icons.call
             )}
-            Retry Call
+            Start Batch Call
           </button>
           <button
             className="stb-btn stb-btn-wa"

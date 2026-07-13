@@ -303,14 +303,14 @@ const RSVPTable = ({ eventId: propEventId }) => {
   const getSelectedRows = () =>
     filteredData.filter((r) => selectedIds.has(r.participant_id || r.id));
 
-  // ── NEW: Retry call for selected participants only ─────────────────────────
-  const handleRetrySelected = async () => {
+  // ── NEW: Start batch call for selected participants only ───────────────────
+  const handleStartBatchCall = async () => {
     if (!selectedIds.size) return;
     setOperationInProgress(true);
     setOperationType("call");
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/retry-batch-selected`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/events/${eventId}/start-batch-selected`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -327,10 +327,10 @@ const RSVPTable = ({ eventId: propEventId }) => {
         setTimeout(() => setShowStatusPopup(false), 4000);
         return;
       }
-      if (!res.ok) throw new Error(d.error || "Retry failed");
+      if (!res.ok) throw new Error(d.error || "Failed to start batch call");
       setRetryStatus({
         success: true,
-        message: `✅ Retry started for ${selectedIds.size} participant(s)`,
+        message: `✅ Batch call started for ${selectedIds.size} participant(s)`,
       });
       setShowStatusPopup(true);
       setTimeout(() => setShowStatusPopup(false), 3000);
@@ -339,7 +339,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
     } catch (e) {
       setRetryStatus({
         success: false,
-        message: `❌ ${e.message || "Failed to start retry call"}`,
+        message: `❌ ${e.message || "Failed to start batch call"}`,
       });
       setShowStatusPopup(true);
       setTimeout(() => setShowStatusPopup(false), 3000);
@@ -1298,7 +1298,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
       <SelectionToolbar
         selectedCount={selectedIds.size}
         onClearSelection={clearSelection}
-        onRetryCall={handleRetrySelected}
+        onStartBatchCall={handleStartBatchCall}
         onSendWhatsApp={handleWhatsAppSelected}
         onEdit={() => setEditParticipant(getSelectedRows()[0])}
         onDelete={() => setShowDeleteConfirm(true)}

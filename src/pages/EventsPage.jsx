@@ -208,7 +208,7 @@ const EventsPage = () => {
   };
 
   const handleEventClick = (eventId) => {
-    navigate(`/call-batch/${eventId}`);
+    navigate(`/dashboard/${eventId}`);
   };
 
   const formatDate = (dateString) => {
