@@ -266,6 +266,27 @@ function extractBody(t) {
   return t.components?.find((c) => c.type === "BODY")?.text || t.body || "";
 }
 
+function composeTemplateMessage(t) {
+  if (!t) return null;
+  const comps = t.preview?.components || t.components || [];
+  const header = comps.find((c) => c.type === "HEADER");
+  const body = comps.find((c) => c.type === "BODY");
+  const footer = comps.find((c) => c.type === "FOOTER");
+
+  const parts = [];
+  if (header) {
+    if (header.format === "TEXT" && header.text) parts.push(header.text);
+    else if (header.format === "IMAGE") parts.push("[Image attached]");
+    else if (header.format === "VIDEO") parts.push("[Video attached]");
+    else if (header.format === "DOCUMENT") parts.push("[Document attached]");
+  }
+  if (body?.text) parts.push(body.text);
+  else if (t.body) parts.push(t.body);
+  if (footer?.text) parts.push(footer.text);
+
+  return parts.length ? parts.join("\n\n") : null;
+}
+
 export default function TemplatePickerModal({
   eventId,
   participantCount = null,
@@ -284,6 +305,8 @@ export default function TemplatePickerModal({
   const [sendErr, setSendErr] = useState(null);
   const [result, setResult] = useState(null);
   const searchRef = useRef(null);
+
+  const rawComps = template?.preview?.components || template?.components || [];
 
   useEffect(() => {
     init();
@@ -346,6 +369,17 @@ export default function TemplatePickerModal({
     setSendErr(null);
     try {
       const token = await getToken();
+      let templateBody = null;
+      try {
+        const detailRes = await fetch(
+          `${BACKEND}/api/samvaadik/templates/${selected.wt_id}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        const detail = await detailRes.json();
+        templateBody = composeTemplateMessage(detail);
+      } catch {
+        templateBody = null; // non-fatal — backend falls back to a placeholder
+      }
       const res = await fetch(`${BACKEND}/whatsapp/samvaadik-batch`, {
         method: "POST",
         headers: {
@@ -356,6 +390,7 @@ export default function TemplatePickerModal({
           event_id: eventId,
           template_name: selected.name,
           language_code: selected.language || selected.language_code || "en",
+          template_body: templateBody || extractBody(selected) || null,
           ...(participantIds?.length
             ? { participant_ids: participantIds }
             : {}),
@@ -371,6 +406,8 @@ export default function TemplatePickerModal({
       setSending(false);
     }
   }
+
+  console.log("selected template object:", JSON.stringify(selected, null, 2));
 
   const filtered = templates.filter(
     (t) =>

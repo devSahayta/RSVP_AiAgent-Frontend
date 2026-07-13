@@ -293,6 +293,30 @@ export default function RetryAutomationPanel({ eventId }) {
   );
 }
 
+function composeTemplateMessage(t) {
+  if (!t) return null;
+  // The list endpoint (/api/samvaadik/templates) never has this — only the
+  // detail endpoint (/api/samvaadik/templates/:wt_id) does, sometimes
+  // nested under .preview. Matches WhatsAppPreviewModal's own extraction.
+  const comps = t.preview?.components || t.components || [];
+  const header = comps.find((c) => c.type === "HEADER");
+  const body = comps.find((c) => c.type === "BODY");
+  const footer = comps.find((c) => c.type === "FOOTER");
+
+  const parts = [];
+  if (header) {
+    if (header.format === "TEXT" && header.text) parts.push(header.text);
+    else if (header.format === "IMAGE") parts.push("[Image attached]");
+    else if (header.format === "VIDEO") parts.push("[Video attached]");
+    else if (header.format === "DOCUMENT") parts.push("[Document attached]");
+  }
+  if (body?.text) parts.push(body.text);
+  else if (t.body) parts.push(t.body);
+  if (footer?.text) parts.push(footer.text);
+
+  return parts.length ? parts.join("\n\n") : null;
+}
+
 // ── New automation form ───────────────────────────────────────────────────
 function AutomationForm({ eventId, authHeaders, onCreated, onCancel }) {
   const [mode, setMode] = useState("call");
@@ -340,6 +364,25 @@ function AutomationForm({ eventId, authHeaders, onCreated, onCancel }) {
         ...(await authHeaders()),
         "Content-Type": "application/json",
       };
+
+      // The list item in `selectedTemplate` has no body/header/footer
+      // content — only the detail endpoint does. Fetch it now so the
+      // chat log can show what was actually sent, same as the preview
+      // modal already has to do.
+      let templateBody = null;
+      if (mode === "whatsapp" && selectedTemplate?.wt_id) {
+        try {
+          const detailRes = await fetch(
+            `${BACKEND}/api/samvaadik/templates/${selectedTemplate.wt_id}`,
+            { headers: await authHeaders() },
+          );
+          const detail = await detailRes.json();
+          templateBody = composeTemplateMessage(detail.data || detail);
+        } catch (e) {
+          templateBody = null; // non-fatal — falls back to placeholder server-side
+        }
+      }
+
       const res = await fetch(
         `${BACKEND}/api/events/${eventId}/retry-automations`,
         {
@@ -365,6 +408,7 @@ function AutomationForm({ eventId, authHeaders, onCreated, onCancel }) {
                   selectedTemplate.language_code ||
                   "en"
                 : undefined,
+            template_body: mode === "whatsapp" ? templateBody : undefined,
           }),
         },
       );
