@@ -1,7 +1,17 @@
 // pages/EventsPage.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Users, ArrowRight, MoreVertical, Plus } from "lucide-react";
+import {
+  Calendar,
+  Users,
+  ArrowRight,
+  ArrowUpDown,
+  MoreVertical,
+  Plus,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import "../styles/pages.css";
 import "../styles/events.css";
@@ -19,7 +29,7 @@ const css = `
     justify-content: space-between;
     gap: 20px;
     flex-wrap: wrap;
-    margin-bottom: 32px;
+    margin-bottom: 28px;
     padding-bottom: 24px;
     border-bottom: 1px solid #1e1e1e;
   }
@@ -60,29 +70,35 @@ const css = `
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #2563eb 100%);
+    gap: 6px;
+    background: linear-gradient(135deg, #7c3aed 0%, #4338ca 100%);
     color: #fff;
-    padding: 13px 24px;
-    border-radius: 12px;
-    font-size: 0.92rem;
-    font-weight: 700;
+    padding: 9px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 10px;
+    font-size: 0.84rem;
+    font-weight: 600;
     cursor: pointer;
     flex-shrink: 0;
-    box-shadow: 0 4px 20px rgba(124, 58, 237, 0.35), inset 0 1px 0 rgba(255,255,255,0.15);
-    transition: all 0.2s ease;
+    box-shadow: 0 2px 10px rgba(76, 29, 149, 0.32), inset 0 1px 0 rgba(255,255,255,0.14);
+    transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, border-color 0.16s ease;
     letter-spacing: 0.01em;
     white-space: nowrap;
     box-sizing: border-box;
   }
   .ep-create-btn:hover {
-    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%);
-    box-shadow: 0 6px 28px rgba(124, 58, 237, 0.5), inset 0 1px 0 rgba(255,255,255,0.2);
-    transform: translateY(-2px);
+    background: linear-gradient(135deg, #8654f0 0%, #4c3fd6 100%);
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow: 0 6px 18px rgba(76, 29, 149, 0.42), inset 0 1px 0 rgba(255,255,255,0.18);
+    transform: translateY(-1px);
   }
   .ep-create-btn:active {
     transform: translateY(0);
-    box-shadow: 0 3px 12px rgba(124, 58, 237, 0.4);
+    box-shadow: 0 2px 8px rgba(76, 29, 149, 0.32);
+  }
+  .ep-create-btn:focus-visible {
+    outline: 2px solid #a78bfa;
+    outline-offset: 2px;
   }
   .ep-create-btn svg { flex-shrink: 0; }
 
@@ -91,28 +107,33 @@ const css = `
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #2563eb 100%);
+    gap: 7px;
+    background: linear-gradient(135deg, #7c3aed 0%, #4338ca 100%);
     color: #fff;
-    padding: 14px 28px;
-    border-radius: 12px;
-    font-size: 0.95rem;
-    font-weight: 700;
+    padding: 11px 20px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-weight: 650;
     cursor: pointer;
-    box-shadow: 0 4px 20px rgba(124, 58, 237, 0.35);
-    transition: all 0.2s ease;
-    margin-top: 8px;
+    box-shadow: 0 4px 16px rgba(76, 29, 149, 0.38), inset 0 1px 0 rgba(255,255,255,0.14);
+    transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, border-color 0.16s ease;
     box-sizing: border-box;
   }
   .ep-empty-create-btn:hover {
-    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%);
-    box-shadow: 0 6px 28px rgba(124, 58, 237, 0.5);
+    background: linear-gradient(135deg, #8654f0 0%, #4c3fd6 100%);
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow: 0 8px 22px rgba(76, 29, 149, 0.48), inset 0 1px 0 rgba(255,255,255,0.18);
     transform: translateY(-2px);
+  }
+  .ep-empty-create-btn:focus-visible {
+    outline: 2px solid #a78bfa;
+    outline-offset: 2px;
   }
 
   /* ── Tablet ── */
   @media (max-width: 768px) {
-    .ep-header { margin-bottom: 26px; padding-bottom: 20px; }
+    .ep-header { margin-bottom: 22px; padding-bottom: 20px; }
   }
 
   /* ── Mobile ── */
@@ -122,7 +143,7 @@ const css = `
       flex-direction: column;
       align-items: stretch;
       gap: 14px;
-      margin-bottom: 22px;
+      margin-bottom: 20px;
       padding-bottom: 18px;
     }
     .ep-header-text { text-align: left; }
@@ -133,8 +154,8 @@ const css = `
     .ep-subtitle { font-size: 0.82rem; }
     .ep-create-btn {
       width: 100%;
-      padding: 14px 20px;
-      font-size: 0.9rem;
+      padding: 12px 18px;
+      font-size: 0.86rem;
       border-radius: 10px;
     }
   }
@@ -145,11 +166,52 @@ const css = `
   }
 `;
 
+// Maps a free-text status string onto one of a small set of visual variants.
+const getStatusVariant = (status) => {
+  if (!status) return "neutral";
+  const s = status.toLowerCase();
+  if (/(complete|done|finished|closed|sent)/.test(s)) return "success";
+  if (/(progress|active|ongoing|processing|sending)/.test(s)) return "info";
+  if (/(pending|waiting|scheduled|queued|draft|not started)/.test(s))
+    return "warning";
+  if (/(fail|error|cancel|declined)/.test(s)) return "danger";
+  return "neutral";
+};
+
+// Breaks a date down into the pieces the calendar-style date block needs.
+const getDateParts = (dateString) => {
+  if (!dateString) {
+    return { month: "—", day: "–", subtext: "No date set", isPast: false };
+  }
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return { month: "—", day: "–", subtext: "No date set", isPast: false };
+  }
+
+  const month = date
+    .toLocaleDateString("en-US", { month: "short" })
+    .toUpperCase();
+  const day = date.toLocaleDateString("en-US", { day: "numeric" });
+  const subtext = date.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+  });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const compareDate = new Date(date);
+  compareDate.setHours(0, 0, 0, 0);
+
+  return { month, day, subtext, isPast: compareDate < today };
+};
+
 const EventsPage = () => {
   const [events, setEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [openMenu, setOpenMenu] = useState(null);
-  const [isDeletingEvent, setIsDeletingEvent] = useState(false);
+  const [deletingEventId, setDeletingEventId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortUpcomingFirst, setSortUpcomingFirst] = useState(false);
 
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading: authLoading } = useKindeAuth();
@@ -159,6 +221,14 @@ const EventsPage = () => {
       fetchEvents(user.id);
     }
   }, [authLoading, isAuthenticated, user]);
+
+  // Close any open card menu on an outside click. Clicks inside a menu
+  // stop propagation before they reach here (see the menu wrapper below).
+  useEffect(() => {
+    const closeMenu = () => setOpenMenu(null);
+    document.addEventListener("click", closeMenu);
+    return () => document.removeEventListener("click", closeMenu);
+  }, []);
 
   const fetchEvents = async (userId) => {
     try {
@@ -182,7 +252,7 @@ const EventsPage = () => {
     if (!confirmDelete) return;
 
     try {
-      setIsDeletingEvent(true);
+      setDeletingEventId(eventId);
       const toastId = showLoading("Deleting Event...");
 
       const response = await fetch(
@@ -203,7 +273,7 @@ const EventsPage = () => {
       console.error("Delete error:", error);
       showError("Something went wrong while deleting the event.");
     } finally {
-      setIsDeletingEvent(false);
+      setDeletingEventId(null);
     }
   };
 
@@ -211,23 +281,67 @@ const EventsPage = () => {
     navigate(`/call-batch/${eventId}`);
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return {
-      date: date.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
-    };
+  const handleCardKeyDown = (e, eventId) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleEventClick(eventId);
+    }
   };
+
+  const visibleEvents = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    const filtered = query
+      ? events.filter((event) =>
+          (event.event_name || "").toLowerCase().includes(query),
+        )
+      : events;
+
+    return [...filtered].sort((a, b) => {
+      const dateA = new Date(a.event_date).getTime() || 0;
+      const dateB = new Date(b.event_date).getTime() || 0;
+      return sortUpcomingFirst ? dateA - dateB : dateB - dateA;
+    });
+  }, [events, searchQuery, sortUpcomingFirst]);
 
   if (authLoading || isLoading) {
     return (
       <div className="page-container">
-        <div className="loading-state">
-          <div className="loading-spinner"></div>
-          <p>Loading your events...</p>
+        <style>{css}</style>
+        <div className="ep-header">
+          <div className="ep-header-text">
+            <div className="ep-title-row">
+              <h1 className="ep-title">My Events</h1>
+            </div>
+            <p className="ep-subtitle">Manage and view all your RSVP events</p>
+          </div>
+        </div>
+        <div className="events-grid" aria-hidden="true">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div className="event-skeleton-card" key={i}>
+              <div className="ev-skel-row">
+                <div className="ev-skel-line ev-skel-date" />
+                <div style={{ flex: 1 }}>
+                  <div
+                    className="ev-skel-line"
+                    style={{ width: "80%", height: 16, marginBottom: 8 }}
+                  />
+                  <div
+                    className="ev-skel-line"
+                    style={{ width: "50%", height: 12 }}
+                  />
+                </div>
+              </div>
+              <div style={{ flex: 1 }} />
+              <div
+                className="ev-skel-line"
+                style={{ width: "100%", height: 1 }}
+              />
+              <div
+                className="ev-skel-line"
+                style={{ width: "40%", height: 12, marginTop: 10 }}
+              />
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -256,7 +370,7 @@ const EventsPage = () => {
             className="ep-create-btn"
             onClick={() => navigate("/createEvent")}
           >
-            <Plus size={18} strokeWidth={2.75} />
+            <Plus size={16} strokeWidth={2.5} />
             Create Event
           </button>
         )}
@@ -264,81 +378,154 @@ const EventsPage = () => {
 
       {events.length === 0 ? (
         <div className="no-events">
-          <Calendar size={48} />
-          <h3>No Events Found</h3>
-          <p>You haven't created any events yet.</p>
+          <div className="no-events-icon-wrap">
+            <Calendar size={30} />
+          </div>
+          <h3>No events yet</h3>
+          <p>Create your first event to start collecting RSVPs.</p>
           <button
             className="ep-empty-create-btn"
             onClick={() => navigate("/createEvent")}
           >
-            <Plus size={18} strokeWidth={2.75} />
+            <Plus size={17} strokeWidth={2.6} />
             Create Your First Event
           </button>
         </div>
       ) : (
-        <div className="events-grid">
-          {events.map((event) => {
-            const { date } = formatDate(event.event_date);
-            return (
-              <div
-                key={event.event_id}
-                className="event-card"
-                onClick={() => handleEventClick(event.event_id)}
-              >
-                <div
-                  className="event-menu"
-                  onClick={(e) => e.stopPropagation()}
+        <>
+          {/* ── Toolbar ── */}
+          <div className="events-toolbar">
+            <div className="search-box">
+              <Search size={16} />
+              <input
+                type="text"
+                placeholder="Search events by name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Search events"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="search-clear-btn"
+                  onClick={() => setSearchQuery("")}
+                  aria-label="Clear search"
                 >
-                  <MoreVertical
-                    size={22}
-                    className="event-menu-icon"
-                    onClick={() =>
-                      setOpenMenu(
-                        openMenu === event.event_id ? null : event.event_id,
-                      )
-                    }
-                  />
-                  {openMenu === event.event_id && (
-                    <div className="event-menu-dropdown show-menu">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            <button
+              type="button"
+              className="ev-sort-btn"
+              onClick={() => setSortUpcomingFirst((prev) => !prev)}
+            >
+              <ArrowUpDown size={14} />
+              {sortUpcomingFirst ? "Upcoming first" : "Latest first"}
+            </button>
+          </div>
+
+          {visibleEvents.length === 0 ? (
+            <div className="events-empty-search">
+              No events match &ldquo;{searchQuery}&rdquo;.
+            </div>
+          ) : (
+            <div className="events-grid">
+              {visibleEvents.map((event) => {
+                const { month, day, subtext, isPast } = getDateParts(
+                  event.event_date,
+                );
+                const statusVariant = getStatusVariant(event.status);
+                const isMenuOpen = openMenu === event.event_id;
+                const isDeletingThisEvent = deletingEventId === event.event_id;
+
+                return (
+                  <div
+                    key={event.event_id}
+                    className={`event-card${isPast ? " is-past" : ""}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleEventClick(event.event_id)}
+                    onKeyDown={(e) => handleCardKeyDown(e, event.event_id)}
+                  >
+                    <div className="event-card-top">
+                      <div className="event-date-block">
+                        <span className="edb-month">{month}</span>
+                        <span className="edb-day">{day}</span>
+                      </div>
+
+                      <div className="event-card-info">
+                        <h3 className="event-name" title={event.event_name}>
+                          {event.event_name}
+                        </h3>
+                        <p className="event-subtext">{subtext}</p>
+                      </div>
+
                       <div
-                        className="event-menu-item delete"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteEvent(event.event_id);
-                        }}
+                        className="event-menu"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        {isDeletingEvent ? "Deleting..." : "Delete"}
+                        <button
+                          type="button"
+                          className="event-menu-icon-btn"
+                          aria-haspopup="true"
+                          aria-expanded={isMenuOpen}
+                          aria-label="Event actions"
+                          onClick={() =>
+                            setOpenMenu(isMenuOpen ? null : event.event_id)
+                          }
+                        >
+                          <MoreVertical size={18} />
+                        </button>
+                        {isMenuOpen && (
+                          <div className="event-menu-dropdown show-menu">
+                            <button
+                              type="button"
+                              className="event-menu-item delete"
+                              disabled={isDeletingThisEvent}
+                              onClick={() => deleteEvent(event.event_id)}
+                            >
+                              <Trash2 size={14} />
+                              {isDeletingThisEvent ? "Deleting..." : "Delete"}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  )}
-                </div>
 
-                <div className="event-card-header">
-                  <h3 className="event-name">{event.event_name}</h3>
-                  <ArrowRight size={20} className="event-arrow" />
-                </div>
+                    {(event.status || isPast) && (
+                      <div className="event-details">
+                        {event.status && (
+                          <span
+                            className={`event-status-badge ${statusVariant}`}
+                          >
+                            <span className="dot" />
+                            {event.status}
+                          </span>
+                        )}
+                        {isPast && (
+                          <span className="event-status-badge neutral">
+                            <span className="dot" />
+                            Past
+                          </span>
+                        )}
+                      </div>
+                    )}
 
-                <div className="event-details">
-                  <div className="event-date">
-                    <Calendar size={16} />
-                    <span>{date}</span>
+                    <div className="event-card-footer">
+                      <div className="event-stats">
+                        <Users size={16} />
+                        <span>View RSVPs</span>
+                      </div>
+                      <ArrowRight size={18} className="event-arrow" />
+                    </div>
                   </div>
-                </div>
-
-                <p className="event-description">
-                  {event.status || "No status available"}
-                </p>
-
-                <div className="event-card-footer">
-                  <div className="event-stats">
-                    <Users size={16} />
-                    <span>View RSVPs</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

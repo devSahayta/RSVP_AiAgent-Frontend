@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import RSVPTable from "../components/RSVPTable";
 import SmartRSVPTable from "../components/SmartRSVPTable";
 import FollowupRuleSummary from "../components/FollowupRuleSummary";
+import RetryAutomationPanel from "../components/RetryAutomationPanel";
 import "../styles/pages.css";
 
 const Dashboard = () => {
@@ -155,9 +156,9 @@ const Dashboard = () => {
             : "Monitor your event responses and guest data"}
         </p>
       </div>
-
       {isSmartFields && <FollowupRuleSummary eventId={eventId} />}
-
+      {/* Works for both classic and smart-field events — it only needs     eventId, not the field mode. */}
+      <RetryAutomationPanel eventId={eventId} />
       {/* ── Render the right table based on mode ── */}
       {isSmartFields ? (
         <SmartRSVPTable eventId={eventId} />
