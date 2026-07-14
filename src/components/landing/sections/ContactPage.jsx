@@ -1,12 +1,13 @@
 // src/components/landing/sections/ContactPage.jsx
 import { useState } from "react";
-import { Send, CheckCircle, Mail, User, MessageSquare, ArrowLeft } from "lucide-react";
+import { Send, CheckCircle, Mail, User, MessageSquare, ArrowLeft, Phone } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const ContactPage = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    phone: "",
     message: "",
   });
   const [status, setStatus] = useState("idle"); // idle, submitting, success, error
@@ -34,7 +35,7 @@ const ContactPage = () => {
 
       if (response.ok) {
         setStatus("success");
-        setFormData({ name: "", email: "", message: "" });
+        setFormData({ name: "", email: "", phone: "", message: "" });
         
         // Navigate back after 3 seconds on success
         setTimeout(() => {
@@ -161,6 +162,26 @@ const ContactPage = () => {
                     required
                     className="w-full pl-12 pr-4 py-3.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                     placeholder="john@example.com"
+                  />
+                </div>
+              </div>
+
+              {/* Phone Field */}
+              <div className="group">
+                <label htmlFor="phone" className="block text-sm font-medium text-gray-300 mb-2">
+                  Phone Number <span className="text-red-400">*</span>
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-purple-400 transition-colors" size={20} />
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    required
+                    className="w-full pl-12 pr-4 py-3.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                    placeholder="+91 98765 43210"
                   />
                 </div>
               </div>
