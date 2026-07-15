@@ -306,7 +306,7 @@ export default function TemplatePickerModal({
   const [result, setResult] = useState(null);
   const searchRef = useRef(null);
 
-  const rawComps = template?.preview?.components || template?.components || [];
+  // const rawComps = template?.preview?.components || template?.components || [];
 
   useEffect(() => {
     init();
