@@ -21,6 +21,7 @@ import {
   Mic,
 } from "lucide-react";
 import VoiceSelector from "../../components/VoiceSelector";
+import KnowledgeBaseAIGenerator from "../../components/KnowledgeBaseAIGenerator";
 import {
   SmartFieldRow,
   defaultSmartField,
@@ -106,6 +107,34 @@ const CreateAgent = () => {
         .map((f, i) => ({ ...f, display_order: i })),
     }));
   };
+
+  // ─── AI knowledge base context ─────────────────────────────────────────────
+  // Gathers whatever the host has already filled in so the AI drafter can
+  // write a KB that's consistent with the agent's mode/template/fields
+  // instead of guessing blind. Passed straight to the backend as-is.
+  const buildKbAiContext = () => ({
+    agent_name: formData.agentName,
+    agent_description: formData.agentDescription,
+    field_mode: fieldMode,
+    event_title: fieldMode === "smart_fields" ? formData.eventTitle : null,
+    template:
+      fieldMode === "classic" && formData.selectedTemplate
+        ? {
+            name: formData.selectedTemplate.name,
+            category: formData.selectedTemplate.category,
+          }
+        : null,
+    groom_name: formData.groomName || null,
+    bride_name: formData.brideName || null,
+    smart_fields:
+      fieldMode === "smart_fields"
+        ? formData.smartFields.map((f) => ({
+            field_label: f.field_label,
+            ai_question: f.ai_question,
+            is_required: f.is_required,
+          }))
+        : null,
+  });
 
   // ─── Step navigation ───────────────────────────────────────────────────────
   // Classic: Step 1 (mode) → 2 (basic) → 3 (template) → 4 (kb) → 5 (review)
@@ -889,10 +918,24 @@ const CreateAgent = () => {
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-gray-300">
-                    Knowledge Base Content{" "}
-                    <span className="text-red-400">*</span>
-                  </label>
+                  <div className="mb-2 flex items-center justify-between">
+                    <label className="block text-sm font-semibold text-gray-300">
+                      Knowledge Base Content{" "}
+                      <span className="text-red-400">*</span>
+                    </label>
+                    <KnowledgeBaseAIGenerator
+                      context={buildKbAiContext()}
+                      hasExistingContent={
+                        !!formData.knowledgeBaseContent.trim()
+                      }
+                      onInsert={(content) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          knowledgeBaseContent: content,
+                        }))
+                      }
+                    />
+                  </div>
                   <textarea
                     value={formData.knowledgeBaseContent}
                     onChange={(e) =>
