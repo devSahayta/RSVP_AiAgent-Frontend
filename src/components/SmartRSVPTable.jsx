@@ -114,7 +114,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [callStatusFilter, setCallStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 50;
 
   // Transcript drawer
   const [selectedParticipant, setSelectedParticipant] = useState(null);
