@@ -35,6 +35,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [callStatusFilter, setCallStatusFilter] = useState("all");
   const { eventId: paramEventId } = useParams();
   const eventId = propEventId || paramEventId;
   const navigate = useNavigate();
@@ -111,7 +112,7 @@ const RSVPTable = ({ eventId: propEventId }) => {
 
   useEffect(() => {
     filterData();
-  }, [rsvpData, searchTerm, statusFilter]);
+  }, [rsvpData, searchTerm, statusFilter, callStatusFilter]);
 
   const fetchRSVPData = async () => {
     try {
@@ -193,6 +194,13 @@ const RSVPTable = ({ eventId: propEventId }) => {
     if (statusFilter !== "all") {
       filtered = filtered.filter(
         (item) => item.rsvpStatus?.toLowerCase() === statusFilter.toLowerCase(),
+      );
+    }
+
+    if (callStatusFilter !== "all") {
+      filtered = filtered.filter(
+        (item) =>
+          (item.callStatus || "pending").toLowerCase() === callStatusFilter,
       );
     }
 
@@ -439,6 +447,17 @@ const RSVPTable = ({ eventId: propEventId }) => {
           <option value="Yes">Yes</option>
           <option value="Maybe">Maybe</option>
           <option value="No">No</option>
+        </select>
+
+        <select
+          value={callStatusFilter}
+          onChange={(e) => setCallStatusFilter(e.target.value)}
+          className="status-filter"
+        >
+          <option value="all">All Call Status</option>
+          <option value="pending">Pending</option>
+          <option value="completed">Completed</option>
+          <option value="failed">Failed</option>
         </select>
       </div>
 

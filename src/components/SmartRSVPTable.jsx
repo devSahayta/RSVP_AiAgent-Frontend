@@ -30,6 +30,15 @@ import DeleteConfirmModal from "./DeleteConfirmModal";
 import AddParticipantModal from "./AddParticipantModal";
 import { useEventActivityLock } from "../hooks/useEventActivityLock";
 
+// Groups the raw recipient_status values into the 3 buckets shown in the
+// Call Status filter — mirrors the grouping used by CallStatusBadge below.
+const normalizeCallStatus = (status) => {
+  if (!status || status === "pending") return "pending";
+  if (status === "completed" || status === "done") return "completed";
+  if (status === "failed" || status === "no_answer") return "failed";
+  return status;
+};
+
 const FIELD_ICONS = {
   yes_no: ToggleLeft,
   number: Hash,
@@ -103,8 +112,9 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
   const [followupByParticipant, setFollowupByParticipant] = useState({});
   const [fetchError, setFetchError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [callStatusFilter, setCallStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 50;
 
   // Transcript drawer
   const [selectedParticipant, setSelectedParticipant] = useState(null);
@@ -227,14 +237,11 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
 
   // ── Filter ─────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFiltered(data);
-      setCurrentPage(1);
-      return;
-    }
-    const lower = searchTerm.toLowerCase();
-    setFiltered(
-      data.filter(
+    let rows = data;
+
+    if (searchTerm.trim()) {
+      const lower = searchTerm.toLowerCase();
+      rows = rows.filter(
         (row) =>
           row.fullName?.toLowerCase().includes(lower) ||
           row.phoneNumber?.toLowerCase().includes(lower) ||
@@ -243,10 +250,18 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
               .toLowerCase()
               .includes(lower),
           ),
-      ),
-    );
+      );
+    }
+
+    if (callStatusFilter !== "all") {
+      rows = rows.filter(
+        (row) => normalizeCallStatus(row.recipient_status) === callStatusFilter,
+      );
+    }
+
+    setFiltered(rows);
     setCurrentPage(1);
-  }, [searchTerm, data, fields]);
+  }, [searchTerm, callStatusFilter, data, fields]);
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const toast = (success, text) => {
@@ -631,6 +646,25 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
               }}
             />
           </div>
+          <select
+            value={callStatusFilter}
+            onChange={(e) => setCallStatusFilter(e.target.value)}
+            style={{
+              padding: "9px 12px",
+              background: "#1a1a1a",
+              border: "1px solid #2a2a2a",
+              borderRadius: 8,
+              color: "#fff",
+              fontSize: 13,
+              outline: "none",
+              flexShrink: 0,
+            }}
+          >
+            <option value="all">All Call Status</option>
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+            <option value="failed">Failed</option>
+          </select>
           <div
             style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap" }}
           >
@@ -797,7 +831,9 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
               fontSize: 14,
             }}
           >
-            No results match "{searchTerm}"
+            {searchTerm.trim()
+              ? `No results match "${searchTerm}"`
+              : "No participants match the selected call status filter"}
           </div>
         )}
 

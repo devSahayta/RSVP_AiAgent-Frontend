@@ -352,7 +352,7 @@ const TransportPlanning = () => {
       <div className="transport-header">
         <button
           className="back-btn"
-          onClick={() => navigate(`/event/${eventId}`)}
+          onClick={() => navigate(`/dashboard/${eventId}`)}
         >
           <ArrowLeft size={20} />
           Back to Event

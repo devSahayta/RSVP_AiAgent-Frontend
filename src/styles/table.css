@@ -649,3 +649,28 @@
     font-size: 1.1rem;
   }
 }
+
+.table-stats .stat-label {
+  font-size: 0.7rem;
+  color: var(--rsvp-text-faint) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.table-stats .stat-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-family: var(--rsvp-mono);
+  color: var(--rsvp-text) !important;
+}
+
+.table-stats .stat-value.confirmed {
+  color: var(--rsvp-green) !important;
+}
+.table-stats .stat-value.pending {
+  color: var(--rsvp-gold) !important;
+}
+.table-stats .stat-value.declined {
+  color: var(--rsvp-red) !important;
+}
