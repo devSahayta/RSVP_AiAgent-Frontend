@@ -1,12 +1,18 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../../../components/ui/button";
-import { ArrowRight, Play } from "lucide-react";
+import { ArrowRight, Play, X } from "lucide-react";
 import { gsap } from "gsap";
 import { useNavigate } from "react-router-dom";
 
+// Set VITE_DEMO_VIDEO_URL in your .env — points at the public Supabase
+// storage URL for the "How It Works" demo video.
+const DEMO_VIDEO_URL = import.meta.env.VITE_DEMO_VIDEO_URL;
+
 const HeroSection = () => {
   const sectionRef = useRef(null);
+  const videoRef = useRef(null);
   const navigate = useNavigate();
+  const [showVideo, setShowVideo] = useState(false);
 
   useEffect(() => {
     const el = sectionRef.current;
@@ -65,6 +71,23 @@ const HeroSection = () => {
     };
   }, []);
 
+  // Close modal on Escape key
+  useEffect(() => {
+    if (!showVideo) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") setShowVideo(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showVideo]);
+
+  // Pause the video when the modal closes so it doesn't keep playing hidden
+  useEffect(() => {
+    if (!showVideo && videoRef.current) {
+      videoRef.current.pause();
+    }
+  }, [showVideo]);
+
   const handleGetStarted = () => {
     navigate("/contact");
   };
@@ -87,7 +110,7 @@ const HeroSection = () => {
         </div>
 
         <h1 className="hero-headline text-foreground text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight leading-[1.1] mb-6 opacity-0">
-          From RSVP to Airport Pickup {""}
+          From RSVP to Airport Pickup{" "}
           <span className="gradient-text">Fully Automated</span>
         </h1>
 
@@ -109,9 +132,14 @@ const HeroSection = () => {
           >
             Book a Demo <ArrowRight className="ml-1 w-4 h-4" />
           </Button>
-          {/* <Button size="lg" variant="outline" className="hero-btn opacity-0 border-border/50 text-foreground hover:bg-muted/50 px-8 text-base">
+          <Button
+            onClick={() => setShowVideo(true)}
+            size="lg"
+            variant="outline"
+            className="hero-btn opacity-0 border-border/50 text-foreground hover:bg-muted/50 px-8 text-base"
+          >
             <Play className="mr-1 w-4 h-4" /> See How It Works
-          </Button> */}
+          </Button>
         </div>
 
         <div className="hero-trust flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground/60 opacity-0">
@@ -128,6 +156,48 @@ const HeroSection = () => {
           ))}
         </div>
       </div>
+
+      {/* ── "How It Works" Video Modal ────────────────────────────── */}
+      {showVideo && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-4"
+          onClick={() => setShowVideo(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="How It Works video"
+        >
+          <div
+            className="relative w-full max-w-4xl glass rounded-xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowVideo(false)}
+              className="absolute top-3 right-3 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+              aria-label="Close video"
+            >
+              <X size={18} />
+            </button>
+
+            {DEMO_VIDEO_URL ? (
+              <video
+                ref={videoRef}
+                src={DEMO_VIDEO_URL}
+                controls
+                autoPlay
+                playsInline
+                className="w-full aspect-video bg-black"
+              >
+                Your browser doesn't support embedded video.
+              </video>
+            ) : (
+              <div className="w-full aspect-video bg-black flex items-center justify-center text-muted-foreground text-sm px-6 text-center">
+                Video URL not configured — set VITE_DEMO_VIDEO_URL in your
+                environment.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 };
