@@ -486,84 +486,27 @@ const RSVPTable = ({ eventId: propEventId }) => {
         <button
           onClick={() => setShowAddParticipant(true)}
           disabled={activityLocked}
-          title={activityLocked ? activityLockReason : "Add a new participant"}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "10px 16px",
-            borderRadius: "8px",
-            border: "1px solid #ddd",
-            background: activityLocked ? "#1a1a1a" : "#000",
-            color: activityLocked ? "#4b5563" : "#fff",
-            cursor: activityLocked ? "not-allowed" : "pointer",
-            fontSize: "14px",
-            fontWeight: "600",
-            opacity: activityLocked ? 0.6 : 1,
-          }}
+          className={`rsvp-btn ${activityLocked ? "rsvp-btn-outline" : "rsvp-btn-primary"}`}
         >
-          <UserPlus size={16} />
-          Add Participant
+          <UserPlus size={16} /> Add Participant
         </button>
 
-        <button
-          onClick={exportToExcel}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "10px 16px",
-            borderRadius: "8px",
-            border: "1px solid #ddd",
-            background: "#000",
-            color: "#fff",
-            cursor: "pointer",
-            fontSize: "14px",
-            fontWeight: "600",
-          }}
-        >
-          <Download size={16} />
-          Export Excel
+        <button onClick={exportToExcel} className="rsvp-btn rsvp-btn-outline">
+          <Download size={16} /> Export Excel
         </button>
 
-        {/* NEW: Transport Planning Button */}
         <button
           onClick={() => navigate(`/transport-planning/${eventId}`)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "10px 16px",
-            borderRadius: "8px",
-            border: "1px solid #ddd",
-            background: "#000",
-            color: "#fff",
-            cursor: "pointer",
-            fontSize: "14px",
-            fontWeight: "600",
-          }}
+          className="rsvp-btn rsvp-btn-outline"
         >
-          <Truck size={16} />
-          Transport Planning
+          <Truck size={16} /> Transport Planning
         </button>
 
         <button
           onClick={() => navigate(`/flight-status/${eventId}`)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "10px 16px",
-            borderRadius: "8px",
-            border: "1px solid #ddd",
-            background: "#000",
-            color: "#fff",
-            cursor: "pointer",
-            fontSize: "14px",
-            fontWeight: "600",
-          }}
+          className="rsvp-btn rsvp-btn-outline"
         >
-          ✈️ View Flight Status
+          View Flight Status
         </button>
       </div>
       {/* <div
