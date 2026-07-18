@@ -4,32 +4,64 @@ import "./LocationSummarySection.css";
 // ── Icons ────────────────────────────────────────────────────────────────────
 
 const PlaneIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
   </svg>
 );
 
 const TrainIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="4" y="3" width="16" height="16" rx="2"/>
-    <path d="M4 11h16"/><path d="M12 3v8"/>
-    <path d="M8 19l-2 3"/><path d="M18 22l-2-3"/>
-    <circle cx="8.5" cy="15.5" r="1.5"/><circle cx="15.5" cy="15.5" r="1.5"/>
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect x="4" y="3" width="16" height="16" rx="2" />
+    <path d="M4 11h16" />
+    <path d="M12 3v8" />
+    <path d="M8 19l-2 3" />
+    <path d="M18 22l-2-3" />
+    <circle cx="8.5" cy="15.5" r="1.5" />
+    <circle cx="15.5" cy="15.5" r="1.5" />
   </svg>
 );
 
 const UsersIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-    <circle cx="9" cy="7" r="4"/>
-    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
   </svg>
 );
 
 const ClockIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="12" r="10" />
+    <polyline points="12 6 12 12 16 14" />
   </svg>
 );
 
@@ -46,7 +78,7 @@ const ChevronIcon = ({ open }) => (
       transition: "transform 0.25s ease",
     }}
   >
-    <polyline points="6 9 12 15 18 9"/>
+    <polyline points="6 9 12 15 18 9" />
   </svg>
 );
 
@@ -57,7 +89,11 @@ function getLocationMeta(locationName) {
   if (name.includes("airport") || name.includes("terminal")) {
     return { icon: <PlaneIcon />, type: "airport" };
   }
-  if (name.includes("railway") || name.includes("station") || name.includes("train")) {
+  if (
+    name.includes("railway") ||
+    name.includes("station") ||
+    name.includes("train")
+  ) {
     return { icon: <TrainIcon />, type: "railway" };
   }
   return { icon: <UsersIcon />, type: "default" };
@@ -96,17 +132,15 @@ function LocationCard({ location, index }) {
 
   return (
     <div className="lss-card" style={{ animationDelay: `${index * 0.08}s` }}>
-
       {/* Header */}
       <div className="lss-card__header">
-        <div className="lss-card__icon-wrap">
-          {meta.icon}
-        </div>
+        <div className="lss-card__icon-wrap">{meta.icon}</div>
         <div className="lss-card__title-block">
           <h3 className="lss-card__title">{location.location}</h3>
           <span className="lss-card__time-range">
             <ClockIcon />
-            {location.earliest_arrival_formatted} – {location.latest_arrival_formatted}
+            {location.earliest_arrival_formatted} –{" "}
+            {location.latest_arrival_formatted}
           </span>
         </div>
         <div className="lss-card__badge">
@@ -121,9 +155,7 @@ function LocationCard({ location, index }) {
       <ul className="lss-passenger-list">
         {visiblePassengers.map((p) => (
           <li key={p.phone} className="lss-passenger-item">
-            <div className="lss-avatar">
-              {getInitials(p.name)}
-            </div>
+            <div className="lss-avatar">{getInitials(p.name)}</div>
             <div className="lss-passenger-info">
               <span className="lss-passenger-name">{p.name}</span>
               <span className="lss-passenger-arrival">
@@ -141,7 +173,9 @@ function LocationCard({ location, index }) {
           onClick={() => setExpanded((prev) => !prev)}
         >
           <ChevronIcon open={expanded} />
-          {expanded ? "Show less" : `Show ${location.passengers.length - 5} more`}
+          {expanded
+            ? "Show less"
+            : `Show ${location.passengers.length - 5} more`}
         </button>
       )}
     </div>
@@ -158,7 +192,9 @@ export default function LocationSummarySection({ eventId }) {
   useEffect(() => {
     if (!eventId) return;
     setLoading(true);
-    fetch(`http://localhost:5000/api/transport/location-summary/${eventId}`)
+    fetch(
+      `${import.meta.env.VITE_BACKEND_URL}/api/transport/location-summary/${eventId}`,
+    )
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -193,7 +229,9 @@ export default function LocationSummarySection({ eventId }) {
   if (error) {
     return (
       <div className="lss-root">
-        <div className="lss-error">⚠️ Failed to load location summary: {error}</div>
+        <div className="lss-error">
+          ⚠️ Failed to load location summary: {error}
+        </div>
       </div>
     );
   }
@@ -206,7 +244,8 @@ export default function LocationSummarySection({ eventId }) {
         <div className="lss-header__left">
           <h2 className="lss-heading">Pickup Locations</h2>
           <p className="lss-subheading">
-            {data.total_passengers} participants · {data.total_locations} locations
+            {data.total_passengers} participants · {data.total_locations}{" "}
+            locations
           </p>
         </div>
         <div className="lss-header__stats">
@@ -224,11 +263,7 @@ export default function LocationSummarySection({ eventId }) {
 
       <div className="lss-grid">
         {data.locations.map((loc, i) => (
-          <LocationCard
-            key={`${loc.location}-${i}`}
-            location={loc}
-            index={i}
-          />
+          <LocationCard key={`${loc.location}-${i}`} location={loc} index={i} />
         ))}
       </div>
     </div>
