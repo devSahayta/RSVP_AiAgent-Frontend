@@ -1,6 +1,6 @@
 // components/SmartRSVPTable.jsx
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { AnimatePresence } from "framer-motion";
 import {
@@ -19,6 +19,9 @@ import {
   MessageSquare,
   Mic,
   UserPlus,
+  Truck,
+  Plane,
+  FileText, // NEW
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -103,6 +106,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
   const { eventId: paramEventId } = useParams();
   const eventId = propEventId || paramEventId;
   const { getToken } = useKindeAuth();
+  const navigate = useNavigate();
 
   const [fields, setFields] = useState([]);
   const [data, setData] = useState([]);
@@ -126,7 +130,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
   const [toastMsg, setToastMsg] = useState({ success: true, text: "" });
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
 
-  // ── NEW: Selection state ──────────────────────────────────────────────────
+  // ── Selection state ──────────────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [operationInProgress, setOperationInProgress] = useState(false);
   const [operationType, setOperationType] = useState(null); // 'call'|'whatsapp'|'delete'|'edit'
@@ -135,12 +139,69 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
   const [editParticipant, setEditParticipant] = useState(null);
   const [selectedParticipantIds, setSelectedParticipantIds] = useState([]);
 
-  // ── NEW: Add participant ──────────────────────────────────────────────────
+  const hasTravelField = fields.some((f) => f.field_type === "travel_ticket");
+
+  // NEW — expands `document` and `travel_ticket` fields into their real
+  // display columns (file-view button / 6 extracted itinerary columns)
+  // instead of showing the raw upload_id / "arrival_only" placeholder text.
+  const displayColumns = React.useMemo(() => {
+    const cols = [];
+    fields.forEach((f) => {
+      if (f.field_type === "travel_ticket") {
+        cols.push({
+          kind: "travel",
+          sub: "arrival_date",
+          label: "Arrival Date",
+          field: f,
+        });
+        cols.push({
+          kind: "travel",
+          sub: "arrival_time",
+          label: "Arrival Time",
+          field: f,
+        });
+        cols.push({
+          kind: "travel",
+          sub: "arrival_transport_no",
+          label: "Arrival Transport No",
+          field: f,
+        });
+        cols.push({
+          kind: "travel",
+          sub: "return_date",
+          label: "Return Date",
+          field: f,
+        });
+        cols.push({
+          kind: "travel",
+          sub: "return_time",
+          label: "Return Time",
+          field: f,
+        });
+        cols.push({
+          kind: "travel",
+          sub: "return_transport_no",
+          label: "Return Transport No",
+          field: f,
+        });
+      } else if (f.field_type === "document") {
+        // Rendered inline, in the same position the organizer placed it
+        // when building the agent — links to the existing Document Viewer
+        // page (same one classic uses) rather than a raw file URL.
+        cols.push({ kind: "document", field: f });
+      } else {
+        cols.push({ kind: "standard", field: f });
+      }
+    });
+    return cols;
+  }, [fields]);
+
+  // ── Add participant ──────────────────────────────────────────────────────
   const [showAddParticipant, setShowAddParticipant] = useState(false);
 
-  // ── NEW: Realtime activity lock — polls backend every 8s for in-flight
-  //         call batches / whatsapp batches so edit/delete stay disabled
-  //         even across page refresh while a batch is genuinely running.
+  // ── Realtime activity lock — polls backend every 8s for in-flight
+  //    call batches / whatsapp batches so edit/delete stay disabled
+  //    even across page refresh while a batch is genuinely running.
   const { locked: activityLocked, reason: activityLockReason } =
     useEventActivityLock(eventId);
 
@@ -323,6 +384,8 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
     }
   };
 
+  // NEW — exports resolved values (document URLs + itinerary sub-fields)
+  // instead of raw upload_ids / "arrival_only" placeholder text.
   const exportToExcel = () => {
     if (!filtered.length) return;
     const rows = filtered.map((row, i) => {
@@ -331,8 +394,15 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
         "Full Name": row.fullName || "",
         "Phone Number": row.phoneNumber || "",
       };
-      fields.forEach((f) => {
-        base[f.field_label] = row[f.field_key] ?? "";
+      displayColumns.forEach((col) => {
+        if (col.kind === "travel") {
+          base[`${col.field.field_label} - ${col.label}`] =
+            row[`${col.field.field_key}_${col.sub}`] ?? "";
+        } else if (col.kind === "document") {
+          base[col.field.field_label] = `/document-viewer/${row.id}`;
+        } else {
+          base[col.field.field_label] = row[col.field.field_key] ?? "";
+        }
       });
       base["Timestamp"] = row.timestamp
         ? new Date(row.timestamp).toLocaleString("en-IN", {
@@ -373,7 +443,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
   );
   const allResponded = data.length > 0 && notRespondedRows.length === 0;
 
-  // ── NEW: Selection helpers ──────────────────────────────────────────────────
+  // ── Selection helpers ──────────────────────────────────────────────────────
   const toggleSelect = (id) =>
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -393,7 +463,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
   const getSelectedRows = () =>
     data.filter((r) => selectedIds.has(r.id || r.participant_id));
 
-  // ── NEW: Start batch call for selected participants only ───────────────────
+  // ── Start batch call for selected participants only ─────────────────────
   const handleStartBatchCall = async () => {
     if (!selectedIds.size) return;
     setOperationInProgress(true);
@@ -428,13 +498,13 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
     }
   };
 
-  // ── NEW: WhatsApp send for selected (opens modal scoped to selection) ──────
+  // ── WhatsApp send for selected (opens modal scoped to selection) ────────
   const handleWhatsAppSelected = () => {
     setSelectedParticipantIds([...selectedIds]);
     setShowTemplatePicker(true);
   };
 
-  // ── NEW: Delete selected participants ───────────────────────────────────────
+  // ── Delete selected participants ─────────────────────────────────────────
   const handleDeleteSelected = async () => {
     const ids = [...selectedIds];
     setDeletingPart(true);
@@ -468,7 +538,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
     }
   };
 
-  // ── NEW: After edit success ─────────────────────────────────────────────────
+  // ── After edit success ───────────────────────────────────────────────────
   const handleEditSuccess = () => {
     clearSelection();
     fetchData(true);
@@ -561,7 +631,6 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
           <p style={{ fontSize: 13, marginTop: 4 }}>
             Upload a CSV when creating the event to add participants.
           </p>
-          {/* NEW: Add participant from empty state too */}
           <button
             onClick={() => setShowAddParticipant(true)}
             style={{
@@ -668,7 +737,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
           <div
             style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap" }}
           >
-            {/* NEW: Add Participant button */}
+            {/* Add Participant button */}
             <button
               onClick={() => setShowAddParticipant(true)}
               disabled={activityLocked}
@@ -734,10 +803,65 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
             >
               <Download size={13} /> Export Excel
             </button>
+            <button
+              onClick={() =>
+                hasTravelField && navigate(`/transport-planning/${eventId}`)
+              }
+              disabled={!hasTravelField}
+              title={
+                hasTravelField
+                  ? "View transport planning"
+                  : "Add a Travel Ticket field to this agent to enable transport planning"
+              }
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 13px",
+                borderRadius: 8,
+                border: "1px solid #2a2a2a",
+                background: hasTravelField ? "#000" : "#0a0a0a",
+                color: hasTravelField ? "#fff" : "#4b5563",
+                cursor: hasTravelField ? "pointer" : "not-allowed",
+                fontSize: 13,
+                fontWeight: 600,
+                opacity: hasTravelField ? 1 : 0.5,
+              }}
+            >
+              <Truck size={13} /> Transport Planning
+            </button>
+
+            <button
+              onClick={() =>
+                hasTravelField && navigate(`/flight-status/${eventId}`)
+              }
+              disabled={!hasTravelField}
+              title={
+                hasTravelField
+                  ? "View flight status"
+                  : "Add a Travel Ticket field to this agent to enable flight status"
+              }
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 13px",
+                borderRadius: 8,
+                border: "1px solid #2a2a2a",
+                background: hasTravelField ? "#000" : "#0a0a0a",
+                color: hasTravelField ? "#fff" : "#4b5563",
+                cursor: hasTravelField ? "pointer" : "not-allowed",
+                fontSize: 13,
+                fontWeight: 600,
+                opacity: hasTravelField ? 1 : 0.5,
+              }}
+            >
+              <Plane size={13} /> View Flight Status
+            </button>
           </div>
         </div>
 
-        {/* NEW: Activity-locked banner */}
+        {/* Activity-locked banner */}
         {activityLocked && (
           <div
             style={{
@@ -780,7 +904,12 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
             }}
           >
             {fields.map((f) => {
-              const Icon = FIELD_ICONS[f.field_type] || Type;
+              const Icon =
+                f.field_type === "document"
+                  ? FileText
+                  : f.field_type === "travel_ticket"
+                    ? Plane
+                    : FIELD_ICONS[f.field_type] || Type;
               return (
                 <span
                   key={f.field_key}
@@ -852,7 +981,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
               style={{
                 width: "100%",
                 borderCollapse: "collapse",
-                minWidth: Math.max(700, 600 + fields.length * 150),
+                minWidth: Math.max(700, 600 + displayColumns.length * 150),
               }}
             >
               <thead>
@@ -862,7 +991,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
                     borderBottom: "1px solid #2a2a2a",
                   }}
                 >
-                  {/* NEW: select-all checkbox column */}
+                  {/* select-all checkbox column */}
                   <th style={{ padding: "10px 14px", width: 36 }}>
                     <input
                       type="checkbox"
@@ -884,10 +1013,39 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
                   <Th>#</Th>
                   <Th>Full Name</Th>
                   <Th>Phone</Th>
-                  {fields.map((f) => {
-                    const Icon = FIELD_ICONS[f.field_type] || Type;
+                  {displayColumns.map((col) => {
+                    if (col.kind === "travel") {
+                      return (
+                        <Th key={`${col.field.field_key}_${col.sub}`}>
+                          {col.label}
+                        </Th>
+                      );
+                    }
+                    if (col.kind === "document") {
+                      return (
+                        <Th key={col.field.field_key}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 5,
+                            }}
+                          >
+                            <FileText
+                              size={12}
+                              style={{ color: "#60a5fa", flexShrink: 0 }}
+                            />
+                            {col.field.field_label}
+                            {col.field.is_required && (
+                              <span style={{ color: "#f87171" }}>*</span>
+                            )}
+                          </div>
+                        </Th>
+                      );
+                    }
+                    const Icon = FIELD_ICONS[col.field.field_type] || Type;
                     return (
-                      <Th key={f.field_key}>
+                      <Th key={col.field.field_key}>
                         <div
                           style={{
                             display: "flex",
@@ -899,8 +1057,8 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
                             size={12}
                             style={{ color: "#60a5fa", flexShrink: 0 }}
                           />
-                          {f.field_label}
-                          {f.is_required && (
+                          {col.field.field_label}
+                          {col.field.is_required && (
                             <span style={{ color: "#f87171" }}>*</span>
                           )}
                         </div>
@@ -965,7 +1123,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
                         (e.currentTarget.style.background = "transparent")
                       }
                     >
-                      {/* NEW: row checkbox */}
+                      {/* row checkbox */}
                       <Td>
                         <input
                           type="checkbox"
@@ -1034,14 +1192,64 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
                           {row.phoneNumber}
                         </span>
                       </Td>
-                      {fields.map((f) => (
-                        <Td key={f.field_key}>
-                          <FieldValue
-                            value={row[f.field_key]}
-                            fieldType={f.field_type}
-                          />
-                        </Td>
-                      ))}
+                      {displayColumns.map((col) => {
+                        if (col.kind === "travel") {
+                          const value =
+                            row[`${col.field.field_key}_${col.sub}`];
+                          return (
+                            <Td key={`${col.field.field_key}_${col.sub}`}>
+                              {value ? (
+                                <span style={{ color: "#e5e7eb" }}>
+                                  {value}
+                                </span>
+                              ) : (
+                                <span
+                                  style={{
+                                    color: "#4b5563",
+                                    fontStyle: "italic",
+                                  }}
+                                >
+                                  —
+                                </span>
+                              )}
+                            </Td>
+                          );
+                        }
+                        if (col.kind === "document") {
+                          return (
+                            <Td key={col.field.field_key}>
+                              <button
+                                onClick={() =>
+                                  navigate(`/document-viewer/${row.id}`)
+                                }
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 5,
+                                  padding: "5px 11px",
+                                  borderRadius: 8,
+                                  background: "rgba(16,185,129,0.12)",
+                                  border: "1px solid rgba(16,185,129,0.3)",
+                                  color: "#34d399",
+                                  cursor: "pointer",
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                <FileText size={11} /> View
+                              </button>
+                            </Td>
+                          );
+                        }
+                        return (
+                          <Td key={col.field.field_key}>
+                            <FieldValue
+                              value={row[col.field.field_key]}
+                              fieldType={col.field.field_type}
+                            />
+                          </Td>
+                        );
+                      })}
 
                       {/* Transcript button cell */}
                       <Td>
@@ -1376,7 +1584,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
         )}
       </AnimatePresence>
 
-      {/* ── Template Picker Modal ── */}
+      {/* Template Picker Modal */}
       {showTemplatePicker && (
         <TemplatePickerModal
           eventId={eventId}
@@ -1400,7 +1608,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
         />
       )}
 
-      {/* ── NEW: Selection toolbar ── */}
+      {/* Selection toolbar */}
       <SelectionToolbar
         selectedCount={selectedIds.size}
         onClearSelection={clearSelection}
@@ -1412,7 +1620,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
         operationType={operationType}
       />
 
-      {/* ── NEW: Edit modal ── */}
+      {/* Edit modal */}
       {editParticipant && (
         <EditParticipantModal
           participant={editParticipant}
@@ -1423,7 +1631,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
         />
       )}
 
-      {/* ── NEW: Delete confirm ── */}
+      {/* Delete confirm */}
       {showDeleteConfirm && (
         <DeleteConfirmModal
           count={selectedIds.size}
@@ -1434,7 +1642,7 @@ const SmartRSVPTable = ({ eventId: propEventId }) => {
         />
       )}
 
-      {/* ── NEW: Add participant modal ── */}
+      {/* Add participant modal */}
       {showAddParticipant && (
         <AddParticipantModal
           eventId={eventId}

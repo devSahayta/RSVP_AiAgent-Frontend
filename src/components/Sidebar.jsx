@@ -25,7 +25,7 @@ const NAV_LINKS = [
   { name: "Events", path: "/events", icon: Calendar },
   // { name: "Create Event", path: "/createEvent", icon: Plus },
   { name: "Agents", path: "/agents", icon: Bot },
-  { name: "Chatbot", path: "/chatbot", icon: MessageSquare },
+  { name: "Chats", path: "/chatbot", icon: MessageSquare },
   // { name: "Templates", path: "/templates", icon: LayersIcon },
   // { name: "Create Template", path: "/template/create", icon: FileText },
   {

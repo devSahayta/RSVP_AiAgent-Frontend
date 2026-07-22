@@ -1,7 +1,14 @@
 import { useState } from "react";
-import { Trash2, ToggleLeft, Hash, List, Type } from "lucide-react";
+import {
+  Trash2,
+  ToggleLeft,
+  Hash,
+  List,
+  Type,
+  FileText,
+  Plane,
+} from "lucide-react"; // CHANGED — added FileText, Plane
 
-// ─── Smart Field Type Config ──────────────────────────────────────────────────
 export const FIELD_TYPES = [
   {
     value: "yes_no",
@@ -26,6 +33,21 @@ export const FIELD_TYPES = [
     label: "Multiple Choice",
     icon: List,
     description: "Collect one of several options",
+  },
+  // NEW
+  {
+    value: "document",
+    label: "Document Upload",
+    icon: FileText,
+    description: "Collect a document via WhatsApp (e.g. ID proof)",
+  },
+  // NEW
+  {
+    value: "travel_ticket",
+    label: "Travel Ticket",
+    icon: Plane,
+    description:
+      "Collect arrival & return tickets via WhatsApp, with auto-extraction",
   },
 ];
 
@@ -203,7 +225,33 @@ export const SmartFieldRow = ({ field, index, onChange, onRemove, isOnly }) => {
             </div>
           </div>
         )}
-
+        {/* NEW — info note for document/travel_ticket types */}
+        {(field.field_type === "document" ||
+          field.field_type === "travel_ticket") && (
+          <div className="md:col-span-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5">
+            <p className="text-xs text-amber-200/90 leading-relaxed">
+              {field.field_type === "document" ? (
+                <>
+                  <span className="font-semibold text-amber-200">
+                    WhatsApp only.
+                  </span>{" "}
+                  The guest will be asked to send a file (image or PDF). This
+                  field is automatically skipped on voice calls — collect it
+                  over WhatsApp instead.
+                </>
+              ) : (
+                <>
+                  <span className="font-semibold text-amber-200">
+                    WhatsApp only.
+                  </span>{" "}
+                  The agent will automatically ask for an Arrival ticket, then a
+                  Return ticket, and extract travel details from both. Also
+                  skipped on voice calls.
+                </>
+              )}
+            </p>
+          </div>
+        )}
         {/* Auto-generated field_key preview */}
         {field.field_key && (
           <div className="md:col-span-2">
