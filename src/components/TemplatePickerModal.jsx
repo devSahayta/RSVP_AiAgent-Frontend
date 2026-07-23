@@ -124,7 +124,6 @@ const css = `
   .tpm-footer-top {
     display: flex; align-items: center;
     justify-content: space-between; gap: 12px;
-    margin-bottom: 0;
   }
   .tpm-footer-info {
     font-size: 0.78rem; color: #4a4540;
@@ -133,7 +132,6 @@ const css = `
   .tpm-footer-info strong { color: #9a8e82; }
   .tpm-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
-  /* participant bar — shown after selecting */
   .tpm-participant-bar {
     margin-top: 10px; padding: 10px 14px;
     background: #120f0d; border: 1px solid #2e2a25;
@@ -231,6 +229,110 @@ const css = `
   }
   .tpm-done:hover { background: #d4b88a; }
 
+  /* ── Dispatch (live sending) view ── */
+  .tpm-dispatch { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+
+  .tpm-dispatch-head { padding: 22px 22px 16px; flex-shrink: 0; }
+  .tpm-dispatch-title-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .tpm-dispatch-title { font-size: 0.92rem; font-weight: 600; color: #f0ebe4; }
+  .tpm-dispatch-count {
+    font-family: 'SF Mono','Fira Code','Cascadia Code',monospace;
+    font-size: 0.92rem; font-weight: 600; color: #c9a97a;
+    font-variant-numeric: tabular-nums;
+  }
+  .tpm-dispatch-sub { font-size: 0.74rem; color: #4a4540; margin: 0 0 12px; }
+
+  .tpm-rail {
+    height: 4px; width: 100%; border-radius: 3px;
+    background: #120f0d; border: 1px solid #201c19;
+    overflow: hidden;
+  }
+  .tpm-rail-fill {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, #a8875c, #c9a97a);
+    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .tpm-rail-fill.has-fail { background: linear-gradient(90deg, #a8875c, #c9a97a); }
+
+  .tpm-rail-legend {
+    display: flex; gap: 14px; margin-top: 8px;
+    font-size: 0.71rem; color: #4a4540;
+  }
+  .tpm-rail-legend span { display: flex; align-items: center; gap: 5px; }
+  .tpm-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .tpm-dot.ok   { background: #7ab87a; }
+  .tpm-dot.fail { background: #c97a7a; }
+  .tpm-dot.pending { background: #3d3730; }
+
+  .tpm-manifest {
+    flex: 1; overflow-y: auto; padding: 4px 0 12px;
+    border-top: 1px solid #201c19;
+  }
+  .tpm-manifest::-webkit-scrollbar { width: 3px; }
+  .tpm-manifest::-webkit-scrollbar-track { background: transparent; }
+  .tpm-manifest::-webkit-scrollbar-thumb { background: #2e2a25; border-radius: 2px; }
+
+  .tpm-mrow {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 22px;
+    animation: tpm-row-in 0.2s ease;
+  }
+  .tpm-mrow-status {
+    width: 16px; height: 16px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    font-size: 0.62rem;
+  }
+  .tpm-mrow-status.pending {
+    background: transparent; border: 1.5px solid #2e2a25;
+  }
+  .tpm-mrow-status.sending {
+    background: transparent; border: 1.5px solid #c9a97a;
+    position: relative;
+  }
+  .tpm-mrow-status.sending::after {
+    content: ''; position: absolute; inset: -1.5px;
+    border-radius: 50%; border: 1.5px solid transparent;
+    border-top-color: #c9a97a;
+    animation: tpm-spin 0.8s linear infinite;
+  }
+  .tpm-mrow-status.sent {
+    background: #0e1e14; border: 1.5px solid #2a5a3a; color: #7ab87a;
+  }
+  .tpm-mrow-status.failed {
+    background: #1e0f0f; border: 1.5px solid #4a2020; color: #c97a7a;
+  }
+
+  .tpm-mrow-name {
+    font-size: 0.8rem; color: #b8b0a6; flex: 1;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .tpm-mrow-status.pending ~ .tpm-mrow-name,
+  .tpm-mrow.is-pending .tpm-mrow-name { color: #4a4540; }
+  .tpm-mrow.is-sent .tpm-mrow-name { color: #d4cdc6; }
+
+  .tpm-mrow-phone {
+    font-family: monospace; font-size: 0.71rem; color: #3d3730; flex-shrink: 0;
+  }
+  .tpm-mrow-label {
+    font-size: 0.68rem; font-weight: 600; letter-spacing: 0.03em;
+    flex-shrink: 0; width: 52px; text-align: right;
+  }
+  .tpm-mrow.is-sent .tpm-mrow-label { color: #5a9c6a; }
+  .tpm-mrow.is-failed .tpm-mrow-label { color: #c97a7a; }
+  .tpm-mrow.is-sending .tpm-mrow-label { color: #c9a97a; }
+  .tpm-mrow.is-pending .tpm-mrow-label { color: #3d3730; }
+
+  .tpm-dispatch-footer {
+    padding: 14px 22px; border-top: 1px solid #252220; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .tpm-dispatch-hint { font-size: 0.73rem; color: #3d3730; }
+
+  @keyframes tpm-row-in { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: translateX(0); } }
   @keyframes tpm-fade { from { opacity:0 } to { opacity:1 } }
   @keyframes tpm-up {
     from { opacity:0; transform:translateY(12px) }
@@ -244,11 +346,19 @@ const css = `
       max-width: 100%; border-radius: 14px 14px 0 0;
       max-height: 93vh;
     }
-    .tpm-header, .tpm-search-wrap, .tpm-footer { padding-left: 18px; padding-right: 18px; }
-    .tpm-row { padding-left: 18px; padding-right: 18px; }
+    .tpm-header, .tpm-search-wrap, .tpm-footer, .tpm-dispatch-head, .tpm-dispatch-footer {
+      padding-left: 18px; padding-right: 18px;
+    }
+    .tpm-row, .tpm-mrow { padding-left: 18px; padding-right: 18px; }
     .tpm-sep { margin: 0 18px; }
     .tpm-err { margin: 10px 18px; }
     .tpm-success { padding: 28px 18px; }
+    .tpm-mrow-phone { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tpm-mrow-status.sending::after { animation: none; border-top-color: #c9a97a; opacity: 0.6; }
+    .tpm-spinner { animation: none; }
   }
 `;
 
@@ -287,10 +397,25 @@ function composeTemplateMessage(t) {
   return parts.length ? parts.join("\n\n") : null;
 }
 
+// Maps a raw participant status from the backend to the small set the
+// manifest row knows how to render.
+function statusMeta(status) {
+  switch (status) {
+    case "sent":
+      return { icon: "✓", label: "Sent", cls: "sent" };
+    case "failed":
+      return { icon: "✕", label: "Failed", cls: "failed" };
+    case "sending":
+      return { icon: "", label: "Sending", cls: "sending" };
+    default:
+      return { icon: "", label: "Queued", cls: "pending" };
+  }
+}
+
 export default function TemplatePickerModal({
   eventId,
   participantCount = null,
-  participantIds = null, // if provided, only send to these participants
+  participantIds = null,
   onClose,
   onSuccess,
 }) {
@@ -304,22 +429,28 @@ export default function TemplatePickerModal({
   const [sending, setSending] = useState(false);
   const [sendErr, setSendErr] = useState(null);
   const [result, setResult] = useState(null);
-  const searchRef = useRef(null);
 
-  // const rawComps = template?.preview?.components || template?.components || [];
+  // Live dispatch state — populated once a batch is kicked off.
+  const [dispatch, setDispatch] = useState(null); // { sent, failed, total, participants: [...] }
+  const pollTimer = useRef(null);
+  const searchRef = useRef(null);
 
   useEffect(() => {
     init();
     const esc = (e) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && !sending) onClose();
     };
     window.addEventListener("keydown", esc);
-    return () => window.removeEventListener("keydown", esc);
+    return () => {
+      window.removeEventListener("keydown", esc);
+      if (pollTimer.current) clearTimeout(pollTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (!loading && searchRef.current) searchRef.current.focus();
-  }, [loading]);
+    if (!loading && !dispatch && searchRef.current) searchRef.current.focus();
+  }, [loading, dispatch]);
 
   async function init() {
     setLoading(true);
@@ -367,6 +498,7 @@ export default function TemplatePickerModal({
     if (!selected || sending) return;
     setSending(true);
     setSendErr(null);
+
     try {
       const token = await getToken();
       let templateBody = null;
@@ -378,8 +510,9 @@ export default function TemplatePickerModal({
         const detail = await detailRes.json();
         templateBody = composeTemplateMessage(detail);
       } catch {
-        templateBody = null; // non-fatal — backend falls back to a placeholder
+        templateBody = null;
       }
+
       const res = await fetch(`${BACKEND}/whatsapp/samvaadik-batch`, {
         method: "POST",
         headers: {
@@ -398,16 +531,50 @@ export default function TemplatePickerModal({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Send failed");
-      setResult({ sent: data.sent, failed: data.failed, total: data.total });
-      onSuccess?.({ sent: data.sent, failed: data.failed, total: data.total });
+
+      setDispatch({ sent: 0, failed: 0, total: count ?? 0, participants: [] });
+      pollBatch(data.batch_id, token);
     } catch (e) {
       setSendErr(e.message);
-    } finally {
       setSending(false);
     }
   }
 
-  console.log("selected template object:", JSON.stringify(selected, null, 2));
+  function pollBatch(batchId, token) {
+    const tick = async () => {
+      try {
+        const r = await fetch(
+          `${BACKEND}/whatsapp/samvaadik-batch/${batchId}/status`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+        const job = await r.json();
+
+        setDispatch({
+          sent: job.sent || 0,
+          failed: job.failed || 0,
+          total: job.total || count || 0,
+          participants: job.participants || [],
+        });
+
+        if (job.status === "processing") {
+          pollTimer.current = setTimeout(tick, 1200);
+        } else if (job.status === "done") {
+          setResult({ sent: job.sent, failed: job.failed, total: job.total });
+          onSuccess?.({ sent: job.sent, failed: job.failed, total: job.total });
+          setSending(false);
+        } else {
+          setSendErr(job.error || "Batch send failed");
+          setSending(false);
+        }
+      } catch (e) {
+        setSendErr(e.message);
+        setSending(false);
+      }
+    };
+    tick();
+  }
 
   const filtered = templates.filter(
     (t) =>
@@ -416,60 +583,99 @@ export default function TemplatePickerModal({
       extractBody(t).toLowerCase().includes(search.toLowerCase()),
   );
 
+  const dTotal = dispatch?.total || 0;
+  const dDone = (dispatch?.sent || 0) + (dispatch?.failed || 0);
+  const pct =
+    dTotal > 0 ? Math.min(100, Math.round((dDone / dTotal) * 100)) : 0;
+
   return (
     <>
       <style>{css}</style>
       <div
         className="tpm-overlay"
-        onClick={(e) => e.target === e.currentTarget && onClose()}
+        onClick={(e) => e.target === e.currentTarget && !sending && onClose()}
       >
         <div className="tpm-modal">
-          {/* Header */}
-          <div className="tpm-header">
-            <h2 className="tpm-title">Send WhatsApp Template</h2>
-            <p className="tpm-subtitle">
-              Select a template · messages sent to all participants · chatbot
-              activates on reply
-            </p>
-          </div>
-
-          {result ? (
-            /* ── Success ── */
-            <div className="tpm-success">
-              <p className="tpm-success-head">All done</p>
-              <p className="tpm-success-sub">
-                Template{" "}
-                <span style={{ fontFamily: "monospace", color: "#7a7068" }}>
-                  {selected?.name}
-                </span>{" "}
-                dispatched
-              </p>
-              <div className="tpm-counts">
-                <div className="tpm-count">
-                  <div className="tpm-count-n ok">{result.sent}</div>
-                  <div className="tpm-count-lbl">Sent</div>
+          {dispatch ? (
+            /* ── Live dispatch / manifest view ── */
+            <div className="tpm-dispatch">
+              <div className="tpm-dispatch-head">
+                <div className="tpm-dispatch-title-row">
+                  <span className="tpm-dispatch-title">
+                    {result ? "Dispatch complete" : "Sending messages…"}
+                  </span>
+                  <span className="tpm-dispatch-count">
+                    {dDone}/{dTotal || "—"}
+                  </span>
                 </div>
-                <div className="tpm-count">
-                  <div className={`tpm-count-n${result.failed ? " fail" : ""}`}>
-                    {result.failed}
-                  </div>
-                  <div className="tpm-count-lbl">Failed</div>
+                <p className="tpm-dispatch-sub">
+                  Template{" "}
+                  <strong style={{ color: "#7a7068" }}>{selected?.name}</strong>
+                </p>
+                <div className="tpm-rail">
+                  <div className="tpm-rail-fill" style={{ width: `${pct}%` }} />
                 </div>
-                <div className="tpm-count">
-                  <div className="tpm-count-n">{result.total}</div>
-                  <div className="tpm-count-lbl">Total</div>
+                <div className="tpm-rail-legend">
+                  <span>
+                    <span className="tpm-dot ok" /> {dispatch.sent} sent
+                  </span>
+                  {dispatch.failed > 0 && (
+                    <span>
+                      <span className="tpm-dot fail" /> {dispatch.failed} failed
+                    </span>
+                  )}
+                  <span>
+                    <span className="tpm-dot pending" />{" "}
+                    {Math.max(0, dTotal - dDone)} queued
+                  </span>
                 </div>
               </div>
-              <p className="tpm-success-note">
-                The chatbot is now active. When participants reply, the AI will
-                respond automatically.
-              </p>
-              <button className="tpm-done" onClick={onClose}>
-                Done
-              </button>
+
+              <div className="tpm-manifest">
+                {dispatch.participants.map((p) => {
+                  const meta = statusMeta(p.status);
+                  return (
+                    <div className={`tpm-mrow is-${meta.cls}`} key={p.id}>
+                      <span className={`tpm-mrow-status ${meta.cls}`}>
+                        {meta.icon}
+                      </span>
+                      <span className="tpm-mrow-name">{p.name || "Guest"}</span>
+                      {p.phone && (
+                        <span className="tpm-mrow-phone">{p.phone}</span>
+                      )}
+                      <span className="tpm-mrow-label">{meta.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="tpm-dispatch-footer">
+                <span className="tpm-dispatch-hint">
+                  {result
+                    ? "The chatbot is now active for replies."
+                    : "You can keep this open or close it — sending continues in the background."}
+                </span>
+                <button
+                  className="tpm-btn tpm-btn-send"
+                  onClick={onClose}
+                  disabled={!result}
+                  title={!result ? "Sending in progress" : "Close"}
+                >
+                  {result ? "Done" : "Sending…"}
+                </button>
+              </div>
             </div>
           ) : (
             <>
+              {/* Header */}
+              <div className="tpm-header">
+                <h2 className="tpm-title">Send WhatsApp Template</h2>
+                <p className="tpm-subtitle">
+                  Select a template · messages sent to all participants ·
+                  chatbot activates on reply
+                </p>
+              </div>
+
               {/* Search */}
               <div className="tpm-search-wrap">
                 <input
@@ -546,7 +752,6 @@ export default function TemplatePickerModal({
                   })}
               </div>
 
-              {/* Send error */}
               {sendErr && (
                 <div className="tpm-err" style={{ flexShrink: 0 }}>
                   <p className="tpm-err-title" style={{ marginBottom: 0 }}>
@@ -579,12 +784,11 @@ export default function TemplatePickerModal({
                       onClick={handleSend}
                       disabled={!selected || sending}
                     >
-                      {sending ? "Sending…" : "Send to all"}
+                      {sending ? "Starting…" : "Send to all"}
                     </button>
                   </div>
                 </div>
 
-                {/* Participant count bar — shown once a template is selected */}
                 {selected && !sending && (
                   <div className="tpm-participant-bar">
                     <div className="tpm-participant-left">
